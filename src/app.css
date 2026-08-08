@@ -1,12 +1,14 @@
 :root {
   --bg: #f8f9fa;
   --bg-secondary: #ffffff;
+  --card: #ffffff;
   --text: #1a1a2e;
   --text-muted: #6c757d;
   --primary: #2c3e50;
   --primary-hover: #1a252f;
   --accent: #e74c3c;
   --accent-hover: #c0392b;
+  --danger: #e74c3c;
   --border: #dee2e6;
   --shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   --shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.12);
