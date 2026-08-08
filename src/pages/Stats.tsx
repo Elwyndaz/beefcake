@@ -40,6 +40,8 @@ export function Stats() {
   const [frequencyData, setFrequencyData] = useState<{ templateName: string; count: number }[]>([])
   const [heatmapData, setHeatmapData] = useState<{ date: string; count: number }[]>([])
   const [prs, setPRs] = useState<PR[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const volumeCanvasRef = useRef<HTMLCanvasElement>(null)
   const frequencyCanvasRef = useRef<HTMLCanvasElement>(null)
@@ -86,18 +88,27 @@ export function Stats() {
   }, [heatmapData])
 
   async function loadData() {
-    const [es, freq, heat, prsData] = await Promise.all([
-      getAllExercises(),
-      getFrequencyPerTemplate(),
-      getHeatmapData(30),
-      getPRs()
-    ])
-    setExercises(es)
-    setFrequencyData(freq)
-    setHeatmapData(heat)
-    setPRs(prsData)
-    if (es.length > 0 && !selectedExerciseId) {
-      setSelectedExerciseId(es[0].id)
+    try {
+      setLoading(true)
+      setError(null)
+      const [es, freq, heat, prsData] = await Promise.all([
+        getAllExercises(),
+        getFrequencyPerTemplate(),
+        getHeatmapData(30),
+        getPRs()
+      ])
+      setExercises(es)
+      setFrequencyData(freq)
+      setHeatmapData(heat)
+      setPRs(prsData)
+      if (es.length > 0 && !selectedExerciseId) {
+        setSelectedExerciseId(es[0].id)
+      }
+    } catch (err) {
+      setError('Kunde inte ladda statistik. Försök igen.')
+      console.error('Fel vid laddning av statistik:', err)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -236,6 +247,32 @@ export function Stats() {
     setSelectedExerciseId(target.value)
   }
 
+  if (loading) {
+    return (
+      <div>
+        <h1 class="page-title">Statistik</h1>
+        <div class="grid grid-2 mb">
+          <div class="card skeleton skeleton-chart"></div>
+          <div class="card skeleton skeleton-chart"></div>
+        </div>
+        <div class="grid grid-2 mb">
+          <div class="card skeleton skeleton-chart"></div>
+          <div class="card skeleton skeleton-chart"></div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div class="empty-state">
+        <h3>Fel vid laddning</h3>
+        <p>{error}</p>
+        <button class="btn btn-primary mt" onClick={loadData}>Försök igen</button>
+      </div>
+    )
+  }
+
   return (
     <div>
       <h1 class="page-title">Statistik</h1>
@@ -283,26 +320,33 @@ export function Stats() {
 
         <div class="card">
           <h3>Personliga rekord (PR)</h3>
-          <div class="table-wrap max-h-300 overflow-y-auto">
-            <table>
-              <thead>
-                <tr>
-                  <th>Övning</th>
-                  <th>Max vikt</th>
-                  <th>Max volym</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[...prs].sort((a, b) => a.exerciseName.localeCompare(b.exerciseName)).map((pr) => (
-                  <tr key={pr.exerciseId}>
-                    <td>{pr.exerciseName}</td>
-                    <td class="tabular-nums">{pr.maxWeight} kg (<span class="nowrap">{formatDateShort(pr.maxWeightDate)}</span>)</td>
-                    <td class="tabular-nums">{pr.maxVolume.toLocaleString('sv-SE')} kg (<span class="nowrap">{formatDateShort(pr.maxVolumeDate)}</span>)</td>
+          {prs.length === 0 ? (
+            <div class="empty-state">
+              <h3>Inga personliga rekord än</h3>
+              <p>Logga pass för att se dina PR.</p>
+            </div>
+          ) : (
+            <div class="table-wrap max-h-300 overflow-y-auto">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Övning</th>
+                    <th>Max vikt</th>
+                    <th>Max volym</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {[...prs].sort((a, b) => a.exerciseName.localeCompare(b.exerciseName)).map((pr) => (
+                    <tr key={pr.exerciseId}>
+                      <td>{pr.exerciseName}</td>
+                      <td class="tabular-nums">{pr.maxWeight} kg (<span class="nowrap">{formatDateShort(pr.maxWeightDate)}</span>)</td>
+                      <td class="tabular-nums">{pr.maxVolume.toLocaleString('sv-SE')} kg (<span class="nowrap">{formatDateShort(pr.maxVolumeDate)}</span>)</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
     </div>

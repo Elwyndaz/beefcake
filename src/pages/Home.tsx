@@ -12,6 +12,8 @@ export function Home() {
   const [totalSessions, setTotalSessions] = useState(0)
   const [lastWorkout, setLastWorkout] = useState<string | null>(null)
   const [showReminder, setShowReminder] = useState<{ show: boolean; daysSince: number } | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     loadData()
@@ -31,23 +33,56 @@ export function Home() {
   }
 
   async function loadData() {
-    const [sessions, templates] = await Promise.all([
-      getAllSessions(),
-      getAllTemplates()
-    ])
-    setRecentSessions(sessions.slice(0, 5))
-    setTemplateCount(templates.length)
-    setTotalSessions(sessions.length)
-    if (sessions.length > 0) {
-      setLastWorkout(sessions[0].date)
+    try {
+      setLoading(true)
+      setError(null)
+      const [sessions, templates] = await Promise.all([
+        getAllSessions(),
+        getAllTemplates()
+      ])
+      setRecentSessions(sessions.slice(0, 5))
+      setTemplateCount(templates.length)
+      setTotalSessions(sessions.length)
+      if (sessions.length > 0) {
+        setLastWorkout(sessions[0].date)
+      }
+      const latest = await getLatestSessionDate()
+      if (latest) setLastWorkout(latest)
+    } catch (err) {
+      setError('Kunde inte ladda data. Försök igen.')
+      console.error('Fel vid laddning:', err)
+    } finally {
+      setLoading(false)
     }
-    const latest = await getLatestSessionDate()
-    if (latest) setLastWorkout(latest)
   }
 
   function formatDate(dateStr: string): string {
     const d = new Date(dateStr + 'T00:00:00')
     return d.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' })
+  }
+
+  if (loading) {
+    return (
+      <div>
+        <h1 class="page-title">Översikt</h1>
+        <div class="grid grid-3 mb">
+          <div class="card skeleton skeleton-card"></div>
+          <div class="card skeleton skeleton-card"></div>
+          <div class="card skeleton skeleton-card"></div>
+        </div>
+        <div class="card skeleton skeleton-card"></div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div class="empty-state">
+        <h3>Fel vid laddning</h3>
+        <p>{error}</p>
+        <button class="btn btn-primary mt" onClick={loadData}>Försök igen</button>
+      </div>
+    )
   }
 
   return (

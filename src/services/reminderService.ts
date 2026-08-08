@@ -26,7 +26,3 @@ export async function checkReminder(): Promise<{ show: boolean; daysSince: numbe
   }
   return { show: false, daysSince: diffDays }
 }
-
-export function formatReminderMessage(daysSince: number): string {
-  return `Hej Patrik, du har inte tränat på ${daysSince} dagar. Din jävla latmask.`
-}

@@ -64,11 +64,6 @@ export async function getAllExercises(): Promise<Exercise[]> {
   return db.getAllFromIndex('exercises', 'by-name')
 }
 
-export async function getExercise(id: string): Promise<Exercise | undefined> {
-  const db = await getDB()
-  return db.get('exercises', id)
-}
-
 export async function getOrCreateExercise(name: string): Promise<Exercise> {
   const db = await getDB()
   const existing = await db.getFromIndex('exercises', 'by-name', name)
@@ -82,12 +77,6 @@ export async function getOrCreateExercise(name: string): Promise<Exercise> {
   return exercise
 }
 
-export async function searchExercises(query: string): Promise<Exercise[]> {
-  const all = await getAllExercises()
-  const q = query.toLowerCase()
-  return all.filter(e => e.name.toLowerCase().includes(q))
-}
-
 // Session Service
 export async function getAllSessions(): Promise<Session[]> {
   const db = await getDB()
@@ -98,11 +87,6 @@ export async function getAllSessions(): Promise<Session[]> {
 export async function getSession(id: string): Promise<Session | undefined> {
   const db = await getDB()
   return db.get('sessions', id)
-}
-
-export async function getSessionsByTemplate(templateId: string): Promise<Session[]> {
-  const db = await getDB()
-  return db.getAllFromIndex('sessions', 'by-template', templateId)
 }
 
 export async function createSession(

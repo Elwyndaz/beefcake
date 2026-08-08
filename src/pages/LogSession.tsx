@@ -20,10 +20,14 @@ export function LogSession() {
   const [date, setDate] = useState(() => todayISO())
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const fromSessionRef = useRef<string | null>(null)
 
-  useEffect(() => {
-    async function checkPrefill() {
+  async function checkPrefill() {
+    try {
+      setLoading(true)
+      setError(null)
       // Check URL for ?from=<sessionId> parameter
       const urlParams = new URLSearchParams(window.location.search)
       const fromSessionId = urlParams.get('from')
@@ -49,11 +53,20 @@ export function LogSession() {
           }
         } catch (err) {
           console.error('Failed to load session for prefill:', err)
+          // Continue to load templates even if prefill fails
         }
       }
       
-      loadTemplates()
+      await loadTemplates()
+    } catch (err) {
+      setError('Kunde inte ladda mallar. Försök igen.')
+      console.error('Fel vid laddning:', err)
+    } finally {
+      setLoading(false)
     }
+  }
+
+  useEffect(() => {
     checkPrefill()
   }, [])
 
@@ -152,6 +165,26 @@ export function LogSession() {
     setSelectedTemplateId(target.value)
     // Clear the prefill ref when user manually selects a template
     fromSessionRef.current = null
+  }
+
+  if (loading) {
+    return (
+      <div>
+        <h1 class="page-title">Logga pass</h1>
+        <div class="card mb skeleton skeleton-card"></div>
+        <div class="card mb skeleton skeleton-card"></div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div class="empty-state">
+        <h3>Fel vid laddning</h3>
+        <p>{error}</p>
+        <button class="btn btn-primary mt" onClick={checkPrefill}>Försök igen</button>
+      </div>
+    )
   }
 
   return (

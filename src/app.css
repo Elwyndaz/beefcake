@@ -649,3 +649,56 @@ tr:hover td { background: var(--surface); }
   .session-detail-table { display: none; }
   .session-detail-exercise-list { display: block; }
 }
+
+/* ===================================================================
+   SKELETON LOADING STYLES
+   =================================================================== */
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--surface) 25%,
+    var(--border) 25%,
+    var(--border) 50%,
+    var(--surface) 50%,
+    var(--surface) 75%,
+    var(--border) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-sm);
+}
+
+.skeleton-text {
+  height: 1rem;
+  margin-bottom: var(--space-2);
+}
+
+.skeleton-text-short { width: 60%; }
+.skeleton-text-medium { width: 80%; }
+.skeleton-text-long { width: 100%; }
+
+.skeleton-title {
+  height: 1.5rem;
+  width: 50%;
+  margin-bottom: var(--space-3);
+}
+
+.skeleton-card {
+  height: 100px;
+  margin-bottom: var(--space-4);
+}
+
+.skeleton-chart {
+  height: 300px;
+}
+
+.skeleton-table-row {
+  height: 40px;
+  margin-bottom: var(--space-2);
+}

@@ -41,10 +41,10 @@ Excel-importen i webbläsaren är **borttagen** (commit `410efd1`). `xlsx` 0.18.
 
 ## P2 — polish
 
-- [ ] Designsystem: tokens och sex komponenter, mörkt läge
+- [x] Designsystem: tokens och sex komponenter, mörkt läge
 - [x] Desktop: sidebar (tvåkolumnslayout kvar)
 - [x] Mobil: bottennavigering, kort istället för tabeller, 44 px tryckytor
-- [ ] Loading- och empty states överallt
+- [x] Loading- och empty states överallt
 - [ ] Undo vid radering
 - [ ] Lazy-ladda Chart.js
 - [ ] Tester (Vitest) och ESLint, båda i CI

@@ -130,6 +130,7 @@ export function History() {
   const [allSessions, setAllSessions] = useState<Session[]>([])
   const [templates, setTemplates] = useState<Template[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [filters, setFilters] = useState<FilterState>({
     template: 'Alla',
     period: 'all'
@@ -139,16 +140,25 @@ export function History() {
   const [toastMessage, setToastMessage] = useState<string | null>(null)
 
   // Load data
-  useEffect(() => {
-    async function load() {
+  async function load() {
+    try {
+      setLoading(true)
+      setError(null)
       const [sessions, templates] = await Promise.all([
         getAllSessions(),
         getAllTemplates()
       ])
       setAllSessions(sessions)
       setTemplates(templates)
+    } catch (err) {
+      setError('Kunde inte ladda historik. Försök igen.')
+      console.error('Fel vid laddning av historik:', err)
+    } finally {
       setLoading(false)
     }
+  }
+
+  useEffect(() => {
     load()
   }, [])
 
@@ -220,8 +230,22 @@ export function History() {
     return (
       <div>
         <h1 class="page-title">Historik</h1>
+        <div class="card skeleton skeleton-card"></div>
+      </div>
+    )
+  }
+
+  // Render error state
+  if (error) {
+    return (
+      <div>
+        <h1 class="page-title">Historik</h1>
         <div class="card">
-          <p>Laddar pass...</p>
+          <div class="empty-state">
+            <h3>Fel vid laddning</h3>
+            <p>{error}</p>
+            <button class="btn btn-primary mt" onClick={load}>Försök igen</button>
+          </div>
         </div>
       </div>
     )

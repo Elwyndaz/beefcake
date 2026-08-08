@@ -17,15 +17,26 @@ export function Templates() {
   const [formName, setFormName] = useState('')
   const [formExercises, setFormExercises] = useState<FormExercise[]>([])
   const [showForm, setShowForm] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     loadData()
   }, [])
 
   async function loadData() {
-    const [ts, es] = await Promise.all([getAllTemplates(), getAllExercises()])
-    setTemplates(ts)
-    setAllExercises(es)
+    try {
+      setLoading(true)
+      setError(null)
+      const [ts, es] = await Promise.all([getAllTemplates(), getAllExercises()])
+      setTemplates(ts)
+      setAllExercises(es)
+    } catch (err) {
+      setError('Kunde inte ladda mallar. Försök igen.')
+      console.error('Fel vid laddning av mallar:', err)
+    } finally {
+      setLoading(false)
+    }
   }
 
   function startEdit(template: Template) {
@@ -115,6 +126,28 @@ export function Templates() {
   function handleNameChange(e: Event) {
     const target = e.target as HTMLInputElement
     setFormName(target.value)
+  }
+
+  if (loading) {
+    return (
+      <div>
+        <div class="flex justify-between items-center mb">
+          <h1 class="page-title m-0">Mallar</h1>
+          <button class="btn btn-primary" disabled>+ Ny mall</button>
+        </div>
+        <div class="card skeleton skeleton-card"></div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div class="empty-state">
+        <h3>Fel vid laddning</h3>
+        <p>{error}</p>
+        <button class="btn btn-primary mt" onClick={loadData}>Försök igen</button>
+      </div>
+    )
   }
 
   return (

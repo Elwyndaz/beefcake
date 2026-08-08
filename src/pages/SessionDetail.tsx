@@ -96,6 +96,7 @@ export function SessionDetail() {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
   const [allExercises, setAllExercises] = useState<Exercise[]>([])
   const [formDate, setFormDate] = useState('')
@@ -147,7 +148,7 @@ export function SessionDetail() {
         }
       } catch (err) {
         console.error('Failed to load session:', err)
-        setNotFound(true)
+        setError('Kunde inte ladda passet. Försök igen.')
       } finally {
         setLoading(false)
       }
@@ -324,8 +325,22 @@ export function SessionDetail() {
     return (
       <div>
         <h1 class="page-title">Passdetaljer</h1>
+        <div class="card skeleton skeleton-card"></div>
+      </div>
+    )
+  }
+
+  // Render error state
+  if (error) {
+    return (
+      <div>
+        <h1 class="page-title">Passdetaljer</h1>
         <div class="card">
-          <p>Laddar...</p>
+          <div class="empty-state">
+            <h3>Fel vid laddning</h3>
+            <p>{error}</p>
+            <button class="btn btn-primary mt" onClick={() => window.location.reload()}>Försök igen</button>
+          </div>
         </div>
       </div>
     )

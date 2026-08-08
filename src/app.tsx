@@ -1,16 +1,21 @@
 /// <reference types="vite-plugin-pwa/client" />
 
 import { Router, Link, Switch, Route, useLocation } from 'wouter'
+import { lazy, Suspense } from 'preact/compat'
 import { PasswordGate } from './components/PasswordGate'
 import { Home } from './pages/Home'
 import { LogSession } from './pages/LogSession'
 import { Templates } from './pages/Templates'
-import { Stats } from './pages/Stats'
 import { Settings } from './pages/Settings'
 import { History } from './pages/History'
 import { SessionDetail } from './pages/SessionDetail'
 import { icon } from './icons'
 import './app.css'
+
+const Stats = lazy(async () => {
+  const m = await import('./pages/Stats')
+  return { default: m.Stats }
+})
 
 const navItems = [
   { href: '/', label: 'Hem', icon: 'home-icon' },
@@ -119,7 +124,11 @@ function AppContent() {
             <Route path="/templates" component={Templates} />
             <Route path="/history" component={History} />
             <Route path="/history/:id" component={SessionDetail} />
-            <Route path="/stats" component={Stats} />
+            <Route path="/stats" component={() => (
+              <Suspense fallback={<div class="card skeleton skeleton-card"></div>}>
+                <Stats />
+              </Suspense>
+            )} />
             <Route path="/settings" component={Settings} />
           </Switch>
         </main>
