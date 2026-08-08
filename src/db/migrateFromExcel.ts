@@ -1,4 +1,3 @@
-import * as XLSX from 'xlsx'
 import { getDB, generateId, nowISO } from '../models'
 import type { Template, Exercise, Session, ExerciseHistory, TemplateExercise, SessionExercise } from '../models'
 
@@ -26,6 +25,7 @@ function normalizeName(name: string): string {
 }
 
 export async function migrateFromExcel(file: File): Promise<{ templates: number; exercises: number; sessions: number; history: number }> {
+  const XLSX = (await import('xlsx')).default
   const db = await getDB()
   const arrayBuffer = await file.arrayBuffer()
   const workbook = XLSX.read(arrayBuffer, { type: 'array' })

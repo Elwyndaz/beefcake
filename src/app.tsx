@@ -12,21 +12,13 @@ import './app.css'
 
 function NavLink({ href, children }: { href: string; children: string }) {
   const [location] = useLocation()
+  const isActive = location === href
   return (
-    <Link href={href} style={{ textDecoration: 'none' }}>
-      <a
-        style={{
-          color: location === href ? 'white' : 'var(--text)',
-          background: location === href ? 'var(--primary)' : 'transparent',
-          padding: '8px 12px',
-          borderRadius: 'var(--radius-sm)',
-          fontWeight: 500,
-          transition: 'all 0.2s'
-        }}
-        href={href}
-      >
-        {children}
-      </a>
+    <Link
+      href={href}
+      class={isActive ? 'nav-link active' : 'nav-link'}
+    >
+      {children}
     </Link>
   )
 }

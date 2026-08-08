@@ -78,7 +78,7 @@ body {
 }
 
 .header nav a:hover,
-.header nav a[aria-current="page"] {
+.header nav a.active {
   background: var(--primary);
   color: white;
 }

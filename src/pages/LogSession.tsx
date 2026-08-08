@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'preact/hooks'
 import { getAllTemplates, getAllExercises, createSession, getOrCreateExercise } from '../services/dataService'
-import type { Template, Exercise } from '../models'
+import { todayISO } from '../models'
+import type { Template, Exercise, TemplateExercise } from '../models'
 
 interface FormExercise {
   exerciseId: string
@@ -15,7 +16,7 @@ export function LogSession() {
   const [allExercises, setAllExercises] = useState<Exercise[]>([])
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('')
   const [exercises, setExercises] = useState<FormExercise[]>([])
-  const [date, setDate] = useState(() => new Date().toISOString().split('T')[0])
+  const [date, setDate] = useState(() => todayISO())
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
@@ -45,7 +46,7 @@ export function LogSession() {
     if (template) {
       const allExercises = await getAllExercises()
       const exMap = new Map(allExercises.map(e => [e.id, e.name]))
-      const formExercises: FormExercise[] = template.exercises.map((te: any) => ({
+      const formExercises: FormExercise[] = template.exercises.map((te: TemplateExercise) => ({
         exerciseId: te.exerciseId,
         exerciseName: exMap.get(te.exerciseId) || '',
         sets: te.defaultSets,

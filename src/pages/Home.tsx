@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'preact/hooks'
 import { getAllSessions, getLatestSessionDate, getAllTemplates } from '../services/dataService'
+import type { Session } from '../models'
 
 export function Home() {
-  const [recentSessions, setRecentSessions] = useState<any[]>([])
+  const [recentSessions, setRecentSessions] = useState<Session[]>([])
   const [templateCount, setTemplateCount] = useState(0)
   const [totalSessions, setTotalSessions] = useState(0)
   const [lastWorkout, setLastWorkout] = useState<string | null>(null)
@@ -76,13 +77,13 @@ export function Home() {
                 </tr>
               </thead>
               <tbody>
-                {recentSessions.map((session: any) => (
+                {recentSessions.map((session) => (
                   <tr key={session.id}>
                     <td>{formatDate(session.date)}</td>
                     <td><span class="badge badge-primary">{session.templateName}</span></td>
                     <td>{session.exercises.length}</td>
                     <td>
-                      {session.exercises.reduce((sum: number, e: any) => sum + e.sets * e.reps * e.weight, 0).toLocaleString('sv-SE')} kg
+                      {session.exercises.reduce((sum, e) => sum + e.sets * e.reps * e.weight, 0).toLocaleString('sv-SE')} kg
                     </td>
                   </tr>
                 ))}

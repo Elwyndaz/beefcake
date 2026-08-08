@@ -5,6 +5,22 @@ import type { Exercise } from '../models'
 
 Chart.register(...registerables)
 
+interface PR {
+  exerciseId: string
+  exerciseName: string
+  maxWeight: number
+  maxVolume: number
+  maxWeightDate: string
+  maxVolumeDate: string
+}
+
+function localDateISO(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 export function Stats() {
   const [exercises, setExercises] = useState<Exercise[]>([])
   const [selectedExerciseId, setSelectedExerciseId] = useState<string>('')
@@ -13,7 +29,7 @@ export function Stats() {
   const [heatmapChart, setHeatmapChart] = useState<Chart | null>(null)
   const [frequencyData, setFrequencyData] = useState<{ templateName: string; count: number }[]>([])
   const [heatmapData, setHeatmapData] = useState<{ date: string; count: number }[]>([])
-  const [prs, setPRs] = useState<any[]>([])
+  const [prs, setPRs] = useState<PR[]>([])
 
   const volumeCanvasRef = useRef<HTMLCanvasElement>(null)
   const frequencyCanvasRef = useRef<HTMLCanvasElement>(null)
@@ -27,17 +43,35 @@ export function Stats() {
     if (selectedExerciseId) {
       loadVolumeChart()
     }
+    return () => {
+      if (volumeChart) {
+        volumeChart.destroy()
+        setVolumeChart(null)
+      }
+    }
   }, [selectedExerciseId])
 
   useEffect(() => {
     if (frequencyData.length > 0 && frequencyCanvasRef.current) {
       loadFrequencyChart()
     }
+    return () => {
+      if (frequencyChart) {
+        frequencyChart.destroy()
+        setFrequencyChart(null)
+      }
+    }
   }, [frequencyData])
 
   useEffect(() => {
     if (heatmapData.length > 0 && heatmapCanvasRef.current) {
       loadHeatmapChart()
+    }
+    return () => {
+      if (heatmapChart) {
+        heatmapChart.destroy()
+        setHeatmapChart(null)
+      }
     }
   }, [heatmapData])
 
@@ -140,7 +174,7 @@ export function Stats() {
     for (let i = 29; i >= 0; i--) {
       const d = new Date()
       d.setDate(d.getDate() - i)
-      const iso = d.toISOString().split('T')[0]
+      const iso = localDateISO(d)
       labels.push(iso)
       const found = heatmapData.find(h => h.date === iso)
       values.push(found ? found.count : 0)
@@ -227,7 +261,7 @@ export function Stats() {
                 </tr>
               </thead>
               <tbody>
-                {prs.slice(0, 10).map((pr: any) => (
+                {prs.slice(0, 10).map((pr) => (
                   <tr key={pr.exerciseId}>
                     <td>{pr.exerciseName}</td>
                     <td>{pr.maxWeight} kg ({pr.maxWeightDate})</td>
