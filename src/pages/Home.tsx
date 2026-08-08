@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'preact/hooks'
 import { getAllSessions, getLatestSessionDate, getAllTemplates } from '../services/dataService'
+import { checkReminder } from '../services/reminderService'
+import { icon } from '../icons'
 import type { Session } from '../models'
 
 export function Home() {
@@ -7,10 +9,24 @@ export function Home() {
   const [templateCount, setTemplateCount] = useState(0)
   const [totalSessions, setTotalSessions] = useState(0)
   const [lastWorkout, setLastWorkout] = useState<string | null>(null)
+  const [showReminder, setShowReminder] = useState<{ show: boolean; daysSince: number } | null>(null)
 
   useEffect(() => {
     loadData()
+    checkReminder().then(res => {
+      if (res?.show) {
+        const dismissed = sessionStorage.getItem('beefcake-reminder-dismissed')
+        if (!dismissed) {
+          setShowReminder({ show: true, daysSince: res.daysSince })
+        }
+      }
+    })
   }, [])
+
+  function dismissReminder() {
+    sessionStorage.setItem('beefcake-reminder-dismissed', '1')
+    setShowReminder(null)
+  }
 
   async function loadData() {
     const [sessions, templates] = await Promise.all([
@@ -34,6 +50,14 @@ export function Home() {
 
   return (
     <div>
+      {showReminder && (
+        <div class="reminder-banner">
+          <span>Du har inte tränat på {showReminder.daysSince} dagar. Den jävla latmasken.</span>
+          <button class="banner-dismiss" onClick={dismissReminder} aria-label="Stäng">
+            <svg width="16" height="16" viewBox="0 0 19 19"><use href={icon('x-icon')} /></svg>
+          </button>
+        </div>
+      )}
       <h1 class="page-title">Översikt</h1>
 
       <div class="grid grid-3 mb">

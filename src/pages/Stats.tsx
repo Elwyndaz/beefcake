@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'preact/hooks'
 import { getAllExercises, getVolumeOverTime, getFrequencyPerTemplate, getHeatmapData, getPRs } from '../services/dataService'
 import { Chart, registerables } from 'chart.js'
+import 'chartjs-adapter-date-fns'
 import type { Exercise } from '../models'
 
 Chart.register(...registerables)
@@ -21,12 +22,21 @@ function localDateISO(d: Date): string {
   return `${y}-${m}-${day}`
 }
 
+function formatDateShort(isoDate: string): string {
+  const date = new Date(isoDate)
+  const day = date.getDate()
+  const month = date.getMonth()
+  const year = date.getFullYear()
+  const monthNames = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec']
+  return `${day} ${monthNames[month]} ${year}`
+}
+
 export function Stats() {
   const [exercises, setExercises] = useState<Exercise[]>([])
   const [selectedExerciseId, setSelectedExerciseId] = useState<string>('')
-  const [volumeChart, setVolumeChart] = useState<Chart | null>(null)
-  const [frequencyChart, setFrequencyChart] = useState<Chart | null>(null)
-  const [heatmapChart, setHeatmapChart] = useState<Chart | null>(null)
+  const volumeChartRef = useRef<Chart | null>(null)
+  const frequencyChartRef = useRef<Chart | null>(null)
+  const heatmapChartRef = useRef<Chart | null>(null)
   const [frequencyData, setFrequencyData] = useState<{ templateName: string; count: number }[]>([])
   const [heatmapData, setHeatmapData] = useState<{ date: string; count: number }[]>([])
   const [prs, setPRs] = useState<PR[]>([])
@@ -44,9 +54,9 @@ export function Stats() {
       loadVolumeChart()
     }
     return () => {
-      if (volumeChart) {
-        volumeChart.destroy()
-        setVolumeChart(null)
+      if (volumeChartRef.current) {
+        volumeChartRef.current.destroy()
+        volumeChartRef.current = null
       }
     }
   }, [selectedExerciseId])
@@ -56,21 +66,21 @@ export function Stats() {
       loadFrequencyChart()
     }
     return () => {
-      if (frequencyChart) {
-        frequencyChart.destroy()
-        setFrequencyChart(null)
+      if (frequencyChartRef.current) {
+        frequencyChartRef.current.destroy()
+        frequencyChartRef.current = null
       }
     }
   }, [frequencyData])
 
   useEffect(() => {
-    if (heatmapData.length > 0 && heatmapCanvasRef.current) {
+    if (heatmapCanvasRef.current) {
       loadHeatmapChart()
     }
     return () => {
-      if (heatmapChart) {
-        heatmapChart.destroy()
-        setHeatmapChart(null)
+      if (heatmapChartRef.current) {
+        heatmapChartRef.current.destroy()
+        heatmapChartRef.current = null
       }
     }
   }, [heatmapData])
@@ -96,10 +106,10 @@ export function Stats() {
     const ctx = volumeCanvasRef.current
     if (!ctx) return
 
-    if (volumeChart) {
-      volumeChart.data.labels = data.map(d => d.date)
-      volumeChart.data.datasets[0].data = data.map(d => d.volume)
-      volumeChart.update()
+    if (volumeChartRef.current) {
+      volumeChartRef.current.data.labels = data.map(d => d.date)
+      volumeChartRef.current.data.datasets[0].data = data.map(d => d.volume)
+      volumeChartRef.current.update()
     } else {
       const chart = new Chart(ctx, {
         type: 'line',
@@ -123,12 +133,12 @@ export function Stats() {
             legend: { display: false }
           },
           scales: {
-            x: { ticks: { maxTicksLimit: 10 } },
+            x: { type: 'time', ticks: { maxTicksLimit: 10 } },
             y: { beginAtZero: true }
           }
         }
       })
-      setVolumeChart(chart)
+      volumeChartRef.current = chart
     }
   }
 
@@ -136,10 +146,10 @@ export function Stats() {
     const ctx = frequencyCanvasRef.current
     if (!ctx) return
 
-    if (frequencyChart) {
-      frequencyChart.data.labels = frequencyData.map(d => d.templateName)
-      frequencyChart.data.datasets[0].data = frequencyData.map(d => d.count)
-      frequencyChart.update()
+    if (frequencyChartRef.current) {
+      frequencyChartRef.current.data.labels = frequencyData.map(d => d.templateName)
+      frequencyChartRef.current.data.datasets[0].data = frequencyData.map(d => d.count)
+      frequencyChartRef.current.update()
     } else {
       const chart = new Chart(ctx, {
         type: 'bar',
@@ -161,8 +171,19 @@ export function Stats() {
           scales: { x: { beginAtZero: true } }
         }
       })
-      setFrequencyChart(chart)
+      frequencyChartRef.current = chart
     }
+  }
+
+  function allValuesZero(): boolean {
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date()
+      d.setDate(d.getDate() - i)
+      const iso = localDateISO(d)
+      const found = heatmapData.find(h => h.date === iso)
+      if (found && found.count > 0) return false
+    }
+    return true
   }
 
   function loadHeatmapChart() {
@@ -180,12 +201,12 @@ export function Stats() {
       values.push(found ? found.count : 0)
     }
 
-    if (heatmapChart) {
-      heatmapChart.data.labels = labels
-      heatmapChart.data.datasets[0].data = values
-      heatmapChart.data.datasets[0].backgroundColor = values.map(v => v > 0 ? '#e74c3c' : '#dee2e6')
-      heatmapChart.data.datasets[0].borderColor = values.map(v => v > 0 ? '#c0392b' : '#dee2e6')
-      heatmapChart.update()
+    if (heatmapChartRef.current) {
+      heatmapChartRef.current.data.labels = labels
+      heatmapChartRef.current.data.datasets[0].data = values
+      heatmapChartRef.current.data.datasets[0].backgroundColor = values.map(v => v > 0 ? '#e74c3c' : '#dee2e6')
+      heatmapChartRef.current.data.datasets[0].borderColor = values.map(v => v > 0 ? '#c0392b' : '#dee2e6')
+      heatmapChartRef.current.update()
     } else {
       const chart = new Chart(ctx, {
         type: 'bar',
@@ -206,7 +227,7 @@ export function Stats() {
           scales: { x: { ticks: { maxTicksLimit: 10 } }, y: { beginAtZero: true } }
         }
       })
-      setHeatmapChart(chart)
+      heatmapChartRef.current = chart
     }
   }
 
@@ -244,9 +265,20 @@ export function Stats() {
       <div class="grid grid-2 mb">
         <div class="card">
           <h3>Aktivitet (senaste 30 dagar)</h3>
-          <div style="height: 200px;">
-            <canvas ref={heatmapCanvasRef} id="heatmap-chart"></canvas>
-          </div>
+          {heatmapData.length === 0 && exercises.length === 0 ? (
+            <div class="empty-state">
+              <h3>Inga pass registrerade än.</h3>
+            </div>
+          ) : allValuesZero() ? (
+            <div class="empty-state">
+              <h3>Ingen aktivitet</h3>
+              <p>Inga pass de senaste 30 dagarna.</p>
+            </div>
+          ) : (
+            <div style="height: 200px;">
+              <canvas ref={heatmapCanvasRef} id="heatmap-chart"></canvas>
+            </div>
+          )}
         </div>
 
         <div class="card">
@@ -261,11 +293,11 @@ export function Stats() {
                 </tr>
               </thead>
               <tbody>
-                {prs.slice(0, 10).map((pr) => (
+                {[...prs].sort((a, b) => a.exerciseName.localeCompare(b.exerciseName)).map((pr) => (
                   <tr key={pr.exerciseId}>
                     <td>{pr.exerciseName}</td>
-                    <td>{pr.maxWeight} kg ({pr.maxWeightDate})</td>
-                    <td>{pr.maxVolume.toLocaleString('sv-SE')} kg ({pr.maxVolumeDate})</td>
+                    <td class="tabular-nums">{pr.maxWeight} kg (<span class="nowrap">{formatDateShort(pr.maxWeightDate)}</span>)</td>
+                    <td class="tabular-nums">{pr.maxVolume.toLocaleString('sv-SE')} kg (<span class="nowrap">{formatDateShort(pr.maxVolumeDate)}</span>)</td>
                   </tr>
                 ))}
               </tbody>

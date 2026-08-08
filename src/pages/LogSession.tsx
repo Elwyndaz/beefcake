@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'preact/hooks'
 import { getAllTemplates, getAllExercises, createSession, getOrCreateExercise } from '../services/dataService'
 import { todayISO } from '../models'
+import { icon } from '../icons'
 import type { Template, Exercise, TemplateExercise } from '../models'
 
 interface FormExercise {
@@ -147,42 +148,99 @@ export function LogSession() {
           </div>
         ) : (
           <>
-            {exercises.map((ex, idx) => (
-              <div key={idx} class="grid grid-4 mb" style="align-items: end; gap: 12px;">
-                <div class="input-group" style="margin: 0; flex: 2;">
-                  <label>Övning</label>
-                  <input
-                    type="text"
-                    value={ex.exerciseName}
-                    onChange={e => handleInputChange(e, idx, 'exerciseName')}
-                    placeholder="Skriv övningsnamn..."
-                    list="exercise-suggestions"
-                  />
-                  <datalist id="exercise-suggestions">
-                    {allExercises.map(e => (
-                      <option key={e.id} value={e.name} />
+            <datalist id="exercise-suggestions">
+              {allExercises.map(e => (
+                <option key={e.id} value={e.name} />
+              ))}
+            </datalist>
+            <div class="exercise-list">
+              <div class="exercise-list-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Övning</th>
+                      <th>Set</th>
+                      <th>Reps</th>
+                      <th>Vikt (kg)</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {exercises.map((ex, idx) => (
+                      <tr key={idx}>
+                        <td>
+                          <input
+                            type="text"
+                            value={ex.exerciseName}
+                            onChange={e => handleInputChange(e, idx, 'exerciseName')}
+                            placeholder="Skriv övningsnamn..."
+                            list="exercise-suggestions"
+                            class="table-input"
+                          />
+                        </td>
+                        <td>
+                          <input type="number" min="1" max="20" value={ex.sets} onChange={e => handleInputChange(e, idx, 'sets')} class="table-input" />
+                        </td>
+                        <td>
+                          <input type="number" min="1" max="50" value={ex.reps} onChange={e => handleInputChange(e, idx, 'reps')} class="table-input" />
+                        </td>
+                        <td>
+                          <input type="number" min="0" step="0.5" max="500" value={ex.weight} onChange={e => handleInputChange(e, idx, 'weight')} class="table-input" />
+                        </td>
+                        <td class="remove-cell">
+                          <button class="btn-remove" onClick={() => removeExercise(idx)} aria-label="Ta bort">
+                            <svg width="20" height="20" viewBox="0 0 19 19">
+                              <use href={icon('x-icon')} />
+                            </svg>
+                          </button>
+                        </td>
+                      </tr>
                     ))}
-                  </datalist>
-                </div>
-                <div class="input-group" style="margin: 0;">
-                  <label>Set</label>
-                  <input type="number" min="1" max="20" value={ex.sets} onChange={e => handleInputChange(e, idx, 'sets')} />
-                </div>
-                <div class="input-group" style="margin: 0;">
-                  <label>Reps</label>
-                  <input type="number" min="1" max="50" value={ex.reps} onChange={e => handleInputChange(e, idx, 'reps')} />
-                </div>
-                <div class="input-group" style="margin: 0;">
-                  <label>Vikt (kg)</label>
-                  <input type="number" min="0" step="0.5" max="500" value={ex.weight} onChange={e => handleInputChange(e, idx, 'weight')} />
-                </div>
-                <div style="margin: 0;">
-                  <button class="btn btn-danger btn-sm" onClick={() => removeExercise(idx)} style="height: 100%;">Ta bort</button>
-                </div>
+                  </tbody>
+                </table>
               </div>
-            ))}
-
-            <button class="btn btn-secondary" onClick={addExercise}>+ Lägg till övning</button>
+              <div class="exercise-list-cards">
+                {exercises.map((ex, idx) => (
+                  <div key={idx} class="exercise-card">
+                    <div class="exercise-card-header">
+                      <h4>Övning {idx + 1}</h4>
+                      <button class="btn-remove" onClick={() => removeExercise(idx)} aria-label="Ta bort">
+                        <svg width="20" height="20" viewBox="0 0 19 19">
+                          <use href={icon('x-icon')} />
+                        </svg>
+                      </button>
+                    </div>
+                    <div class="exercise-card-fields">
+                      <div class="input-group">
+                        <label>Övning</label>
+                        <input
+                          type="text"
+                          value={ex.exerciseName}
+                          onChange={e => handleInputChange(e, idx, 'exerciseName')}
+                          placeholder="Skriv övningsnamn..."
+                          list="exercise-suggestions"
+                        />
+                      </div>
+                      <div class="input-group grid-3">
+                        <div>
+                          <label>Set</label>
+                          <input type="number" min="1" max="20" value={ex.sets} onChange={e => handleInputChange(e, idx, 'sets')} />
+                        </div>
+                        <div>
+                          <label>Reps</label>
+                          <input type="number" min="1" max="50" value={ex.reps} onChange={e => handleInputChange(e, idx, 'reps')} />
+                        </div>
+                        <div>
+                          <label>Vikt (kg)</label>
+                          <input type="number" min="0" step="0.5" max="500" value={ex.weight} onChange={e => handleInputChange(e, idx, 'weight')} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <button class="btn btn-secondary mt" onClick={addExercise}>+ Lägg till övning</button>
           </>
         )}
       </div>
