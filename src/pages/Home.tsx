@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'preact/hooks'
 import { getAllSessions, getLatestSessionDate, getAllTemplates } from '../services/dataService'
-import { checkReminder } from '../services/reminderService'
 
 export function Home() {
   const [recentSessions, setRecentSessions] = useState<any[]>([])
@@ -77,13 +76,13 @@ export function Home() {
                 </tr>
               </thead>
               <tbody>
-                {recentSessions.map(session => (
+                {recentSessions.map((session: any) => (
                   <tr key={session.id}>
                     <td>{formatDate(session.date)}</td>
                     <td><span class="badge badge-primary">{session.templateName}</span></td>
                     <td>{session.exercises.length}</td>
                     <td>
-                      {session.exercises.reduce((sum, e) => sum + e.sets * e.reps * e.weight, 0).toLocaleString('sv-SE')} kg
+                      {session.exercises.reduce((sum: number, e: any) => sum + e.sets * e.reps * e.weight, 0).toLocaleString('sv-SE')} kg
                     </td>
                   </tr>
                 ))}

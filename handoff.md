@@ -1,32 +1,37 @@
 # Beefcake — Handoff
 
 ## Current State
-Projekt initierat: Vite + Preact + TS + PWA struktur på plats.
-Mapstruktur skapad: src/{db,models,services,components,pages,utils,workers}
-context.md, backlog.md skapade.
+✅ **Build passing** — `npm run build` completes without TypeScript errors.
+✅ PWA configured with Workbox (offline-first)
+✅ IndexedDB schema with 4 stores: templates, exercises, sessions, exerciseHistory
+✅ Migration script from Excel (`Styrkepass v2.xlsx`)
+✅ All 5 pages implemented: Home, LogSession, Templates, Stats, Settings
+✅ Services: dataService (CRUD + stats), reminderService (3-day check)
+✅ Routing with wouter
+✅ Git repo initialized, committed
+
+## Fixed Issues (from review)
+- Router: switched to `wouter` (was `preact-router/match`)
+- PWA types: added `/// <reference types="vite-plugin-pwa/client" />` in app.tsx
+- Models import: fixed path to `../db/schema`
+- Added missing `xlsx` dependency
+- Settings.tsx: fixed prompt logic bug (`confirmText !== 'RADERA'`)
+- LogSession.tsx: datalist now uses exercise names from catalog (not empty values)
+- Stats.tsx: frequency & heatmap charts now proper Chart.js instances (not script tags)
+- reminderService.ts: timezone-safe date diff (local midnight comparison)
+- schema.ts: removed unique index on template name (allows duplicate names)
 
 ## Next Steps (Priority Order)
-1. **DB Schema & Init** (`src/db/schema.ts`, `src/db/init.ts`) — definiera stores, öppna DB, migration helper
-2. **Models** (`src/models/index.ts`) — TypeScript interfaces för Template, Exercise, Session, ExerciseHistory
-3. **Migration Script** (`src/db/migrateFromExcel.ts`) — läs Excel, skriv till DB (körs en gång i devtools)
-4. **Services** — templateService, exerciseService, sessionService, statsService, reminderService
-5. **Router & Layout** — wouter eller preact-router, header/nav, responsiv layout
-6. **Pages** — Home (dashboard), LogSession, Templates, Stats, Settings
-7. **Components** — återanvändbara UI-komponenter
-8. **PWA Config** — vite.config.ts med vite-plugin-pwa, manifest
-9. **Deploy** — Cloudflare Pages setup
-
-## Key Decisions Locked
-- Desktop-first, PWA, offline-first
-- Cloudflare Pages hosting
-- IndexedDB via `idb`
-- kg only, svenska UI
-- Template = pass-typ (en entitet)
-- Local-first, export/import JSON+CSV
-- Reminder: in-app toast vid start (>3 dagar)
+1. **Test migration** — Open dev server, go to Settings, upload `Styrkepass v2.xlsx`
+2. **Verify data flow** — Log a session, check Home dashboard, Stats charts
+3. **PWA install test** — Verify "Add to Home Screen" works on mobile/desktop
+4. **Cloudflare Pages deploy** — Connect repo, set build command `npm run build`, output `dist`
+5. **Custom domain** — Configure on Cloudflare
 
 ## Files to Watch
 - `context.md` — domain & tech overview
 - `backlog.md` — prioritized task list
-- `src/db/schema.ts` — DB definition
+- `src/db/schema.ts` — DB definition (version 1)
+- `src/db/migrateFromExcel.ts` — one-time import logic
 - `vite.config.ts` — PWA config
+- `handoff.md` — this file

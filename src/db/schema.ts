@@ -1,4 +1,4 @@
-import { openDB, DBSchema, IDBPDatabase } from 'idb'
+import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
 
 export interface Exercise {
   id: string
@@ -88,7 +88,7 @@ export async function getDB(): Promise<IDBPDatabase<BeefcakeDB>> {
     upgrade(db) {
       if (!db.objectStoreNames.contains('templates')) {
         const templateStore = db.createObjectStore('templates', { keyPath: 'id' })
-        templateStore.createIndex('by-name', 'name', { unique: true })
+        templateStore.createIndex('by-name', 'name')
         templateStore.createIndex('by-updated', 'updatedAt')
       }
       if (!db.objectStoreNames.contains('exercises')) {

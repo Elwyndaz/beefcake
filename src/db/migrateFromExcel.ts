@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx'
-import { getDB, generateId, nowISO, todayISO } from '../models'
+import { getDB, generateId, nowISO } from '../models'
 import type { Template, Exercise, Session, ExerciseHistory, TemplateExercise, SessionExercise } from '../models'
 
 interface ExcelRow {
@@ -47,7 +47,6 @@ export async function migrateFromExcel(file: File): Promise<{ templates: number;
     const exerciseName = normalizeName(row.Övning)
     const templateName = normalizeName(row.Pass)
 
-    // Exercise
     if (!exerciseMap.has(exerciseName)) {
       exerciseMap.set(exerciseName, {
         id: generateId(),
@@ -59,7 +58,6 @@ export async function migrateFromExcel(file: File): Promise<{ templates: number;
     }
     const exercise = exerciseMap.get(exerciseName)!
 
-    // Template
     if (!templateMap.has(templateName)) {
       templateMap.set(templateName, {
         id: generateId(),
@@ -68,7 +66,6 @@ export async function migrateFromExcel(file: File): Promise<{ templates: number;
     }
     const template = templateMap.get(templateName)!
 
-    // Add exercise to template if not already there
     const existingTemplateExercise = template.exercises.find(te => te.exerciseId === exercise.id)
     if (!existingTemplateExercise) {
       template.exercises.push({
@@ -79,13 +76,11 @@ export async function migrateFromExcel(file: File): Promise<{ templates: number;
         order: orderCounter++
       })
     } else {
-      // Update with latest values (Excel shows progression)
       existingTemplateExercise.defaultSets = row.Set
       existingTemplateExercise.defaultReps = row.Repetitioner
       existingTemplateExercise.defaultWeight = row.Vikt
     }
 
-    // Session
     const sessionKey = `${dateISO}-${templateName}`
     if (!sessionMap.has(sessionKey)) {
       sessionMap.set(sessionKey, {
@@ -107,20 +102,16 @@ export async function migrateFromExcel(file: File): Promise<{ templates: number;
     })
   }
 
-  // Sort template exercises by order
   for (const template of templateMap.values()) {
     template.exercises.sort((a, b) => a.order - b.order)
   }
 
-  // Write to DB
   const tx = db.transaction(['templates', 'exercises', 'sessions', 'exerciseHistory'], 'readwrite')
 
-  // Exercises
   for (const exercise of exerciseMap.values()) {
     await tx.objectStore('exercises').put(exercise)
   }
 
-  // Templates
   const templates: Template[] = []
   for (const [name, data] of templateMap.entries()) {
     const template: Template = {
@@ -133,7 +124,6 @@ export async function migrateFromExcel(file: File): Promise<{ templates: number;
     await tx.objectStore('templates').put(template)
   }
 
-  // Sessions + History
   const history: ExerciseHistory[] = []
   for (const sessionData of sessionMap.values()) {
     const session: Session = {
@@ -146,7 +136,6 @@ export async function migrateFromExcel(file: File): Promise<{ templates: number;
     }
     await tx.objectStore('sessions').put(session)
 
-    // Denormalized history
     for (const se of session.exercises) {
       history.push({
         id: generateId(),

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'preact/hooks'
 import { getAllTemplates, getAllExercises, createSession, getOrCreateExercise } from '../services/dataService'
-import type { Template, TemplateExercise, Exercise } from '../models'
+import type { Template, Exercise } from '../models'
 
 interface FormExercise {
   exerciseId: string
@@ -12,6 +12,7 @@ interface FormExercise {
 
 export function LogSession() {
   const [templates, setTemplates] = useState<Template[]>([])
+  const [allExercises, setAllExercises] = useState<Exercise[]>([])
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('')
   const [exercises, setExercises] = useState<FormExercise[]>([])
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0])
@@ -23,8 +24,9 @@ export function LogSession() {
   }, [])
 
   async function loadTemplates() {
-    const ts = await getAllTemplates()
+    const [ts, es] = await Promise.all([getAllTemplates(), getAllExercises()])
     setTemplates(ts)
+    setAllExercises(es)
     if (ts.length > 0 && !selectedTemplateId) {
       setSelectedTemplateId(ts[0].id)
     }
@@ -32,25 +34,27 @@ export function LogSession() {
 
   useEffect(() => {
     if (selectedTemplateId) {
-      const template = templates.find(t => t.id === selectedTemplateId)
-      if (template) {
-        const formExercises: FormExercise[] = template.exercises.map(te => ({
-          exerciseId: te.exerciseId,
-          exerciseName: '', // Will be filled below
-          sets: te.defaultSets,
-          reps: te.defaultReps,
-          weight: te.defaultWeight
-        }))
-        // Fetch exercise names
-        const allExercises = await getAllExercises()
-        const exMap = new Map(allExercises.map(e => [e.id, e.name]))
-        formExercises.forEach(fe => { fe.exerciseName = exMap.get(fe.exerciseId) || '' })
-        setExercises(formExercises)
-      }
+      loadTemplateExercises()
     } else {
       setExercises([])
     }
   }, [selectedTemplateId, templates])
+
+  async function loadTemplateExercises() {
+    const template = templates.find(t => t.id === selectedTemplateId)
+    if (template) {
+      const allExercises = await getAllExercises()
+      const exMap = new Map(allExercises.map(e => [e.id, e.name]))
+      const formExercises: FormExercise[] = template.exercises.map((te: any) => ({
+        exerciseId: te.exerciseId,
+        exerciseName: exMap.get(te.exerciseId) || '',
+        sets: te.defaultSets,
+        reps: te.defaultReps,
+        weight: te.defaultWeight
+      }))
+      setExercises(formExercises)
+    }
+  }
 
   async function handleSave() {
     if (exercises.length === 0) return
@@ -59,7 +63,6 @@ export function LogSession() {
       const template = templates.find(t => t.id === selectedTemplateId)
       if (!template) throw new Error('Template not found')
 
-      // Ensure all exercises exist in catalog
       const validExercises = await Promise.all(
         exercises.map(async e => {
           let exerciseId = e.exerciseId
@@ -98,14 +101,20 @@ export function LogSession() {
     setExercises(newExercises)
   }
 
-  async function handleExerciseSearch(idx: number, query: string) {
-    if (query.length < 2) return
-    const allExercises = await getAllExercises()
-    const matches = allExercises
-      .filter(e => e.name.toLowerCase().includes(query.toLowerCase()))
-      .slice(0, 5)
-    // Could show dropdown, for now just log
-    console.log('Matches:', matches)
+  function handleInputChange(e: Event, idx: number, field: keyof FormExercise) {
+    const target = e.target as HTMLInputElement
+    const value = target.type === 'number' ? (parseFloat(target.value) || 0) : target.value
+    updateExercise(idx, field, value)
+  }
+
+  function handleDateChange(e: Event) {
+    const target = e.target as HTMLInputElement
+    setDate(target.value)
+  }
+
+  function handleSelectChange(e: Event) {
+    const target = e.target as HTMLSelectElement
+    setSelectedTemplateId(target.value)
   }
 
   return (
@@ -116,11 +125,11 @@ export function LogSession() {
         <div class="grid grid-2 mb">
           <div class="input-group">
             <label>Datum</label>
-            <input type="date" value={date} onChange={e => setDate(e.target.value)} />
+            <input type="date" value={date} onChange={handleDateChange} />
           </div>
           <div class="input-group">
             <label>Mall</label>
-            <select value={selectedTemplateId} onChange={e => setSelectedTemplateId(e.target.value)}>
+            <select value={selectedTemplateId} onChange={handleSelectChange}>
               {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
           </div>
@@ -144,27 +153,27 @@ export function LogSession() {
                   <input
                     type="text"
                     value={ex.exerciseName}
-                    onChange={e => updateExercise(idx, 'exerciseName', e.target.value)}
+                    onChange={e => handleInputChange(e, idx, 'exerciseName')}
                     placeholder="Skriv övningsnamn..."
                     list="exercise-suggestions"
                   />
                   <datalist id="exercise-suggestions">
-                    {templates.flatMap(t => t.exercises).map(te => (
-                      <option key={te.exerciseId} value={''} />
+                    {allExercises.map(e => (
+                      <option key={e.id} value={e.name} />
                     ))}
                   </datalist>
                 </div>
                 <div class="input-group" style="margin: 0;">
                   <label>Set</label>
-                  <input type="number" min="1" max="20" value={ex.sets} onChange={e => updateExercise(idx, 'sets', parseInt(e.target.value) || 0)} />
+                  <input type="number" min="1" max="20" value={ex.sets} onChange={e => handleInputChange(e, idx, 'sets')} />
                 </div>
                 <div class="input-group" style="margin: 0;">
                   <label>Reps</label>
-                  <input type="number" min="1" max="50" value={ex.reps} onChange={e => updateExercise(idx, 'reps', parseInt(e.target.value) || 0)} />
+                  <input type="number" min="1" max="50" value={ex.reps} onChange={e => handleInputChange(e, idx, 'reps')} />
                 </div>
                 <div class="input-group" style="margin: 0;">
                   <label>Vikt (kg)</label>
-                  <input type="number" min="0" step="0.5" max="500" value={ex.weight} onChange={e => updateExercise(idx, 'weight', parseFloat(e.target.value) || 0)} />
+                  <input type="number" min="0" step="0.5" max="500" value={ex.weight} onChange={e => handleInputChange(e, idx, 'weight')} />
                 </div>
                 <div style="margin: 0;">
                   <button class="btn btn-danger btn-sm" onClick={() => removeExercise(idx)} style="height: 100%;">Ta bort</button>

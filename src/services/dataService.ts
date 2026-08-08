@@ -92,7 +92,7 @@ export async function searchExercises(query: string): Promise<Exercise[]> {
 export async function getAllSessions(): Promise<Session[]> {
   const db = await getDB()
   const sessions = await db.getAllFromIndex('sessions', 'by-date')
-  return sessions.sort((a, b) => b.date.localeCompare(a.date))
+  return sessions.sort((a: Session, b: Session) => b.date.localeCompare(a.date))
 }
 
 export async function getSession(id: string): Promise<Session | undefined> {
@@ -122,7 +122,6 @@ export async function createSession(
   }
   await db.put('sessions', session)
 
-  // Update exercise history (denormalized)
   const history: ExerciseHistory[] = exercises.map(e => ({
     id: generateId(),
     date,
@@ -140,7 +139,6 @@ export async function createSession(
   }
   await tx.done
 
-  // Update template last used values
   for (const e of exercises) {
     await updateTemplateExerciseLastUsed(templateId, e.exerciseId, e.sets, e.reps, e.weight)
   }
@@ -161,7 +159,6 @@ export async function deleteSession(id: string): Promise<void> {
   const db = await getDB()
   const session = await db.get('sessions', id)
   if (session) {
-    // Delete history entries
     const history = await db.getAllFromIndex('exerciseHistory', 'by-session', id)
     const tx = db.transaction('exerciseHistory', 'readwrite')
     for (const h of history) {
@@ -181,7 +178,7 @@ export async function getLatestSessionDate(): Promise<string | null> {
 export async function getExerciseHistory(exerciseId: string): Promise<ExerciseHistory[]> {
   const db = await getDB()
   const history = await db.getAllFromIndex('exerciseHistory', 'by-exercise', exerciseId)
-  return history.sort((a, b) => a.date.localeCompare(b.date))
+  return history.sort((a: ExerciseHistory, b: ExerciseHistory) => a.date.localeCompare(b.date))
 }
 
 export async function getVolumeOverTime(exerciseId: string): Promise<{ date: string; volume: number }[]> {
@@ -292,4 +289,16 @@ export async function exportSessionsCSV(): Promise<string> {
     }
   }
   return rows.join('\n')
+}
+
+export async function clearAllData(): Promise<void> {
+  const db = await getDB()
+  const tx = db.transaction(['templates', 'exercises', 'sessions', 'exerciseHistory'], 'readwrite')
+  await Promise.all([
+    tx.objectStore('templates').clear(),
+    tx.objectStore('exercises').clear(),
+    tx.objectStore('sessions').clear(),
+    tx.objectStore('exerciseHistory').clear()
+  ])
+  await tx.done
 }

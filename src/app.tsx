@@ -1,6 +1,7 @@
-import { Router } from 'preact-router'
+/// <reference types="vite-plugin-pwa/client" />
+
+import { Router, Link, Switch, Route, useLocation } from 'wouter'
 import { useEffect } from 'preact/hooks'
-import { registerSW } from 'virtual:pwa-register'
 import { checkReminder } from './services/reminderService'
 import { Home } from './pages/Home'
 import { LogSession } from './pages/LogSession'
@@ -9,7 +10,26 @@ import { Stats } from './pages/Stats'
 import { Settings } from './pages/Settings'
 import './app.css'
 
-registerSW({ onNeedRefresh: () => true, onOfflineReady: () => {} })
+function NavLink({ href, children }: { href: string; children: string }) {
+  const [location] = useLocation()
+  return (
+    <Link href={href} style={{ textDecoration: 'none' }}>
+      <a
+        style={{
+          color: location === href ? 'white' : 'var(--text)',
+          background: location === href ? 'var(--primary)' : 'transparent',
+          padding: '8px 12px',
+          borderRadius: 'var(--radius-sm)',
+          fontWeight: 500,
+          transition: 'all 0.2s'
+        }}
+        href={href}
+      >
+        {children}
+      </a>
+    </Link>
+  )
+}
 
 export function App() {
   useEffect(() => {
@@ -21,26 +41,28 @@ export function App() {
   }, [])
 
   return (
-    <div class="app">
-      <header class="header">
-        <h1>Beefcake</h1>
-        <nav>
-          <a href="/">Hem</a>
-          <a href="/log">Logga pass</a>
-          <a href="/templates">Mallar</a>
-          <a href="/stats">Statistik</a>
-          <a href="/settings">Inställningar</a>
-        </nav>
-      </header>
-      <main class="main">
-        <Router>
-          <Home path="/" />
-          <LogSession path="/log" />
-          <Templates path="/templates" />
-          <Stats path="/stats" />
-          <Settings path="/settings" />
-        </Router>
-      </main>
-    </div>
+    <Router>
+      <div class="app">
+        <header class="header">
+          <h1>Beefcake</h1>
+          <nav>
+            <NavLink href="/">Hem</NavLink>
+            <NavLink href="/log">Logga pass</NavLink>
+            <NavLink href="/templates">Mallar</NavLink>
+            <NavLink href="/stats">Statistik</NavLink>
+            <NavLink href="/settings">Inställningar</NavLink>
+          </nav>
+        </header>
+        <main class="main">
+          <Switch>
+            <Route path="/" component={Home} />
+            <Route path="/log" component={LogSession} />
+            <Route path="/templates" component={Templates} />
+            <Route path="/stats" component={Stats} />
+            <Route path="/settings" component={Settings} />
+          </Switch>
+        </main>
+      </div>
+    </Router>
   )
 }

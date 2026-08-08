@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'preact/hooks'
-import { getAllTemplates, getAllExercises, createTemplate, updateTemplate, deleteTemplate, updateTemplateExerciseLastUsed } from '../services/dataService'
-import type { Template, TemplateExercise, Exercise } from '../models'
+import { getAllTemplates, getAllExercises, createTemplate, updateTemplate, deleteTemplate, getOrCreateExercise } from '../services/dataService'
+import type { Template, Exercise } from '../models'
 
 interface FormExercise {
   exerciseId: string
@@ -12,11 +12,11 @@ interface FormExercise {
 
 export function Templates() {
   const [templates, setTemplates] = useState<Template[]>([])
+  const [allExercises, setAllExercises] = useState<Exercise[]>([])
   const [editingId, setEditingId] = useState<string | null>(null)
   const [formName, setFormName] = useState('')
   const [formExercises, setFormExercises] = useState<FormExercise[]>([])
   const [showForm, setShowForm] = useState(false)
-  const [allExercises, setAllExercises] = useState<Exercise[]>([])
 
   useEffect(() => {
     loadData()
@@ -31,18 +31,16 @@ export function Templates() {
   function startEdit(template: Template) {
     setEditingId(template.id)
     setFormName(template.name)
-    const exercises = await Promise.all(
-      template.exercises.map(async te => {
-        const ex = allExercises.find(e => e.id === te.exerciseId)
-        return {
-          exerciseId: te.exerciseId,
-          exerciseName: ex?.name || '',
-          defaultSets: te.defaultSets,
-          defaultReps: te.defaultReps,
-          defaultWeight: te.defaultWeight
-        }
-      })
-    )
+    const exercises: FormExercise[] = template.exercises.map(te => {
+      const ex = allExercises.find(e => e.id === te.exerciseId)
+      return {
+        exerciseId: te.exerciseId,
+        exerciseName: ex?.name || '',
+        defaultSets: te.defaultSets,
+        defaultReps: te.defaultReps,
+        defaultWeight: te.defaultWeight
+      }
+    })
     setFormExercises(exercises)
     setShowForm(true)
   }
@@ -62,9 +60,8 @@ export function Templates() {
   async function handleSave() {
     if (!formName.trim() || formExercises.length === 0) return
 
-    // Ensure exercises exist in catalog
     const validExercises = await Promise.all(
-      formExercises.map(async fe => {
+      formExercises.map(async (fe, i) => {
         let exerciseId = fe.exerciseId
         if (!exerciseId || exerciseId.startsWith('new-')) {
           const ex = await getOrCreateExercise(fe.exerciseName)
@@ -74,7 +71,8 @@ export function Templates() {
           exerciseId,
           defaultSets: fe.defaultSets,
           defaultReps: fe.defaultReps,
-          defaultWeight: fe.defaultWeight
+          defaultWeight: fe.defaultWeight,
+          order: i
         }
       })
     )
@@ -108,6 +106,17 @@ export function Templates() {
     setFormExercises(formExercises.filter((_, i) => i !== idx))
   }
 
+  function handleInputChange(e: Event, idx: number, field: keyof FormExercise) {
+    const target = e.target as HTMLInputElement
+    const value = target.type === 'number' ? (parseFloat(target.value) || 0) : target.value
+    updateFormExercise(idx, field, value)
+  }
+
+  function handleNameChange(e: Event) {
+    const target = e.target as HTMLInputElement
+    setFormName(target.value)
+  }
+
   return (
     <div>
       <div class="flex justify-between items-center mb">
@@ -121,7 +130,7 @@ export function Templates() {
 
           <div class="input-group mb">
             <label>Mallnamn</label>
-            <input type="text" value={formName} onChange={e => setFormName(e.target.value)} placeholder="T.ex. Bröst, axlar & biceps" />
+            <input type="text" value={formName} onChange={handleNameChange} placeholder="T.ex. Bröst, axlar & biceps" />
           </div>
 
           <h4 class="mb-sm">Övningar</h4>
@@ -132,7 +141,7 @@ export function Templates() {
                 <input
                   type="text"
                   value={fe.exerciseName}
-                  onChange={e => updateFormExercise(idx, 'exerciseName', e.target.value)}
+                  onChange={e => handleInputChange(e, idx, 'exerciseName')}
                   placeholder="Skriv övningsnamn..."
                   list="template-exercise-suggestions"
                 />
@@ -142,15 +151,15 @@ export function Templates() {
               </div>
               <div class="input-group" style="margin: 0;">
                 <label>Set</label>
-                <input type="number" min="1" max="20" value={fe.defaultSets} onChange={e => updateFormExercise(idx, 'defaultSets', parseInt(e.target.value) || 0)} />
+                <input type="number" min="1" max="20" value={fe.defaultSets} onChange={e => handleInputChange(e, idx, 'defaultSets')} />
               </div>
               <div class="input-group" style="margin: 0;">
                 <label>Reps</label>
-                <input type="number" min="1" max="50" value={fe.defaultReps} onChange={e => updateFormExercise(idx, 'defaultReps', parseInt(e.target.value) || 0)} />
+                <input type="number" min="1" max="50" value={fe.defaultReps} onChange={e => handleInputChange(e, idx, 'defaultReps')} />
               </div>
               <div class="input-group" style="margin: 0;">
                 <label>Vikt (kg)</label>
-                <input type="number" min="0" step="0.5" max="500" value={fe.defaultWeight} onChange={e => updateFormExercise(idx, 'defaultWeight', parseFloat(e.target.value) || 0)} />
+                <input type="number" min="0" step="0.5" max="500" value={fe.defaultWeight} onChange={e => handleInputChange(e, idx, 'defaultWeight')} />
               </div>
               <div style="margin: 0;">
                 <button class="btn btn-danger btn-sm" onClick={() => removeFormExercise(idx)} style="height: 100%;">Ta bort</button>
@@ -205,10 +214,4 @@ export function Templates() {
       </div>
     </div>
   )
-}
-
-// Helper - need to import from dataService
-async function getOrCreateExercise(name: string) {
-  const { getOrCreateExercise: fn } = await import('../services/dataService')
-  return fn(name)
 }

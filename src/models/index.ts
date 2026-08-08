@@ -6,6 +6,6 @@ export type {
   Session,
   ExerciseHistory,
   BeefcakeDB
-} from './schema'
+} from '../db/schema'
 
-export { getDB, generateId, nowISO, todayISO } from './schema'
+export { getDB, generateId, nowISO, todayISO } from '../db/schema'

@@ -27,6 +27,12 @@ export function Settings() {
     URL.revokeObjectURL(url)
   }
 
+  function handleFileImport(e: Event) {
+    const target = e.target as HTMLInputElement
+    const file = target.files?.[0]
+    if (file) handleImportJSON(file)
+  }
+
   async function handleImportJSON(file: File) {
     if (!confirm('Detta kommer att ersätta ALL data. Är du säker?')) return
     setImporting(true)
@@ -41,6 +47,12 @@ export function Settings() {
     } finally {
       setImporting(false)
     }
+  }
+
+  function handleFileMigrate(e: Event) {
+    const target = e.target as HTMLInputElement
+    const file = target.files?.[0]
+    if (file) handleMigrateExcel(file)
   }
 
   async function handleMigrateExcel(file: File) {
@@ -59,7 +71,8 @@ export function Settings() {
 
   async function handleClearAll() {
     if (!confirm('VARNING: Detta raderar ALL data permanent. Är du helt säker?')) return
-    if (!prompt('Skriv "RADERA" för att bekräfta:') === 'RADERA') return
+    const confirmText = prompt('Skriv "RADERA" för att bekräfta:')
+    if (confirmText !== 'RADERA') return
     await clearAllData()
     alert('All data raderad. Laddar om...')
     window.location.reload()
@@ -77,7 +90,7 @@ export function Settings() {
         <input
           type="file"
           accept=".xlsx,.xlsb"
-          onChange={e => e.target.files?.[0] && handleMigrateExcel(e.target.files[0])}
+          onChange={handleFileMigrate}
           disabled={migrating}
         />
         {migrating && <p>Migrerar...</p>}
@@ -95,7 +108,7 @@ export function Settings() {
           <input
             type="file"
             accept=".json"
-            onChange={e => e.target.files?.[0] && handleImportJSON(e.target.files[0])}
+            onChange={handleFileImport}
             disabled={importing}
           />
         </div>
