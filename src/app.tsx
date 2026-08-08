@@ -1,7 +1,8 @@
 /// <reference types="vite-plugin-pwa/client" />
 
-import { Router, Link, Switch, Route, useLocation } from 'wouter'
+import { Router, Link, Switch, Route, useLocation as useWouterLocation } from 'wouter'
 import { useEffect } from 'preact/hooks'
+import { PasswordGate } from './components/PasswordGate'
 import { checkReminder } from './services/reminderService'
 import { Home } from './pages/Home'
 import { LogSession } from './pages/LogSession'
@@ -10,8 +11,20 @@ import { Stats } from './pages/Stats'
 import { Settings } from './pages/Settings'
 import './app.css'
 
+const BASE_PATH = '/beefcake'
+
+function useBeefcakeLocation() {
+  const [path, navigate] = useWouterLocation()
+  const realPath = path.startsWith(BASE_PATH) ? path.slice(BASE_PATH.length) : path
+  const realNavigate = (to: string, options?: { replace?: boolean }) => {
+    const fullPath = BASE_PATH + (to.startsWith('/') ? to : `/${to}`)
+    return navigate(fullPath, options)
+  }
+  return [realPath, realNavigate] as [string, typeof navigate]
+}
+
 function NavLink({ href, children }: { href: string; children: string }) {
-  const [location] = useLocation()
+  const [location] = useBeefcakeLocation()
   const isActive = location === href
   return (
     <Link
@@ -23,7 +36,7 @@ function NavLink({ href, children }: { href: string; children: string }) {
   )
 }
 
-export function App() {
+function AppContent() {
   useEffect(() => {
     checkReminder().then(res => {
       if (res?.show) {
@@ -33,7 +46,7 @@ export function App() {
   }, [])
 
   return (
-    <Router>
+    <Router hook={useBeefcakeLocation}>
       <div class="app">
         <header class="header">
           <h1>Beefcake</h1>
@@ -56,5 +69,13 @@ export function App() {
         </main>
       </div>
     </Router>
+  )
+}
+
+export function App() {
+  return (
+    <PasswordGate>
+      <AppContent />
+    </PasswordGate>
   )
 }

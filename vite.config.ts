@@ -3,6 +3,7 @@ import preact from '@preact/preset-vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  base: '/beefcake/',
   plugins: [
     preact(),
     VitePWA({
@@ -16,8 +17,8 @@ export default defineConfig({
         background_color: '#16213e',
         display: 'standalone',
         orientation: 'portrait-primary',
-        scope: '/',
-        start_url: '/',
+        scope: '/beefcake/',
+        start_url: '/beefcake/',
         icons: [
           {
             src: 'pwa-192x192.png',

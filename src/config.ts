@@ -1,0 +1,2 @@
+export const AUTH_HASH = 'd277670919a94ba361be1887d39852c3f31d7eed817343cbb70fcd8910841f86'
+export const AUTH_KEY = 'beefcake-auth'
