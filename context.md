@@ -15,7 +15,15 @@ Träningsapp (PWA) som ersätter Excel-ark för styrketräning. Desktop-first, m
 3. Statistik: volym/övning över tid, frekvens per template, heatmap, PR-lista
 4. Påminnelse: lokal check vid app-start om >3 dagar sedan senaste pass
 5. Export/import: JSON (hela DB) + CSV (platt sessionslista)
-6. Migration: engångsimport från `Styrkepass v2.xlsx`
+6. Migration: seed genererad ur `C:\dev\Styrkepass v2.xlsx` vid byggtid, laddas av `seedIfEmpty()`
+
+## Status
+
+Se `AUDIT.md` för full genomlysning och prioriterad roadmap, `backlog.md` för snabböversikt och `MISTRAL-WORKPLAN.md` för färdiga arbetsuppgifter.
+
+Två saker att känna till innan man rör datan:
+- Excel-import i webbläsaren är borttagen (commit `410efd1`). Seedning sker med skript vid byggtid, aldrig i klienten.
+- `seedIfEmpty()` kör bara mot tom databas. Uppdateringar av datan måste ske som idempotent upsert på naturlig nyckel, inte som ny seed.
 
 ## Tech Stack
 - Vite + Preact + TypeScript
