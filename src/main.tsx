@@ -1,8 +1,12 @@
 import { render } from 'preact'
-import './index.css'
 import { App } from './app.tsx'
-import { seedIfEmpty } from './services/dataService'
+import { syncSeed } from './services/dataService'
 
-seedIfEmpty()
+syncSeed()
+  .then(({ sessionsAdded, exercisesAdded }) => {
+    if (sessionsAdded || exercisesAdded) {
+      console.info(`Seed: +${sessionsAdded} pass, +${exercisesAdded} övningar`)
+    }
+  })
   .catch(err => console.error('Seed misslyckades:', err))
   .finally(() => render(<App />, document.getElementById('app')!))

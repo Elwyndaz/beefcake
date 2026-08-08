@@ -271,19 +271,103 @@ export async function importAllData(json: string): Promise<void> {
   await tx.done
 }
 
-export async function seedIfEmpty(): Promise<boolean> {
-  const db = await getDB()
-  const existing = await db.count('sessions')
-  if (existing > 0) return false
+/** Övningsnamn jämförs skiftlägesokänsligt, så "Hantelrodd" och "hantelrodd"
+ *  blir samma övning istället för att splittra historiken på två poster. */
+function exerciseKey(name: string): string {
+  return name.trim().toLowerCase()
+}
 
-  const { seedTemplates, seedExercises, seedSessions, seedHistory } = await import('../db/seedData')
+/** Ett pass identifieras av datum och passnamn. Den nyckeln är stabil över
+ *  omgenereringar av seed-datan; id:n är det inte, eftersom en ny övning i
+ *  källan numrerar om hela sekvensen. */
+function sessionKey(date: string, templateName: string): string {
+  return `${date} ${templateName}`
+}
+
+/**
+ * Lägger till det som saknas ur seed-datan. Additiv: skriver aldrig över och
+ * raderar aldrig något som redan finns, så egna ändringar i appen och
+ * historiska pass överlever varje körning. Idempotent, kan köras vid varje
+ * appstart.
+ */
+export async function syncSeed(): Promise<{ sessionsAdded: number; exercisesAdded: number }> {
+  const db = await getDB()
+  const { seedTemplates, seedExercises, seedSessions } = await import('../db/seedData')
+
+  const [existingExercises, existingTemplates, existingSessions] = await Promise.all([
+    db.getAll('exercises'),
+    db.getAll('templates'),
+    db.getAll('sessions')
+  ])
+
+  const exerciseIdByName = new Map(existingExercises.map(e => [exerciseKey(e.name), e.id]))
+  const templateIdByName = new Map(existingTemplates.map(t => [exerciseKey(t.name), t.id]))
+  const haveSession = new Set(existingSessions.map(s => sessionKey(s.date, s.templateName)))
+  const seedNameById = new Map(seedExercises.map(e => [e.id, e.name]))
+
+  const newExercises: Exercise[] = []
+  for (const e of seedExercises) {
+    if (exerciseIdByName.has(exerciseKey(e.name))) continue
+    exerciseIdByName.set(exerciseKey(e.name), e.id)
+    newExercises.push(e)
+  }
+
+  const newTemplates: Template[] = []
+  for (const t of seedTemplates) {
+    if (templateIdByName.has(exerciseKey(t.name))) continue
+    templateIdByName.set(exerciseKey(t.name), t.id)
+    newTemplates.push({
+      ...t,
+      // Mallens övningar pekar på seed-id:n. Peka om dem till de id:n databasen
+      // faktiskt använder, annars blir mallen tom i gränssnittet.
+      exercises: t.exercises.map(te => ({
+        ...te,
+        exerciseId:
+          exerciseIdByName.get(exerciseKey(seedNameById.get(te.exerciseId) ?? '')) ?? te.exerciseId
+      }))
+    })
+  }
+
+  const newSessions: Session[] = []
+  const newHistory: ExerciseHistory[] = []
+  for (const s of seedSessions) {
+    if (haveSession.has(sessionKey(s.date, s.templateName))) continue
+    const exercises = s.exercises.map(e => ({
+      ...e,
+      exerciseId: exerciseIdByName.get(exerciseKey(e.exerciseName)) ?? e.exerciseId
+    }))
+    newSessions.push({
+      ...s,
+      templateId: templateIdByName.get(exerciseKey(s.templateName)) ?? s.templateId,
+      exercises
+    })
+    for (const e of exercises) {
+      newHistory.push({
+        id: `${s.id}-${e.order}`,
+        date: s.date,
+        exerciseId: e.exerciseId,
+        exerciseName: e.exerciseName,
+        sets: e.sets,
+        reps: e.reps,
+        weight: e.weight,
+        volume: e.sets * e.reps * e.weight,
+        sessionId: s.id
+      })
+    }
+  }
+
+  if (!newExercises.length && !newTemplates.length && !newSessions.length) {
+    return { sessionsAdded: 0, exercisesAdded: 0 }
+  }
+
   const tx = db.transaction(['templates', 'exercises', 'sessions', 'exerciseHistory'], 'readwrite')
-  for (const t of seedTemplates) await tx.objectStore('templates').put(t)
-  for (const e of seedExercises) await tx.objectStore('exercises').put(e)
-  for (const s of seedSessions) await tx.objectStore('sessions').put(s)
-  for (const h of seedHistory) await tx.objectStore('exerciseHistory').put(h)
+  for (const e of newExercises) await tx.objectStore('exercises').put(e)
+  for (const t of newTemplates) await tx.objectStore('templates').put(t)
+  for (const s of newSessions) await tx.objectStore('sessions').put(s)
+  for (const h of newHistory) await tx.objectStore('exerciseHistory').put(h)
   await tx.done
-  return true
+
+  return { sessionsAdded: newSessions.length, exercisesAdded: newExercises.length }
 }
 
 export async function exportSessionsCSV(): Promise<string> {
