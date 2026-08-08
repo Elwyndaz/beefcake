@@ -65,15 +65,15 @@ export function Home() {
       <div class="grid grid-3 mb">
         <div class="card">
           <h3>Totala pass</h3>
-          <p style="font-size: 2.5rem; font-weight: 700; color: var(--primary);">{totalSessions}</p>
+          <p class="text-3xl font-bold text-primary">{totalSessions}</p>
         </div>
         <div class="card">
           <h3>Mallar</h3>
-          <p style="font-size: 2.5rem; font-weight: 700; color: var(--primary);">{templateCount}</p>
+          <p class="text-3xl font-bold text-primary">{templateCount}</p>
         </div>
         <div class="card">
           <h3>Senaste pass</h3>
-          <p style="font-size: 1.5rem; font-weight: 600; color: var(--primary);">
+          <p class="text-2xl font-semibold text-primary">
             {lastWorkout ? formatDate(lastWorkout) : '—'}
           </p>
         </div>

@@ -96,13 +96,13 @@ function DeleteDialog({
     <div class="dialog-overlay" onClick={onClose}>
       <div class="dialog" onClick={e => e.stopPropagation()}>
         <div class="flex justify-between items-center mb">
-          <h3 style="margin: 0;">{title}</h3>
+          <h3 class="m-0">{title}</h3>
           <button class="banner-dismiss" onClick={onClose} aria-label="Stäng">
             <svg width="16" height="16" viewBox="0 0 19 19"><use href={icon('x-icon')} /></svg>
           </button>
         </div>
         <p>{message}</p>
-        <div class="flex gap mt" style="justify-content: flex-end;">
+        <div class="flex gap mt justify-end">
           <button class="btn btn-secondary" onClick={onClose}>Avbryt</button>
           <button class="btn btn-danger" onClick={onConfirm}>Radera</button>
         </div>
@@ -234,8 +234,8 @@ export function History() {
         <h1 class="page-title">Historik</h1>
         
         <div class="card mb">
-          <div class="grid grid-2" style="gap: 12px;">
-            <div class="input-group" style="margin: 0;">
+          <div class="grid grid-2 gap-3">
+            <div class="input-group m-0">
               <label>Passtyp</label>
               <select value={filters.template} onChange={handleTemplateChange}>
                 {templateOptions.map(t => (
@@ -243,7 +243,7 @@ export function History() {
                 ))}
               </select>
             </div>
-            <div class="input-group" style="margin: 0;">
+            <div class="input-group m-0">
               <label>Period</label>
               <select value={filters.period} onChange={handlePeriodChange}>
                 {Object.entries(periodLabels).map(([key, label]) => (
@@ -272,8 +272,8 @@ export function History() {
 
       {/* Filters */}
       <div class="card mb">
-        <div class="grid grid-2" style="gap: 12px;">
-          <div class="input-group" style="margin: 0;">
+        <div class="grid grid-2 gap-3">
+          <div class="input-group m-0">
             <label>Passtyp</label>
             <select value={filters.template} onChange={handleTemplateChange}>
               {templateOptions.map(t => (
@@ -281,7 +281,7 @@ export function History() {
               ))}
             </select>
           </div>
-          <div class="input-group" style="margin: 0;">
+          <div class="input-group m-0">
             <label>Period</label>
             <select value={filters.period} onChange={handlePeriodChange}>
               {Object.entries(periodLabels).map(([key, label]) => (
@@ -393,7 +393,7 @@ export function History() {
         {/* Load more */}
         {!allDisplayed && (
           <div class="mt">
-            <button class="btn btn-secondary" onClick={loadMore} style="width: 100%;">
+            <button class="btn btn-secondary btn-block" onClick={loadMore}>
               Visa fler ({filteredSessions.length - displayCount} kvar)
             </button>
           </div>

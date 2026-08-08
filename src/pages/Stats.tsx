@@ -249,14 +249,14 @@ export function Stats() {
               {exercises.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
             </select>
           </div>
-          <div style="height: 300px;">
+          <div class="h-300">
             <canvas ref={volumeCanvasRef} id="volume-chart"></canvas>
           </div>
         </div>
 
         <div class="card">
           <h3>Frekvens per pass</h3>
-          <div style="height: 300px;">
+          <div class="h-300">
             <canvas ref={frequencyCanvasRef} id="frequency-chart"></canvas>
           </div>
         </div>
@@ -275,7 +275,7 @@ export function Stats() {
               <p>Inga pass de senaste 30 dagarna.</p>
             </div>
           ) : (
-            <div style="height: 200px;">
+            <div class="h-200">
               <canvas ref={heatmapCanvasRef} id="heatmap-chart"></canvas>
             </div>
           )}
@@ -283,7 +283,7 @@ export function Stats() {
 
         <div class="card">
           <h3>Personliga rekord (PR)</h3>
-          <div class="table-wrap" style="max-height: 300px; overflow-y: auto;">
+          <div class="table-wrap max-h-300 overflow-y-auto">
             <table>
               <thead>
                 <tr>

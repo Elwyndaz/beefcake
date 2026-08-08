@@ -59,7 +59,7 @@ function DeleteDialog({
     <div class="dialog-overlay" onClick={onClose}>
       <div class="dialog" onClick={e => e.stopPropagation()}>
         <div class="flex justify-between items-center mb">
-          <h3 style="margin: 0;">Radera pass</h3>
+          <h3 class="m-0">Radera pass</h3>
           <button class="banner-dismiss" onClick={onClose} aria-label="Stäng">
             <svg width="16" height="16" viewBox="0 0 19 19"><use href={icon('x-icon')} /></svg>
           </button>
@@ -69,7 +69,7 @@ function DeleteDialog({
           <br />
           Det går inte att ångra.
         </p>
-        <div class="flex gap mt" style="justify-content: flex-end;">
+        <div class="flex gap mt justify-end">
           <button class="btn btn-secondary" onClick={onClose}>Avbryt</button>
           <button class="btn btn-danger" onClick={onConfirm}>Radera</button>
         </div>
@@ -357,8 +357,8 @@ export function SessionDetail() {
         <div class="card mb">
           <div class="flex justify-between items-center mb">
             <div>
-              <h2 style="margin: 0 0 4px 0;">{session.templateName}</h2>
-              <p style="margin: 0; color: var(--text-muted);">{formatDateFull(session.date)}</p>
+              <h2 class="mb-1">{session.templateName}</h2>
+              <p class="m-0 text-muted">{formatDateFull(session.date)}</p>
             </div>
             <div class="flex gap-sm">
               <button class="btn btn-primary btn-sm" onClick={handleRunAgain}>Kör igen</button>
@@ -395,14 +395,14 @@ export function SessionDetail() {
                 </tbody>
                 <tfoot>
                   <tr>
-                    <td colSpan={4} style="text-align: right; font-weight: 600;">Total:</td>
-                    <td class="tabular-nums" style="font-weight: 600;">{calculateTotalVolume(session.exercises).toLocaleString('sv-SE')} kg</td>
+                    <td colSpan={4} class="text-right font-semibold">Total:</td>
+                    <td class="tabular-nums font-semibold">{calculateTotalVolume(session.exercises).toLocaleString('sv-SE')} kg</td>
                   </tr>
                 </tfoot>
               </table>
             </div>
           </div>
-          <p class="mt-sm" style="text-align: right; color: var(--text-muted);">
+          <p class="mt-sm text-right text-muted">
             <a href="/history" class="btn btn-secondary btn-sm">Tillbaka till historik</a>
           </p>
         </div>
@@ -429,7 +429,7 @@ export function SessionDetail() {
 
       <div class="card mb">
         <div class="flex justify-between items-center mb">
-          <h2 style="margin: 0;">{session.templateName}</h2>
+          <h2 class="m-0">{session.templateName}</h2>
           <div class="flex gap-sm">
             <button class="btn btn-secondary btn-sm" onClick={cancelEdit}>Avbryt</button>
             <button 

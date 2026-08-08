@@ -78,7 +78,7 @@ export function Settings() {
 
       <div class="card mb">
         <h3>Data</h3>
-        <p class="mb" style="color: var(--text-muted);">
+        <p class="mb text-muted">
           All data lagras lokalt i din webbläsare (IndexedDB). Inget skickas till server.
         </p>
         <button class="btn btn-danger" onClick={handleClearAll}>Radera ALL data</button>
@@ -87,7 +87,7 @@ export function Settings() {
       <div class="card">
         <h3>Om</h3>
         <p>Beefcake — Träningslogg för styrketräning</p>
-        <p style="font-size: 0.9rem; color: var(--text-muted);">
+        <p class="text-sm text-muted">
           Byggd med Preact, TypeScript, IndexedDB, Chart.js, Workbox PWA.
         </p>
       </div>

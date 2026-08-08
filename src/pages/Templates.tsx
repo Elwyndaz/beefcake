@@ -120,7 +120,7 @@ export function Templates() {
   return (
     <div>
       <div class="flex justify-between items-center mb">
-        <h1 class="page-title" style="margin: 0;">Mallar</h1>
+        <h1 class="page-title m-0">Mallar</h1>
         <button class="btn btn-primary" onClick={startCreate}>+ Ny mall</button>
       </div>
 
@@ -135,8 +135,8 @@ export function Templates() {
 
           <h4 class="mb-sm">Övningar</h4>
           {formExercises.map((fe, idx) => (
-            <div key={idx} class="grid grid-4 mb" style="align-items: end; gap: 12px;">
-              <div class="input-group" style="margin: 0; flex: 2;">
+            <div key={idx} class="grid grid-4 mb items-end gap-3">
+              <div class="input-group m-0 flex-2">
                 <label>Övning</label>
                 <input
                   type="text"
@@ -149,20 +149,20 @@ export function Templates() {
                   {allExercises.map(e => <option key={e.id} value={e.name} />)}
                 </datalist>
               </div>
-              <div class="input-group" style="margin: 0;">
+              <div class="input-group m-0">
                 <label>Set</label>
                 <input type="number" min="1" max="20" value={fe.defaultSets} onChange={e => handleInputChange(e, idx, 'defaultSets')} />
               </div>
-              <div class="input-group" style="margin: 0;">
+              <div class="input-group m-0">
                 <label>Reps</label>
                 <input type="number" min="1" max="50" value={fe.defaultReps} onChange={e => handleInputChange(e, idx, 'defaultReps')} />
               </div>
-              <div class="input-group" style="margin: 0;">
+              <div class="input-group m-0">
                 <label>Vikt (kg)</label>
                 <input type="number" min="0" step="0.5" max="500" value={fe.defaultWeight} onChange={e => handleInputChange(e, idx, 'defaultWeight')} />
               </div>
-              <div style="margin: 0;">
-                <button class="btn btn-danger btn-sm" onClick={() => removeFormExercise(idx)} style="height: 100%;">Ta bort</button>
+              <div class="m-0">
+                <button class="btn btn-danger btn-sm h-full" onClick={() => removeFormExercise(idx)}>Ta bort</button>
               </div>
             </div>
           ))}

@@ -42,25 +42,10 @@ export function PasswordGate({ children }: Props) {
   }
 
   return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      minHeight: '100vh',
-      background: 'var(--bg)',
-      color: 'var(--text)',
-      fontFamily: 'system-ui, sans-serif'
-    }}>
-      <form onSubmit={handleSubmit} style={{
-        background: 'var(--card)',
-        padding: '2rem',
-        borderRadius: 'var(--radius)',
-        boxShadow: '0 4px 24px rgba(0,0,0,0.15)',
-        width: '320px',
-        textAlign: 'center'
-      }}>
-        <h1 style={{ marginBottom: '0.25rem' }}>Beefcake</h1>
-        <p style={{ color: 'var(--text-muted)', marginTop: 0, marginBottom: '1.5rem' }}>
+    <div class="password-gate-container">
+      <form onSubmit={handleSubmit} class="password-gate-form">
+        <h1 class="password-gate-title">Beefcake</h1>
+        <p class="password-gate-subtitle">
           Träningslogg
         </p>
         <input
@@ -72,27 +57,16 @@ export function PasswordGate({ children }: Props) {
           }}
           placeholder="Lösenord"
           autoFocus
-          style={{
-            width: '100%',
-            padding: '0.65rem 0.75rem',
-            border: error ? '2px solid var(--danger)' : '1px solid var(--border)',
-            borderRadius: 'var(--radius-sm)',
-            background: 'var(--bg)',
-            color: 'var(--text)',
-            fontSize: '1rem',
-            marginBottom: '1rem',
-            boxSizing: 'border-box' as const
-          }}
+          class={error ? 'password-input password-input-error' : 'password-input'}
         />
         {error && (
-          <p style={{ color: 'var(--danger)', margin: '0 0 1rem', fontSize: '0.85rem' }}>
+          <p class="password-error">
             Fel lösenord.
           </p>
         )}
         <button
           type="submit"
-          class="btn btn-primary"
-          style={{ width: '100%' }}
+          class="btn btn-primary btn-block"
         >
           Logga in
         </button>
