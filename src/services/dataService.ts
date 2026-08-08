@@ -150,8 +150,30 @@ export async function updateSession(id: string, updates: Partial<Session>): Prom
   const db = await getDB()
   const existing = await db.get('sessions', id)
   if (!existing) throw new Error(`Session ${id} not found`)
-  const updated = { ...existing, ...updates }
-  await db.put('sessions', updated)
+  const updated = { ...existing, ...updates, id }
+
+  // exerciseHistory är en denormaliserad kopia av passets övningar och är det
+  // statistiken läser. Skrivs bara passet blir graferna tyst fel. Bygg om
+  // passets historikrader i samma transaktion som passet självt.
+  const history: ExerciseHistory[] = updated.exercises.map((e, i) => ({
+    id: `${id}-${i}`,
+    date: updated.date,
+    exerciseId: e.exerciseId,
+    exerciseName: e.exerciseName,
+    sets: e.sets,
+    reps: e.reps,
+    weight: e.weight,
+    volume: e.sets * e.reps * e.weight,
+    sessionId: id
+  }))
+
+  const stale = await db.getAllFromIndex('exerciseHistory', 'by-session', id)
+  const tx = db.transaction(['sessions', 'exerciseHistory'], 'readwrite')
+  for (const h of stale) await tx.objectStore('exerciseHistory').delete(h.id)
+  for (const h of history) await tx.objectStore('exerciseHistory').put(h)
+  await tx.objectStore('sessions').put(updated)
+  await tx.done
+
   return updated
 }
 
