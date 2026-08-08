@@ -1,10 +1,7 @@
 import { useState } from 'preact/hooks'
 import { exportAllData, importAllData, exportSessionsCSV, clearAllData } from '../services/dataService'
-import { migrateFromExcel } from '../db/migrateFromExcel'
 
 export function Settings() {
-  const [migrating, setMigrating] = useState(false)
-  const [migrateResult, setMigrateResult] = useState<string>('')
   const [importing, setImporting] = useState(false)
 
   async function handleExportJSON() {
@@ -49,26 +46,6 @@ export function Settings() {
     }
   }
 
-  function handleFileMigrate(e: Event) {
-    const target = e.target as HTMLInputElement
-    const file = target.files?.[0]
-    if (file) handleMigrateExcel(file)
-  }
-
-  async function handleMigrateExcel(file: File) {
-    setMigrating(true)
-    setMigrateResult('')
-    try {
-      const result = await migrateFromExcel(file)
-      setMigrateResult(`Klart! Mallar: ${result.templates}, Övningar: ${result.exercises}, Pass: ${result.sessions}, Historikrader: ${result.history}`)
-    } catch (err) {
-      console.error(err)
-      setMigrateResult('Fel: ' + (err as Error).message)
-    } finally {
-      setMigrating(false)
-    }
-  }
-
   async function handleClearAll() {
     if (!confirm('VARNING: Detta raderar ALL data permanent. Är du helt säker?')) return
     const confirmText = prompt('Skriv "RADERA" för att bekräfta:')
@@ -81,21 +58,6 @@ export function Settings() {
   return (
     <div>
       <h1 class="page-title">Inställningar</h1>
-
-      <div class="card mb">
-        <h3>Migration från Excel</h3>
-        <p class="mb" style="color: var(--text-muted);">
-          Importera ditt befintliga <code>Styrkepass v2.xlsx</code> en gång för att komma igång.
-        </p>
-        <input
-          type="file"
-          accept=".xlsx,.xlsb"
-          onChange={handleFileMigrate}
-          disabled={migrating}
-        />
-        {migrating && <p>Migrerar...</p>}
-        {migrateResult && <p class="mt" style="color: var(--accent);">{migrateResult}</p>}
-      </div>
 
       <div class="card mb">
         <h3>Export / Import</h3>

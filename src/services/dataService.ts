@@ -271,6 +271,21 @@ export async function importAllData(json: string): Promise<void> {
   await tx.done
 }
 
+export async function seedIfEmpty(): Promise<boolean> {
+  const db = await getDB()
+  const existing = await db.count('sessions')
+  if (existing > 0) return false
+
+  const { seedTemplates, seedExercises, seedSessions, seedHistory } = await import('../db/seedData')
+  const tx = db.transaction(['templates', 'exercises', 'sessions', 'exerciseHistory'], 'readwrite')
+  for (const t of seedTemplates) await tx.objectStore('templates').put(t)
+  for (const e of seedExercises) await tx.objectStore('exercises').put(e)
+  for (const s of seedSessions) await tx.objectStore('sessions').put(s)
+  for (const h of seedHistory) await tx.objectStore('exerciseHistory').put(h)
+  await tx.done
+  return true
+}
+
 export async function exportSessionsCSV(): Promise<string> {
   const sessions = await getAllSessions()
   const headers = ['Datum', 'Pass', 'Övning', 'Set', 'Reps', 'Vikt (kg)', 'Volym']
