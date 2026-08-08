@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'preact/hooks'
+import { useLocation } from 'wouter'
 import { getAllSessions, getLatestSessionDate, getAllTemplates } from '../services/dataService'
 import { checkReminder } from '../services/reminderService'
 import { icon } from '../icons'
 import type { Session } from '../models'
 
 export function Home() {
+  const [, navigate] = useLocation()
   const [recentSessions, setRecentSessions] = useState<Session[]>([])
   const [templateCount, setTemplateCount] = useState(0)
   const [totalSessions, setTotalSessions] = useState(0)
@@ -102,7 +104,11 @@ export function Home() {
               </thead>
               <tbody>
                 {recentSessions.map((session) => (
-                  <tr key={session.id}>
+                  <tr 
+                    key={session.id} 
+                    onClick={() => navigate(`/history/${session.id}`)}
+                    class="history-row"
+                  >
                     <td>{formatDate(session.date)}</td>
                     <td><span class="badge badge-primary">{session.templateName}</span></td>
                     <td>{session.exercises.length}</td>

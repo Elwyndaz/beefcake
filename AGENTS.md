@@ -43,6 +43,12 @@ ExerciseHistory  { id, date, exerciseId, exerciseName, sets, reps, weight, volum
 
 Modellen har en känd begränsning: ett `sets`, ett `reps`, ett `weight` per övning. Den klarar inte olika vikt per set, kroppsvikt, kondition eller RIR. Se `AUDIT.md` avsnitt 8. Bygg inget som gör den svårare att byta.
 
+## Rutter
+
+`/` Hem · `/log` Logga pass (stödjer `?from=<sessionId>` för att förifylla från ett tidigare pass) · `/templates` Mallar · `/history` Historik · `/history/:id` Passdetaljer med redigera, radera, kör igen · `/stats` Statistik · `/settings` Inställningar.
+
+Navigering: sidebar på desktop med alla fem plus Inställningar, ikonräls på tablet, bottennavigering på mobil med Hem, Logga pass, Historik, Statistik. Mallar och Inställningar ligger som ikoner i mobilheadern.
+
 ## Hårda regler
 
 1. **`src/db/seedData.ts` är genererad. Redigera den aldrig för hand.** Den innehåller 418 verkliga träningspass. Kör `python scripts/generate-seed.py` om den ska byggas om.

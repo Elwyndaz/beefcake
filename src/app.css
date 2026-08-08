@@ -77,6 +77,43 @@ body {
   display: none;
 }
 
+.header-nav-right {
+  display: none;
+}
+
+/* Dialog styles */
+.dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.dialog {
+  background: var(--bg-secondary);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-hover);
+  padding: var(--spacing-lg);
+  max-width: 500px;
+  width: 90%;
+}
+
+.dialog h3 {
+  font-size: 1.1rem;
+}
+
+.dialog p {
+  color: var(--text);
+  line-height: 1.6;
+  margin-bottom: var(--spacing);
+}
+
 /* Sidebar - Desktop >= 1200px */
 .sidebar {
   display: none;
@@ -584,6 +621,116 @@ tr:hover td {
   gap: var(--spacing);
 }
 
+/* History list - Table layout (Desktop/Tablet) */
+.history-list-table {
+  display: block;
+}
+
+.history-list-cards {
+  display: none;
+}
+
+.history-month-group {
+  margin-bottom: var(--spacing);
+}
+
+.history-month-header {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--primary);
+  margin: 0 0 8px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.history-row {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.history-row:hover td {
+  background: var(--bg);
+}
+
+.history-actions {
+  width: 44px;
+  text-align: center;
+}
+
+/* History list - Card layout (Mobile) */
+.history-card {
+  background: var(--bg-secondary);
+  border-radius: var(--radius);
+  padding: var(--spacing);
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.history-card:hover {
+  box-shadow: var(--shadow-hover);
+}
+
+.history-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.history-card-date {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.history-card-body {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.history-card-volume {
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.history-month-group-mobile {
+  margin-bottom: var(--spacing);
+}
+
+/* Session detail */
+.session-detail-exercise-list {
+  overflow-x: auto;
+}
+
+.session-detail-table {
+  display: block;
+}
+
+.session-detail-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.session-detail-table th,
+.session-detail-table td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.session-detail-table th {
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: var(--bg);
+}
+
 .toast {
   position: fixed;
   bottom: var(--spacing-lg);
@@ -712,6 +859,9 @@ tr:hover td {
   .bottom-nav .nav-text {
     display: none;
   }
+  .header-nav-right {
+    display: flex;
+  }
   .header-settings {
     display: block;
   }
@@ -737,5 +887,19 @@ tr:hover td {
   .exercise-card-fields .input-group.grid-3 {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
+  }
+  /* History mobile */
+  .history-list-table {
+    display: none;
+  }
+  .history-list-cards {
+    display: block;
+  }
+  /* Session detail mobile */
+  .session-detail-table {
+    display: none;
+  }
+  .session-detail-exercise-list {
+    display: block;
   }
 }

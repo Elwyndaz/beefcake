@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'preact/hooks'
-import { getAllTemplates, getAllExercises, createSession, getOrCreateExercise } from '../services/dataService'
+import { useState, useEffect, useRef } from 'preact/hooks'
+import { getAllTemplates, getAllExercises, createSession, getOrCreateExercise, getSession } from '../services/dataService'
 import { todayISO } from '../models'
 import { icon } from '../icons'
 import type { Template, Exercise, TemplateExercise } from '../models'
@@ -20,10 +20,51 @@ export function LogSession() {
   const [date, setDate] = useState(() => todayISO())
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const fromSessionRef = useRef<string | null>(null)
 
   useEffect(() => {
-    loadTemplates()
+    async function checkPrefill() {
+      // Check URL for ?from=<sessionId> parameter
+      const urlParams = new URLSearchParams(window.location.search)
+      const fromSessionId = urlParams.get('from')
+      
+      if (fromSessionId) {
+        fromSessionRef.current = fromSessionId
+        try {
+          const session = await getSession(fromSessionId)
+          if (session) {
+            // Prefill with the session's template and exercises
+            setSelectedTemplateId(session.templateId)
+            const formExercises: FormExercise[] = session.exercises.map(e => ({
+              exerciseId: e.exerciseId,
+              exerciseName: e.exerciseName,
+              sets: e.sets,
+              reps: e.reps,
+              weight: e.weight
+            }))
+            setExercises(formExercises)
+            setDate(todayISO())
+            // Clear the URL parameter
+            window.history.replaceState({}, '', window.location.pathname)
+          }
+        } catch (err) {
+          console.error('Failed to load session for prefill:', err)
+        }
+      }
+      
+      loadTemplates()
+    }
+    checkPrefill()
   }, [])
+
+  useEffect(() => {
+    // Only load template exercises if we haven't prefilled from a session
+    if (selectedTemplateId && !fromSessionRef.current) {
+      loadTemplateExercises()
+    } else if (!selectedTemplateId) {
+      setExercises([])
+    }
+  }, [selectedTemplateId, templates])
 
   async function loadTemplates() {
     const [ts, es] = await Promise.all([getAllTemplates(), getAllExercises()])
@@ -33,14 +74,6 @@ export function LogSession() {
       setSelectedTemplateId(ts[0].id)
     }
   }
-
-  useEffect(() => {
-    if (selectedTemplateId) {
-      loadTemplateExercises()
-    } else {
-      setExercises([])
-    }
-  }, [selectedTemplateId, templates])
 
   async function loadTemplateExercises() {
     const template = templates.find(t => t.id === selectedTemplateId)
@@ -117,6 +150,8 @@ export function LogSession() {
   function handleSelectChange(e: Event) {
     const target = e.target as HTMLSelectElement
     setSelectedTemplateId(target.value)
+    // Clear the prefill ref when user manually selects a template
+    fromSessionRef.current = null
   }
 
   return (

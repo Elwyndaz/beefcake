@@ -7,6 +7,8 @@ import { LogSession } from './pages/LogSession'
 import { Templates } from './pages/Templates'
 import { Stats } from './pages/Stats'
 import { Settings } from './pages/Settings'
+import { History } from './pages/History'
+import { SessionDetail } from './pages/SessionDetail'
 import { icon } from './icons'
 import './app.css'
 
@@ -14,6 +16,7 @@ const navItems = [
   { href: '/', label: 'Hem', icon: 'home-icon' },
   { href: '/log', label: 'Logga pass', icon: 'log-icon' },
   { href: '/templates', label: 'Mallar', icon: 'template-icon' },
+  { href: '/history', label: 'Historik', icon: 'history-icon' },
   { href: '/stats', label: 'Statistik', icon: 'stats-icon' },
   { href: '/settings', label: 'Inställningar', icon: 'settings-icon' },
 ]
@@ -38,12 +41,12 @@ function SidebarNav() {
         <span class="sidebar-wordmark">Beefcake</span>
       </div>
       <nav class="sidebar-nav">
-        {navItems.slice(0, 4).map(item => (
+        {navItems.slice(0, 5).map(item => (
           <NavLink key={item.href} href={item.href} label={item.label} icon={item.icon} showLabel />
         ))}
       </nav>
       <div class="sidebar-footer">
-        <NavLink href={navItems[4].href} label={navItems[4].label} icon={navItems[4].icon} showLabel />
+        <NavLink href={navItems[5].href} label={navItems[5].label} icon={navItems[5].icon} showLabel />
       </div>
     </aside>
   )
@@ -58,21 +61,23 @@ function RailNav() {
         </svg>
       </div>
       <nav class="rail-nav">
-        {navItems.slice(0, 4).map(item => (
+        {navItems.slice(0, 5).map(item => (
           <NavLink key={item.href} href={item.href} label={item.label} icon={item.icon} showLabel={false} />
         ))}
       </nav>
       <div class="rail-footer">
-        <NavLink href={navItems[4].href} label={navItems[4].label} icon={navItems[4].icon} showLabel={false} />
+        <NavLink href={navItems[5].href} label={navItems[5].label} icon={navItems[5].icon} showLabel={false} />
       </div>
     </aside>
   )
 }
 
 function BottomNav() {
+  // Mobile bottom nav: Hem, Logga pass, Historik, Statistik (indices 0, 1, 3, 4)
+  const mobileNavItems = [navItems[0], navItems[1], navItems[3], navItems[4]]
   return (
     <nav class="bottom-nav">
-      {navItems.slice(0, 4).map(item => (
+      {mobileNavItems.map(item => (
         <NavLink key={item.href} href={item.href} label={item.label} icon={item.icon} showLabel={false} />
       ))}
     </nav>
@@ -80,12 +85,20 @@ function BottomNav() {
 }
 
 function HeaderNav() {
+  // Mobile header: Templates (index 2) and Settings (index 5)
   return (
-    <Link href="/settings" class="header-settings">
-      <svg width="24" height="24" viewBox="0 0 24 24">
-        <use href={icon('settings-icon')} />
-      </svg>
-    </Link>
+    <div class="header-nav-right flex gap-sm">
+      <Link href="/templates" class="header-settings" aria-label="Mallar">
+        <svg width="24" height="24" viewBox="0 0 24 24">
+          <use href={icon('template-icon')} />
+        </svg>
+      </Link>
+      <Link href="/settings" class="header-settings" aria-label="Inställningar">
+        <svg width="24" height="24" viewBox="0 0 24 24">
+          <use href={icon('settings-icon')} />
+        </svg>
+      </Link>
+    </div>
   )
 }
 
@@ -98,17 +111,14 @@ function AppContent() {
         <header class="header">
           <h1>Beefcake</h1>
           <HeaderNav />
-          <nav class="header-nav">
-            {navItems.map(item => (
-              <NavLink key={item.href} href={item.href} label={item.label} icon={item.icon} />
-            ))}
-          </nav>
         </header>
         <main class="main">
           <Switch>
             <Route path="/" component={Home} />
             <Route path="/log" component={LogSession} />
             <Route path="/templates" component={Templates} />
+            <Route path="/history" component={History} />
+            <Route path="/history/:id" component={SessionDetail} />
             <Route path="/stats" component={Stats} />
             <Route path="/settings" component={Settings} />
           </Switch>

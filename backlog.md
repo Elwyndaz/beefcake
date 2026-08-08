@@ -21,34 +21,34 @@ Excel-importen i webbläsaren är **borttagen** (commit `410efd1`). `xlsx` 0.18.
 ## P0 — kritiskt
 
 - [ ] Automatisk backup: JSON-export till fil, plus varning om ingen export gjorts på 30 dagar
-- [ ] Importera de 72 saknade passen (2025-11-19 → 2026-07-28) från `C:\dev\Styrkepass v2.xlsx`, idempotent, matchad på naturlig nyckel
+- [x] Importera de 72 saknade passen (2025-11-19 → 2026-07-28) från `C:\dev\Styrkepass v2.xlsx`, idempotent, matchad på naturlig nyckel
 - [ ] Datamodell: `SetEntry[]` istället för `sets`/`reps`/`weight`, plus `Exercise.kind` för kroppsvikt, tid och distans
-- [ ] Historiksida med detaljvy, redigera, radera och upprepa
-- [ ] Ta bort `alert()` vid appstart, ersätt med banner
+- [x] Historiksida med detaljvy, redigera, radera och upprepa
+- [x] Ta bort `alert()` vid appstart, ersätt med banner
 - [ ] Städa `undefined`-mallen ur datan
 - [ ] Gör `createSession` atomär, en transaktion istället för tre
 
 ## P1 — hög påverkan
 
-- [ ] Radera `src/index.css` (Vite-mallens starter-CSS styr fortfarande layouten)
+- [x] Radera `src/index.css` (Vite-mallens starter-CSS styr fortfarande layouten)
 - [ ] Visa "förra gången" per övning på loggningssidan
 - [ ] Autosave av påbörjat pass
 - [ ] Dashboard med "nästa pass" som primär handling
-- [ ] Loggningsformuläret som tabell på desktop, kort på mobil
+- [x] Loggningsformuläret som tabell på desktop, kort på mobil
 - [ ] Statistik som svarar på rätt frågor: estimerat 1RM, tonnage per vecka, streak, periodfilter
 - [ ] Övningssida med progression
-- [ ] Fixa race conditions och Chart.js-läckor
+- [x] Chart.js-läckor fixade (race conditions i LogSession kvar)
 
 ## P2 — polish
 
 - [ ] Designsystem: tokens och sex komponenter, mörkt läge
-- [ ] Desktop: sidebar och tvåkolumnslayout
-- [ ] Mobil: bottennavigering, kort istället för tabeller, 44 px tryckytor
+- [x] Desktop: sidebar (tvåkolumnslayout kvar)
+- [x] Mobil: bottennavigering, kort istället för tabeller, 44 px tryckytor
 - [ ] Loading- och empty states överallt
 - [ ] Undo vid radering
 - [ ] Lazy-ladda Chart.js
 - [ ] Tester (Vitest) och ESLint, båda i CI
-- [ ] Ta bort dubbel manifest-länk i `index.html`
+- [x] Ta bort dubbel manifest-länk i `index.html`
 
 ## P3 — senare
 
