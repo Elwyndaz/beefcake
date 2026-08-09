@@ -19,7 +19,7 @@ Träningsapp (PWA) som ersätter Excel-ark för styrketräning. Desktop-first, m
 
 ## Status
 
-Se `AUDIT.md` för full genomlysning och prioriterad roadmap, `backlog.md` för snabböversikt och `MISTRAL-WORKPLAN.md` för färdiga arbetsuppgifter.
+Se `AUDIT.md` för full genomlysning och prioriterad roadmap, `BACKLOG.md` för snabböversikt och `MISTRAL-WORKPLAN.md` för färdiga arbetsuppgifter.
 
 Två saker att känna till innan man rör datan:
 - Excel-import i webbläsaren är borttagen (commit `410efd1`). Seedning sker med skript vid byggtid, aldrig i klienten.

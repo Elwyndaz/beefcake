@@ -25,8 +25,11 @@ Vite 8 · Preact 10 · TypeScript strict · wouter · `idb` · Chart.js · vite-
 | `AGENTS.md` | Den här filen. Beständigt minne och hårda regler |
 | `AUDIT.md` | Full genomlysning: buggar, UX, design, datamodell, säkerhet, roadmap P0–P3 |
 | `MISTRAL-WORKPLAN.md` | Färdiga arbetsuppgifter med acceptanskriterier |
-| `backlog.md` | Snabböversikt av vad som är byggt och vad som är kvar |
-| `context.md` | Domänmodell och konventioner |
+| `BACKLOG.md` | Snabböversikt av vad som är byggt och vad som är kvar |
+| `CONTEXT.md` | Domänmodell och konventioner |
+| `HANDOFF.md` | Nuläge: mål, nästa steg, blockerare. Läses av cockpiten |
+
+Filnamnen med versaler är ett krav: cockpiten (`cockpit.buildapp.se`) hämtar exakt `HANDOFF.md`, `CONTEXT.md` och `BACKLOG.md`. Döp inte om dem till gemener.
 
 ## Datamodell
 
