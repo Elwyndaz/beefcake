@@ -47,7 +47,7 @@ export function Home() {
         getAllSessions(),
         getAllTemplates()
       ])
-      setTemplates(ts)
+      setTemplates(ts.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)))
       setRecentSessions(sessions.slice(0, 5))
       setTemplateCount(ts.length)
       setTotalSessions(sessions.length)
@@ -120,18 +120,15 @@ export function Home() {
         <Button size="lg" class="btn-block mb-sm" onClick={handleQuickLog}>
           {lastUsedTemplate ? `Kör "${lastUsedTemplate}" igen` : templates.length > 0 ? `Logga nytt pass` : `Skapa mall först`}
         </Button>
-        {recentSessions.length >= 2 && (
-          <div class="flex gap-sm flex-wrap">
-            {recentSessions.slice(0, 3).map((session) => (
-              <Button
-                key={session.id}
-                size="sm"
-                onClick={() => navigate(`/history/${session.id}`)}
-              >
-                {formatDateWithWeekday(session.date)}: {session.templateName}
-              </Button>
-            ))}
-          </div>
+        {templates.length >= 2 && (
+          <>
+            <Button size="lg" class="btn-block mb-sm" onClick={() => navigate(`/log?template=${encodeURIComponent(templates[0].name)}`)}>
+              Kör "{templates[0].name}" igen
+            </Button>
+            <Button size="lg" class="btn-block mb-sm" onClick={() => navigate(`/log?template=${encodeURIComponent(templates[1].name)}`)}>
+              Kör "{templates[1].name}" igen
+            </Button>
+          </>
         )}
       </Card>
 
