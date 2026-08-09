@@ -9,9 +9,11 @@ import type { Session } from '../models'
 export function Home() {
   const [, navigate] = useLocation()
   const [recentSessions, setRecentSessions] = useState<Session[]>([])
+  const [templates, setTemplates] = useState<any[]>([])
   const [templateCount, setTemplateCount] = useState(0)
   const [totalSessions, setTotalSessions] = useState(0)
   const [lastWorkout, setLastWorkout] = useState<string | null>(null)
+  const [lastUsedTemplate, setLastUsedTemplate] = useState<string | null>(null)
   const [showReminder, setShowReminder] = useState<{ show: boolean; daysSince: number } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -41,11 +43,13 @@ export function Home() {
         getAllSessions(),
         getAllTemplates()
       ])
+      setTemplates(templates)
       setRecentSessions(sessions.slice(0, 5))
       setTemplateCount(templates.length)
       setTotalSessions(sessions.length)
       if (sessions.length > 0) {
         setLastWorkout(sessions[0].date)
+        setLastUsedTemplate(sessions[0].templateName)
       }
     } catch (err) {
       setError('Kunde inte ladda data. Försök igen.')
@@ -55,14 +59,21 @@ export function Home() {
     }
   }
 
-  function formatDate(dateStr: string): string {
-    return formatDateWithWeekday(dateStr)
+  function handleQuickLog() {
+    if (lastUsedTemplate) {
+      navigate(`/log?template=${encodeURIComponent(lastUsedTemplate)}`)
+    } else if (templates.length > 0) {
+      navigate(`/log?template=${encodeURIComponent(templates[0].name)}`)
+    } else {
+      navigate('/log')
+    }
   }
 
   if (loading) {
     return (
       <div>
         <h1 class="page-title">Översikt</h1>
+        <div class="card skeleton skeleton-card mb"></div>
         <div class="grid grid-3 mb">
           <div class="card skeleton skeleton-card"></div>
           <div class="card skeleton skeleton-card"></div>
@@ -95,6 +106,13 @@ export function Home() {
       )}
       <h1 class="page-title">Översikt</h1>
 
+      <div class="card mb">
+        <h2 class="m-0 mb-sm">Nästa pass</h2>
+        <button class="btn btn-primary btn-lg btn-block" onClick={handleQuickLog}>
+          {lastUsedTemplate ? `Kör "${lastUsedTemplate}" igen` : templates.length > 0 ? `Logga nytt pass` : `Skapa mall först`}
+        </button>
+      </div>
+
       <div class="grid grid-3 mb">
         <div class="card">
           <h3>Totala pass</h3>
@@ -107,7 +125,7 @@ export function Home() {
         <div class="card">
           <h3>Senaste pass</h3>
           <p class="text-2xl font-semibold text-primary">
-            {lastWorkout ? formatDate(lastWorkout) : '—'}
+            {lastWorkout ? formatDateWithWeekday(lastWorkout) : '—'}
           </p>
         </div>
       </div>
@@ -142,7 +160,7 @@ export function Home() {
                     onClick={() => navigate(`/history/${session.id}`)}
                     class="history-row"
                   >
-                    <td>{formatDate(session.date)}</td>
+                    <td>{formatDateWithWeekday(session.date)}</td>
                     <td><span class="badge badge-primary">{session.templateName}</span></td>
                     <td>{session.exercises.length}</td>
                     <td>

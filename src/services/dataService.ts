@@ -268,6 +268,89 @@ export async function getPRs(): Promise<{ exerciseId: string; exerciseName: stri
   return Array.from(map.entries()).map(([exerciseId, data]) => ({ exerciseId, ...data }))
 }
 
+// 1RM estimation using Epley formula: 1RM = weight * (1 + reps/30)
+export async function getEstimated1RM(exerciseId: string): Promise<{ exerciseName: string; estimated1RM: number; date: string } | null> {
+  const history = await getExerciseHistory(exerciseId)
+  if (history.length === 0) return null
+
+  // Find the entry with highest estimated 1RM
+  let best: { exerciseName: string; estimated1RM: number; date: string } | null = null
+  for (const h of history) {
+    for (const set of h.setEntries) {
+      if (set.weight > 0 && set.reps > 0) {
+        const epley1RM = set.weight * (1 + set.reps / 30)
+        if (!best || epley1RM > best.estimated1RM) {
+          best = {
+            exerciseName: h.exerciseName,
+            estimated1RM: epley1RM,
+            date: h.date
+          }
+        }
+      }
+    }
+  }
+  return best
+}
+
+// Get total volume (tonnage) for a given week
+export async function getWeeklyTonnage(weekStartDate: string): Promise<number> {
+  const db = await getDB()
+  const sessions = await db.getAll('sessions')
+  
+  const weekEndDate = new Date(weekStartDate)
+  weekEndDate.setDate(weekEndDate.getDate() + 6)
+  const weekEndISO = weekEndDate.toISOString().split('T')[0]
+  
+  let totalVolume = 0
+  for (const s of sessions) {
+    if (s.date >= weekStartDate && s.date <= weekEndISO) {
+      for (const e of s.exercises) {
+        for (const set of e.setEntries) {
+          totalVolume += set.sets * set.reps * set.weight
+        }
+      }
+    }
+  }
+  return totalVolume
+}
+
+// Get current training streak (consecutive days with workouts)
+export async function getCurrentStreak(): Promise<{ streakDays: number; lastWorkoutDate: string | null }> {
+  const db = await getDB()
+  const sessions = await db.getAll('sessions')
+  
+  if (sessions.length === 0) {
+    return { streakDays: 0, lastWorkoutDate: null }
+  }
+
+  // Sort by date descending
+  const sortedSessions = [...sessions].sort((a, b) => b.date.localeCompare(a.date))
+  
+  let streakDays = 0
+  let lastDate: string | null = null
+  let currentDate = sortedSessions[0].date
+  
+  // Start from the most recent session and count consecutive days
+  while (true) {
+    const sessionOnDate = sortedSessions.find(s => s.date === currentDate)
+    if (sessionOnDate) {
+      streakDays++
+      lastDate = currentDate
+      // Move to previous day
+      const prevDate = new Date(currentDate)
+      prevDate.setDate(prevDate.getDate() - 1)
+      currentDate = prevDate.toISOString().split('T')[0]
+    } else {
+      break
+    }
+    
+    // Stop after checking 365 days
+    if (streakDays >= 365) break
+  }
+  
+  return { streakDays, lastWorkoutDate: lastDate }
+}
+
 // Export/Import
 export async function exportAllData(): Promise<string> {
   const db = await getDB()

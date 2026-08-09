@@ -1,11 +1,22 @@
 import { useState, useEffect, useRef } from 'preact/hooks'
-import { getAllExercises, getVolumeOverTime, getFrequencyPerTemplate, getHeatmapData, getPRs } from '../services/dataService'
-import { Chart, registerables } from 'chart.js'
-import 'chartjs-adapter-date-fns'
-import { formatDateShort, localDateISO } from '../lib/date'
+import { getAllExercises, getVolumeOverTime, getFrequencyPerTemplate, getHeatmapData, getPRs, getCurrentStreak, getWeeklyTonnage, getEstimated1RM } from '../services/dataService'
+import { formatDateShort, localDateISO, todayISO, parseLocalDate } from '../lib/date'
 import type { Exercise } from '../models'
 
-Chart.register(...registerables)
+// Lazy load Chart.js
+let chartPromise: Promise<any> | null = null
+async function getChart() {
+  if (!chartPromise) {
+    chartPromise = Promise.all([
+      import('chart.js'),
+      import('chartjs-adapter-date-fns')
+    ]).then(([ChartModule]) => {
+      ChartModule.Chart.register(...ChartModule.registerables)
+      return ChartModule.Chart
+    })
+  }
+  return chartPromise
+}
 
 interface PR {
   exerciseId: string
@@ -16,15 +27,28 @@ interface PR {
   maxVolumeDate: string
 }
 
+type Period = 'week' | 'month' | 'quarter' | 'year'
+
+const periodLabels: Record<Period, string> = {
+  week: 'Vecka',
+  month: 'Månad',
+  quarter: 'Kvartal',
+  year: 'År'
+}
+
 export function Stats() {
   const [exercises, setExercises] = useState<Exercise[]>([])
   const [selectedExerciseId, setSelectedExerciseId] = useState<string>('')
-  const volumeChartRef = useRef<Chart | null>(null)
-  const frequencyChartRef = useRef<Chart | null>(null)
-  const heatmapChartRef = useRef<Chart | null>(null)
+  const [period, setPeriod] = useState<Period>('month')
+  const volumeChartRef = useRef<any>(null)
+  const frequencyChartRef = useRef<any>(null)
+  const heatmapChartRef = useRef<any>(null)
   const [frequencyData, setFrequencyData] = useState<{ templateName: string; count: number }[]>([])
   const [heatmapData, setHeatmapData] = useState<{ date: string; count: number }[]>([])
   const [prs, setPRs] = useState<PR[]>([])
+  const [streak, setStreak] = useState<{ streakDays: number; lastWorkoutDate: string | null }>({ streakDays: 0, lastWorkoutDate: null })
+  const [thisWeekTonnage, setThisWeekTonnage] = useState<number>(0)
+  const [oneRM, setOneRM] = useState<{ exerciseName: string; estimated1RM: number; date: string } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -41,19 +65,19 @@ export function Stats() {
       loadVolumeChart()
     }
     return () => {
-      if (volumeChartRef.current) {
+      if (volumeChartRef.current?.destroy) {
         volumeChartRef.current.destroy()
         volumeChartRef.current = null
       }
     }
-  }, [selectedExerciseId])
+  }, [selectedExerciseId, period])
 
   useEffect(() => {
     if (frequencyData.length > 0 && frequencyCanvasRef.current) {
       loadFrequencyChart()
     }
     return () => {
-      if (frequencyChartRef.current) {
+      if (frequencyChartRef.current?.destroy) {
         frequencyChartRef.current.destroy()
         frequencyChartRef.current = null
       }
@@ -65,7 +89,7 @@ export function Stats() {
       loadHeatmapChart()
     }
     return () => {
-      if (heatmapChartRef.current) {
+      if (heatmapChartRef.current?.destroy) {
         heatmapChartRef.current.destroy()
         heatmapChartRef.current = null
       }
@@ -76,18 +100,27 @@ export function Stats() {
     try {
       setLoading(true)
       setError(null)
-      const [es, freq, heat, prsData] = await Promise.all([
+      const [es, freq, heat, prsData, streakData, tonnageData] = await Promise.all([
         getAllExercises(),
         getFrequencyPerTemplate(),
         getHeatmapData(30),
-        getPRs()
+        getPRs(),
+        getCurrentStreak(),
+        getThisWeekTonnage()
       ])
       setExercises(es)
       setFrequencyData(freq)
       setHeatmapData(heat)
       setPRs(prsData)
+      setStreak(streakData)
+      setThisWeekTonnage(tonnageData)
       if (es.length > 0 && !selectedExerciseId) {
         setSelectedExerciseId(es[0].id)
+        // Load 1RM for first exercise
+        const firstExercise1RM = await getEstimated1RM(es[0].id)
+        if (firstExercise1RM) {
+          setOneRM(firstExercise1RM)
+        }
       }
     } catch (err) {
       setError('Kunde inte ladda statistik. Försök igen.')
@@ -97,23 +130,82 @@ export function Stats() {
     }
   }
 
+  // Helper to get start of current week (Monday)
+  function getMondayISO(): string {
+    const now = parseLocalDate(todayISO())
+    const dayOfWeek = now.getDay() // 0=Sunday, 1=Monday...
+    const monday = new Date(now)
+    monday.setDate(now.getDate() - ((dayOfWeek + 6) % 7))
+    return localDateISO(monday)
+  }
+
+  // Get tonnage for current week
+  async function getThisWeekTonnage(): Promise<number> {
+    return getWeeklyTonnage(getMondayISO())
+  }
+
+  // Update 1RM when selected exercise changes
+  useEffect(() => {
+    if (selectedExerciseId) {
+      getEstimated1RM(selectedExerciseId).then(rm => {
+        if (rm) setOneRM(rm)
+        else setOneRM(null)
+      })
+    }
+  }, [selectedExerciseId])
+
+  // Filter volume data by period
+  function getPeriodStartDate(period: Period): string {
+    const now = parseLocalDate(todayISO())
+    switch (period) {
+      case 'week': {
+        const monday = new Date(now)
+        monday.setDate(now.getDate() - ((now.getDay() + 6) % 7))
+        return localDateISO(monday)
+      }
+      case 'month': {
+        return localDateISO(new Date(now.getFullYear(), now.getMonth(), 1))
+      }
+      case 'quarter': {
+        const quarter = Math.floor(now.getMonth() / 3)
+        return localDateISO(new Date(now.getFullYear(), quarter * 3, 1))
+      }
+      case 'year': {
+        return localDateISO(new Date(now.getFullYear(), 0, 1))
+      }
+      default:
+        return localDateISO(now)
+    }
+  }
+
+  function handlePeriodChange(e: Event) {
+    const target = e.target as HTMLSelectElement
+    setPeriod(target.value as Period)
+  }
+
   async function loadVolumeChart() {
-    const data = await getVolumeOverTime(selectedExerciseId)
+    const allData = await getVolumeOverTime(selectedExerciseId)
+    const periodStart = getPeriodStartDate(period)
+    
+    // Filter data by period
+    const filteredData = allData.filter(d => d.date >= periodStart)
+    
     const ctx = volumeCanvasRef.current
     if (!ctx) return
 
+    const Chart = await getChart()
     if (volumeChartRef.current) {
-      volumeChartRef.current.data.labels = data.map(d => d.date)
-      volumeChartRef.current.data.datasets[0].data = data.map(d => d.volume)
+      volumeChartRef.current.data.labels = filteredData.map(d => d.date)
+      volumeChartRef.current.data.datasets[0].data = filteredData.map(d => d.volume)
       volumeChartRef.current.update()
     } else {
       const chart = new Chart(ctx, {
         type: 'line',
         data: {
-          labels: data.map(d => d.date),
+          labels: filteredData.map(d => d.date),
           datasets: [{
             label: 'Volym (kg)',
-            data: data.map(d => d.volume),
+            data: filteredData.map(d => d.volume),
             borderColor: '#2c3e50',
             backgroundColor: 'rgba(44, 62, 80, 0.1)',
             fill: true,
@@ -138,10 +230,11 @@ export function Stats() {
     }
   }
 
-  function loadFrequencyChart() {
+  async function loadFrequencyChart() {
     const ctx = frequencyCanvasRef.current
     if (!ctx) return
 
+    const Chart = await getChart()
     if (frequencyChartRef.current) {
       frequencyChartRef.current.data.labels = frequencyData.map(d => d.templateName)
       frequencyChartRef.current.data.datasets[0].data = frequencyData.map(d => d.count)
@@ -172,8 +265,9 @@ export function Stats() {
   }
 
   function allValuesZero(): boolean {
+    const today = parseLocalDate(todayISO())
     for (let i = 29; i >= 0; i--) {
-      const d = new Date()
+      const d = new Date(today)
       d.setDate(d.getDate() - i)
       const iso = localDateISO(d)
       const found = heatmapData.find(h => h.date === iso)
@@ -182,14 +276,15 @@ export function Stats() {
     return true
   }
 
-  function loadHeatmapChart() {
+  async function loadHeatmapChart() {
     const ctx = heatmapCanvasRef.current
     if (!ctx) return
 
+    const today = parseLocalDate(todayISO())
     const labels: string[] = []
     const values: number[] = []
     for (let i = 29; i >= 0; i--) {
-      const d = new Date()
+      const d = new Date(today)
       d.setDate(d.getDate() - i)
       const iso = localDateISO(d)
       labels.push(iso)
@@ -197,6 +292,7 @@ export function Stats() {
       values.push(found ? found.count : 0)
     }
 
+    const Chart = await getChart()
     if (heatmapChartRef.current) {
       heatmapChartRef.current.data.labels = labels
       heatmapChartRef.current.data.datasets[0].data = values
@@ -262,14 +358,45 @@ export function Stats() {
     <div>
       <h1 class="page-title">Statistik</h1>
 
+      {/* Overview stats */}
+      <div class="grid grid-3 mb">
+        <div class="card">
+          <h3>Streak</h3>
+          <p class="text-3xl font-bold text-primary">{streak.streakDays}</p>
+          <p class="text-sm text-muted">dagar i rad</p>
+        </div>
+        <div class="card">
+          <h3>Veckovolym</h3>
+          <p class="text-3xl font-bold text-primary">{thisWeekTonnage.toLocaleString('sv-SE')}</p>
+          <p class="text-sm text-muted">kg denna vecka</p>
+        </div>
+        <div class="card">
+          <h3>Est. 1RM</h3>
+          <p class="text-3xl font-bold text-primary">
+            {oneRM ? Math.round(oneRM.estimated1RM).toLocaleString('sv-SE') : '—'}
+          </p>
+          <p class="text-sm text-muted">{oneRM ? `${oneRM.exerciseName} (${formatDateShort(oneRM.date)})` : 'Välj övning'}</p>
+        </div>
+      </div>
+
       <div class="grid grid-2 mb">
         <div class="card">
           <h3>Volym över tid</h3>
-          <div class="input-group mb-sm">
-            <label>Övning</label>
-            <select value={selectedExerciseId} onChange={handleSelectChange}>
-              {exercises.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
-            </select>
+          <div class="grid grid-2 gap-sm mb-sm">
+            <div class="input-group m-0">
+              <label>Övning</label>
+              <select value={selectedExerciseId} onChange={handleSelectChange}>
+                {exercises.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+              </select>
+            </div>
+            <div class="input-group m-0">
+              <label>Period</label>
+              <select value={period} onChange={handlePeriodChange}>
+                {Object.entries(periodLabels).map(([key, label]) => (
+                  <option key={key} value={key}>{label}</option>
+                ))}
+              </select>
+            </div>
           </div>
           <div class="h-300">
             <canvas ref={volumeCanvasRef} id="volume-chart"></canvas>
