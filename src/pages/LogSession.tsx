@@ -34,6 +34,9 @@ export function LogSession() {
       setError(null)
       const urlParams = new URLSearchParams(window.location.search)
       const fromSessionId = urlParams.get('from')
+      const templateName = urlParams.get('template')
+      
+      await loadTemplates()
       
       if (fromSessionId) {
         fromSessionRef.current = fromSessionId
@@ -53,9 +56,14 @@ export function LogSession() {
         } catch (err) {
           console.error('Failed to load session for prefill:', err)
         }
+      } else if (templateName) {
+        // Match template by name (case-insensitive)
+        const matchedTemplate = templates.find(t => t.name.toLowerCase() === templateName.toLowerCase())
+        if (matchedTemplate) {
+          setSelectedTemplateId(matchedTemplate.id)
+          window.history.replaceState({}, '', window.location.pathname)
+        }
       }
-      
-      await loadTemplates()
     } catch (err) {
       setError('Kunde inte ladda mallar. Försök igen.')
       console.error('Fel vid laddning:', err)
