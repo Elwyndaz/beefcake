@@ -36,8 +36,9 @@ export function LogSession() {
       const fromSessionId = urlParams.get('from')
       const templateName = urlParams.get('template')
       
-      const ts = await getAllTemplates()
+      const [ts, es] = await Promise.all([getAllTemplates(), getAllExercises()])
       setTemplates(ts)
+      setAllExercises(es)
       
       if (fromSessionId) {
         fromSessionRef.current = fromSessionId
@@ -63,11 +64,14 @@ export function LogSession() {
         if (matchedTemplate) {
           setSelectedTemplateId(matchedTemplate.id)
           window.history.replaceState({}, '', window.location.pathname)
+        } else if (ts.length > 0) {
+          // Fallback to first template if no match
+          setSelectedTemplateId(ts[0].id)
         }
+      } else if (ts.length > 0) {
+        // Default to first template
+        setSelectedTemplateId(ts[0].id)
       }
-      
-      const es = await getAllExercises()
-      setAllExercises(es)
     } catch (err) {
       setError('Kunde inte ladda mallar. Försök igen.')
       console.error('Fel vid laddning:', err)
