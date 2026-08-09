@@ -41,7 +41,7 @@ Modellen saknar fortfarande `Exercise.kind` för kroppsvikt, tid och distans. D�
 
 ## Data och seed
 
-- **All träningsdata är verklig.** 419 pass, 1 522 historikrader, till 2026-07-28. Radera eller skriv aldrig om historisk data, varken i seed, i IndexedDB eller i en migrering. Additivt eller inget.
+- **All träningsdata är verklig**, från 2024 till 2026-07-28. Radera eller skriv aldrig om historisk data, varken i seed, i IndexedDB eller i en migrering. Additivt eller inget.
 - `src/db/seedData.ts` är **genererad**, aldrig handredigerad. Bygg om med `python scripts/generate-seed.py`.
 - Källan är `C:\dev\Styrkepass v2.xlsx` och den öppnas **bara för läsning**.
 - `syncSeed()` är additiv och idempotent. Den matchar pass på `(datum, passnamn)` och övningar på gemener. Matcha aldrig på `seed-N`-id, sekvensen numreras om så fort en övning tillkommer i källan.
