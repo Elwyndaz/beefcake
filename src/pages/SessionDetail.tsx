@@ -3,13 +3,14 @@ import { useLocation } from 'wouter'
 import { 
   getSession, 
   getAllExercises, 
+  getAllTemplates,
   updateSession, 
   deleteSession,
   getOrCreateExercise 
 } from '../services/dataService'
 import { icon } from '../icons'
 import { formatDateFull, formatDateShort } from '../lib/date'
-import type { Session, Exercise, SessionExercise, SetEntry } from '../models'
+import type { Session, Exercise, SessionExercise, SetEntry, Template } from '../models'
 
 interface FormExercise {
   exerciseId: string
@@ -85,7 +86,9 @@ export function SessionDetail() {
   const [error, setError] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
   const [allExercises, setAllExercises] = useState<Exercise[]>([])
+  const [allTemplates, setAllTemplates] = useState<Template[]>([])
   const [formDate, setFormDate] = useState('')
+  const [formTemplateId, setFormTemplateId] = useState('')
   const [formExercises, setFormExercises] = useState<FormExercise[]>([])
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -111,9 +114,10 @@ export function SessionDetail() {
       }
 
       try {
-        const [sess, exercises] = await Promise.all([
+        const [sess, exercises, templates] = await Promise.all([
           getSession(sessionId),
-          getAllExercises()
+          getAllExercises(),
+          getAllTemplates()
         ])
         
         if (!sess) {
@@ -121,7 +125,9 @@ export function SessionDetail() {
         } else {
           setSession(sess)
           setAllExercises(exercises)
+          setAllTemplates(templates)
           setFormDate(sess.date)
+          setFormTemplateId(sess.templateId)
           // Convert session exercises to form exercises
           const formEx: FormExercise[] = sess.exercises.map(e => ({
             exerciseId: e.exerciseId,
@@ -153,6 +159,12 @@ export function SessionDetail() {
     setToastMessage(null)
   }
 
+  // Handle template change
+  function handleTemplateChange(e: Event) {
+    const target = e.target as HTMLSelectElement
+    setFormTemplateId(target.value)
+  }
+
   // Handle save
   async function handleSave() {
     if (formExercises.length === 0) return
@@ -179,8 +191,15 @@ export function SessionDetail() {
         })
       )
 
+      // Find the selected template
+      const selectedTemplate = allTemplates.find(t => t.id === formTemplateId)
+      const templateName = selectedTemplate?.name || session.templateName
+      const templateId = selectedTemplate?.id || session.templateId
+
       await updateSession(session.id, {
         date: formDate,
+        templateId,
+        templateName,
         exercises: validExercises
       })
       
@@ -188,6 +207,8 @@ export function SessionDetail() {
       const updatedSession = {
         ...session,
         date: formDate,
+        templateId,
+        templateName,
         exercises: validExercises
       }
       setSession(updatedSession)
@@ -241,6 +262,7 @@ export function SessionDetail() {
       setSaved(false)
       if (session) {
         setFormDate(session.date)
+        setFormTemplateId(session.templateId)
         setFormExercises(session.exercises.map(e => ({
           exerciseId: e.exerciseId,
           exerciseName: e.exerciseName,
@@ -255,6 +277,7 @@ export function SessionDetail() {
     setEditing(false)
     if (session) {
       setFormDate(session.date)
+      setFormTemplateId(session.templateId)
       setFormExercises(session.exercises.map(e => ({
         exerciseId: e.exerciseId,
         exerciseName: e.exerciseName,
@@ -486,6 +509,15 @@ export function SessionDetail() {
         <div class="input-group mb">
           <label>Datum</label>
           <input type="date" value={formDate} onChange={handleDateChange} />
+        </div>
+
+        <div class="input-group mb">
+          <label>Passmall</label>
+          <select value={formTemplateId} onChange={handleTemplateChange}>
+            {allTemplates.map(t => (
+              <option key={t.id} value={t.id}>{t.name}</option>
+            ))}
+          </select>
         </div>
 
         <h3 class="mb-sm">Övningar</h3>
