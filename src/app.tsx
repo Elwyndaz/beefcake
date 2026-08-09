@@ -3,6 +3,7 @@
 import { Router, Link, Switch, Route, useLocation } from 'wouter'
 import { lazy, Suspense } from 'preact/compat'
 import { PasswordGate } from './components/PasswordGate'
+import { BackupBanner } from './components/BackupBanner'
 import { Home } from './pages/Home'
 import { LogSession } from './pages/LogSession'
 import { Templates } from './pages/Templates'
@@ -118,6 +119,7 @@ function AppContent() {
           <HeaderNav />
         </header>
         <main class="main">
+          <BackupBanner />
           <Switch>
             <Route path="/" component={Home} />
             <Route path="/log" component={LogSession} />
