@@ -117,9 +117,23 @@ export function Home() {
 
       <Card>
         <h2 class="m-0 mb-sm">Nästa pass</h2>
-        <Button size="lg" class="btn-block" onClick={handleQuickLog}>
+        <Button size="lg" class="btn-block mb-sm" onClick={handleQuickLog}>
           {lastUsedTemplate ? `Kör "${lastUsedTemplate}" igen` : templates.length > 0 ? `Logga nytt pass` : `Skapa mall först`}
         </Button>
+        {recentSessions.length >= 2 && (
+          <div class="flex gap-sm flex-wrap">
+            {recentSessions.slice(0, 3).map((session) => (
+              <Button
+                key={session.id}
+                variant="secondary"
+                size="sm"
+                onClick={() => navigate(`/history/${session.id}`)}
+              >
+                {formatDateWithWeekday(session.date)}: {session.templateName}
+              </Button>
+            ))}
+          </div>
+        )}
       </Card>
 
       <div class="grid grid-3 mb">
@@ -136,23 +150,6 @@ export function Home() {
           />
         </Card>
       </div>
-
-      {recentSessions.length >= 2 && (
-        <Card>
-          <h2 class="m-0 mb-sm">Snabbval</h2>
-          <div class="flex gap-sm flex-wrap">
-            {recentSessions.slice(0, 3).map((session) => (
-              <Button
-                key={session.id}
-                variant="secondary"
-                onClick={() => navigate(`/history/${session.id}`)}
-              >
-                {formatDateWithWeekday(session.date)}: {session.templateName}
-              </Button>
-            ))}
-          </div>
-        </Card>
-      )}
 
       <Card padding="none">
         <div class="flex justify-between items-center mb-sm" style="padding: var(--space-6) var(--space-6) var(--space-2) var(--space-6)">
