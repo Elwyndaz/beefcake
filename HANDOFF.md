@@ -11,6 +11,9 @@ reviewedAt: 2026-08-09
 
 - `SetEntry[]` ersätter `sets`/`reps`/`weight` genom hela kedjan: schema, models, dataService, LogSession, SessionDetail, Templates. Legacy-typer och migreringsfunktioner kvar för gammal seed-struktur.
 - Designsystem-refresh: tokens i `app.css`, Geist self-hostad, komponenterna i `src/components/` används i alla vyer.
+- Inline mallhantering i logg- och redigeringsläge: "Spara som mall" i LogSession, "Spara övningarna till mallen" + "Spara som ny mall" i SessionDetail.
+- Muskelgrupper: `MUSCLE_GROUP_MAP` (namn → grupp), backfill i `syncSeed`, nytt "Muskelgrupper"-kort i Statistik med volym per grupp.
+- Data-tappning: `restoreFromLocalStorage()` i `syncSeed` (körs före render i `main.tsx`), `autoBackup()` efter varje mutation. Verifierat: wipe av IndexedDB → reload → alla pass tillbaka.
 - Dokumenten städade 2026-08-09: `AUDIT.md`, `MISTRAL-WORKPLAN.md` och `DESIGN-AUDIT.md` raderade, öppna poster flyttade till `BACKLOG.md`, domänmodellen samlad i `CONTEXT.md`.
 
 ## Verification
@@ -22,7 +25,6 @@ reviewedAt: 2026-08-09
 
 ## Unresolved details
 
-- Okommitterat arbete i `src/app.tsx` och `src/services/dataService.ts`: muskelgruppskarta och `restoreFromLocalStorage()`. Någon annans pågående arbete, rör det inte utan att fråga.
 - `importAllData` rensar databasen innan den validerar filen.
 - Race condition i mall-laddningen i LogSession, async-effekt utan avbrottsskydd.
 - Inga tester och ingen linter.

@@ -224,6 +224,8 @@ th, td {
    =================================================================== */
 
 .flex { display: flex; }
+.grow { flex-grow: 1; }
+.font-600 { font-weight: 600; }
 .flex-1 { flex: 1; }
 .flex-2 { flex: 2; }
 .items-center { align-items: center; }
@@ -513,6 +515,11 @@ tr:hover td { background: var(--surface); }
 .tabular-nums { font-variant-numeric: var(--font-numeric); }
 /* Prevent canvas/charts from expanding table width */
 canvas { display: block; max-width: 100%; }
+
+/* Muscle group breakdown list */
+.muscle-group-list { display: flex; flex-direction: column; gap: var(--space-4); }
+.muscle-group-bar { height: 8px; border-radius: 999px; background: var(--surface); overflow: hidden; }
+.muscle-group-fill { height: 100%; border-radius: 999px; background: var(--accent); transition: width 0.3s ease-in-out; }
 
 /* Rounded "card row" tables for display lists (history, session detail, PRs).
    Rows sit as pills on the card surface. */

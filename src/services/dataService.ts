@@ -1,6 +1,53 @@
 import { getDB, generateId, nowISO, migrateSession, migrateTemplateExercise } from '../models'
 import type { Template, TemplateExercise, Exercise, Session, SessionExercise, ExerciseHistory, SetEntry, LegacySession, LegacyTemplateExercise } from '../models'
 
+// Exercise name → muscle group mapping for seed data and new exercises
+const MUSCLE_GROUP_MAP: Record<string, string> = {
+  'Armhävningar': 'Bröst', 'Axlar baksida rep': 'Axlar', 'Axlar sidolyft': 'Axlar',
+  'Axlar sidolyft bakåt': 'Axlar', 'Benböj': 'Ben', 'Benlyft mage': 'Mage',
+  'Benspark': 'Ben', 'Benspark baksida': 'Ben', 'Bicepscurl bänk': 'Biceps',
+  'Bicepscurl ez stång': 'Biceps', 'Bicepscurl hantel': 'Biceps', 'Bänk': 'Bröst',
+  'Chins': 'Rygg', 'Hantelpress': 'Axlar', 'Hantelrodd': 'Rygg',
+  'Hip-thrusts': 'Bakre kedjan', 'Hopprep': 'Kondition', 'Hängande benlyft': 'Mage',
+  'Marklyft': 'Bakre kedjan', 'Militärpress': 'Axlar', 'Situps': 'Mage',
+  'Skivstångsrodd': 'Rygg', 'Snedbänk': 'Bröst', 'Snedbänk hantlar': 'Bröst',
+  'Triceps pushdown': 'Triceps', 'Triceps stång': 'Triceps', 'Triceps övning': 'Triceps',
+  'Vadpress skivstång': 'Ben', 'Vadpress maskin': 'Ben', 'Ab roller': 'Mage',
+  'Axelpress maskin': 'Axlar', 'Latsdrag': 'Rygg', 'Leg curl': 'Ben',
+  'Leg extension': 'Ben'
+}
+
+export function getMuscleGroup(exerciseName: string): string | undefined {
+  return MUSCLE_GROUP_MAP[exerciseName.trim()]
+}
+
+export function getMuscleGroups(): string[] {
+  return [...new Set(Object.values(MUSCLE_GROUP_MAP))].sort()
+}
+
+export function getMuscleGroupMap(): Record<string, string> {
+  return MUSCLE_GROUP_MAP
+}
+
+// Backfill muscleGroup on existing exercises that lack it (from the name map)
+export async function backfillMuscleGroups(): Promise<number> {
+  const db = await getDB()
+  const exercises = await db.getAll('exercises')
+  let updated = 0
+  const tx = db.transaction(['exercises'], 'readwrite')
+  for (const e of exercises) {
+    if (!e.muscleGroup) {
+      const mg = MUSCLE_GROUP_MAP[e.name]
+      if (mg) {
+        await tx.objectStore('exercises').put({ ...e, muscleGroup: mg })
+        updated++
+      }
+    }
+  }
+  await tx.done
+  return updated
+}
+
 // Template Service
 export async function getAllTemplates(): Promise<Template[]> {
   const db = await getDB()
@@ -64,19 +111,6 @@ export async function updateTemplateExerciseLastUsed(
 export async function getAllExercises(): Promise<Exercise[]> {
   const db = await getDB()
   return db.getAllFromIndex('exercises', 'by-name')
-}
-
-export async function getOrCreateExercise(name: string): Promise<Exercise> {
-  const db = await getDB()
-  const existing = await db.getFromIndex('exercises', 'by-name', name)
-  if (existing) return existing
-  const exercise: Exercise = {
-    id: generateId(),
-    name,
-    createdAt: nowISO()
-  }
-  await db.put('exercises', exercise)
-  return exercise
 }
 
 // Session Service
@@ -357,6 +391,62 @@ export async function getCurrentStreak(): Promise<{ streakDays: number; lastWork
   return { streakDays, lastWorkoutDate: lastDate }
 }
 
+// Get volume per muscle group
+export async function getVolumeByMuscleGroup(): Promise<{ muscleGroup: string; volume: number; sessions: number }[]> {
+  const db = await getDB()
+  const [exercises, history] = await Promise.all([
+    db.getAll('exercises'),
+    db.getAll('exerciseHistory')
+  ])
+  
+  const exerciseMuscleMap = new Map(exercises.map(e => [e.id, e.muscleGroup || 'Övrigt']))
+  const map = new Map<string, { volume: number; sessionIds: Set<string> }>()
+  
+  for (const h of history) {
+    const mg = exerciseMuscleMap.get(h.exerciseId) || 'Övrigt'
+    const existing = map.get(mg) || { volume: 0, sessionIds: new Set() }
+    existing.volume += h.volume
+    existing.sessionIds.add(h.sessionId)
+    map.set(mg, existing)
+  }
+  
+  return Array.from(map.entries())
+    .map(([muscleGroup, data]) => ({ muscleGroup, volume: data.volume, sessions: data.sessionIds.size }))
+    .sort((a, b) => b.volume - a.volume)
+}
+
+// Update exercise with muscle group
+export async function updateExerciseMuscleGroup(exerciseId: string, muscleGroup: string): Promise<void> {
+  const db = await getDB()
+  const existing = await db.get('exercises', exerciseId)
+  if (existing) {
+    existing.muscleGroup = muscleGroup
+    await db.put('exercises', existing)
+  }
+}
+
+// Get or create exercise with optional muscle group
+export async function getOrCreateExercise(name: string, muscleGroup?: string): Promise<Exercise> {
+  const db = await getDB()
+  const existing = await db.getFromIndex('exercises', 'by-name', name)
+  if (existing) {
+    // Update muscle group if provided and not already set
+    if (muscleGroup && !existing.muscleGroup) {
+      existing.muscleGroup = muscleGroup
+      await db.put('exercises', existing)
+    }
+    return existing
+  }
+  const exercise: Exercise = {
+    id: generateId(),
+    name,
+    muscleGroup,
+    createdAt: nowISO()
+  }
+  await db.put('exercises', exercise)
+  return exercise
+}
+
 // Export/Import
 export async function exportAllData(): Promise<string> {
   const db = await getDB()
@@ -412,6 +502,8 @@ export async function syncSeed(): Promise<{ sessionsAdded: number; exercisesAdde
   // Återställ från LocalStorage om DB är tom, INNAN seed-data laddas
   await restoreFromLocalStorage()
   await autoBackup()
+  // Fyll på muskelgrupper på övningar som saknar dem (mappas från övningsnamnet)
+  await backfillMuscleGroups()
 
   const db = await getDB()
   const { seedTemplates, seedExercises, seedSessions } = await import('../db/seedData')
@@ -431,7 +523,9 @@ export async function syncSeed(): Promise<{ sessionsAdded: number; exercisesAdde
   for (const e of seedExercises) {
     if (exerciseIdByName.has(exerciseKey(e.name))) continue
     exerciseIdByName.set(exerciseKey(e.name), e.id)
-    newExercises.push(e)
+    // Assign muscle group from mapping if not set
+    const mg = MUSCLE_GROUP_MAP[e.name]
+    newExercises.push(mg ? { ...e, muscleGroup: mg } : e)
   }
 
   // Migrera seedTemplates till ny struktur

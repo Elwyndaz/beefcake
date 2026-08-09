@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'preact/hooks'
-import { getAllTemplates, getAllExercises, createSession, getOrCreateExercise, getSession } from '../services/dataService'
+import { getAllTemplates, getAllExercises, createSession, getOrCreateExercise, getSession, createTemplate } from '../services/dataService'
 import { todayISO } from '../models'
 import { icon } from '../icons'
 import { Card } from '../components/Card'
@@ -24,6 +24,8 @@ export function LogSession() {
   const [saved, setSaved] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showSaveTemplate, setShowSaveTemplate] = useState(false)
+  const [templateName, setTemplateName] = useState('')
   const fromSessionRef = useRef<string | null>(null)
 
   async function checkPrefill() {
@@ -132,6 +134,33 @@ export function LogSession() {
     }
   }
 
+  async function handleSaveAsTemplate() {
+    if (exercises.length === 0 || !templateName.trim()) return
+    try {
+      const templateExercises = await Promise.all(
+        exercises.map(async e => {
+          let exerciseId = e.exerciseId
+          if (!exerciseId || exerciseId.startsWith('new-')) {
+            const ex = await getOrCreateExercise(e.exerciseName)
+            exerciseId = ex.id
+          }
+          return {
+            exerciseId,
+            defaultSetEntry: e.setEntries[0] || { sets: 3, reps: 10, weight: 0 }
+          }
+        })
+      )
+      const newTemplate = await createTemplate(templateName.trim(), templateExercises)
+      setTemplates(prev => [...prev, newTemplate].sort((a, b) => a.name.localeCompare(b.name)))
+      setSelectedTemplateId(newTemplate.id)
+      setShowSaveTemplate(false)
+      setTemplateName('')
+    } catch (err) {
+      console.error('Kunde inte spara mall:', err)
+      setError('Kunde inte spara mall')
+    }
+  }
+
   function updateExercise(idx: number, field: keyof FormExercise, value: string | number | SetEntry[]) {
     const newExercises = [...exercises]
     newExercises[idx] = { ...newExercises[idx], [field]: value }
@@ -230,6 +259,36 @@ export function LogSession() {
       </Card>
 
       <Card title="Övningar">
+        <div class="flex justify-between items-center mb-sm gap-sm">
+          <p class="m-0 text-muted text-sm">Övningarna du fyller i här kan sparas som en mall.</p>
+          <Button variant="secondary" size="sm" onClick={() => setShowSaveTemplate(v => !v)}>
+            Spara som mall
+          </Button>
+        </div>
+        {showSaveTemplate && (
+          <div class="card mb">
+            <form
+              class="flex gap-sm items-end"
+              onSubmit={e => {
+                e.preventDefault()
+                handleSaveAsTemplate()
+              }}
+            >
+              <Field label="Mallnamn" class="m-0 grow">
+                <input
+                  type="text"
+                  value={templateName}
+                  onInput={(e: Event) => setTemplateName((e.target as HTMLInputElement).value)}
+                  placeholder="t.ex. Bröst, axlar & triceps – lång"
+                  autoFocus
+                />
+              </Field>
+              <Button type="submit" disabled={!templateName.trim() || exercises.length === 0}>
+                Spara mall
+              </Button>
+            </form>
+          </div>
+        )}
         {exercises.length === 0 ? (
           <EmptyState
             title="Lägg till övningar"

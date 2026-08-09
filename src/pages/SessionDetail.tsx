@@ -6,7 +6,9 @@ import {
   getAllTemplates,
   updateSession, 
   deleteSession,
-  getOrCreateExercise 
+  getOrCreateExercise,
+  createTemplate,
+  updateTemplate
 } from '../services/dataService'
 import { icon } from '../icons'
 import { formatDateFull, formatDateShort } from '../lib/date'
@@ -99,6 +101,8 @@ export function SessionDetail() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [, navigate] = useLocation()
   const [toastMessage, setToastMessage] = useState<string | null>(null)
+  const [showSaveTemplate, setShowSaveTemplate] = useState(false)
+  const [newTemplateName, setNewTemplateName] = useState('')
 
   const getSessionId = useCallback((): string | null => {
     const pathParts = window.location.pathname.split('/')
@@ -218,6 +222,66 @@ export function SessionDetail() {
       console.error('Failed to save session:', err)
     } finally {
       setSaving(false)
+    }
+  }
+
+  // Spara ändringar i övningarna till den valda mallen
+  async function handleUpdateTemplate() {
+    if (!session) return
+    const template = allTemplates.find(t => t.id === formTemplateId)
+    if (!template) {
+      setToastMessage('Denna mall finns inte längre, välj en annan mall eller spara som ny.')
+      return
+    }
+    try {
+      const templateExercises = await Promise.all(
+        formExercises.map(async (e, i) => {
+          let exerciseId = e.exerciseId
+          if (!exerciseId || exerciseId.startsWith('new-')) {
+            const ex = await getOrCreateExercise(e.exerciseName)
+            exerciseId = ex.id
+          }
+          return {
+            exerciseId,
+            defaultSetEntry: e.setEntries[0] || { sets: 3, reps: 10, weight: 0 },
+            order: i
+          }
+        })
+      )
+      await updateTemplate(template.id, { exercises: templateExercises })
+      setToastMessage(`Mallen "${template.name}" uppdaterad med nuvarande övningar.`)
+    } catch (err) {
+      console.error('Failed to update template:', err)
+      setToastMessage('Kunde inte uppdatera mallen.')
+    }
+  }
+
+  // Spara nuvarande övningar som en ny mall
+  async function handleSaveAsNewTemplate() {
+    if (!session || !newTemplateName.trim()) return
+    try {
+      const templateExercises = await Promise.all(
+        formExercises.map(async e => {
+          let exerciseId = e.exerciseId
+          if (!exerciseId || exerciseId.startsWith('new-')) {
+            const ex = await getOrCreateExercise(e.exerciseName)
+            exerciseId = ex.id
+          }
+          return {
+            exerciseId,
+            defaultSetEntry: e.setEntries[0] || { sets: 3, reps: 10, weight: 0 }
+          }
+        })
+      )
+      const newTemplate = await createTemplate(newTemplateName.trim(), templateExercises)
+      setAllTemplates(prev => [...prev, newTemplate].sort((a, b) => a.name.localeCompare(b.name)))
+      setFormTemplateId(newTemplate.id)
+      setShowSaveTemplate(false)
+      setNewTemplateName('')
+      setToastMessage(`Mallen "${newTemplate.name}" skapad.`)
+    } catch (err) {
+      console.error('Failed to create template:', err)
+      setToastMessage('Kunde inte skapa mallen.')
     }
   }
 
@@ -494,6 +558,40 @@ export function SessionDetail() {
             ))}
           </select>
         </Field>
+
+        <div class="flex gap-sm mb">
+          <Button variant="secondary" size="sm" onClick={handleUpdateTemplate} disabled={!formTemplateId}>
+            Spara övningarna till mallen
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => setShowSaveTemplate(v => !v)}>
+            Spara som ny mall
+          </Button>
+        </div>
+
+        {showSaveTemplate && (
+          <div class="card mb">
+            <form
+              class="flex gap-sm items-end"
+              onSubmit={e => {
+                e.preventDefault()
+                handleSaveAsNewTemplate()
+              }}
+            >
+              <Field label="Mallnamn" class="m-0 grow">
+                <input
+                  type="text"
+                  value={newTemplateName}
+                  onInput={(e: Event) => setNewTemplateName((e.target as HTMLInputElement).value)}
+                  placeholder="t.ex. Bröst, axlar & triceps – lång"
+                  autoFocus
+                />
+              </Field>
+              <Button type="submit" disabled={!newTemplateName.trim() || formExercises.length === 0}>
+                Skapa mall
+              </Button>
+            </form>
+          </div>
+        )}
 
         <h3 class="mb-sm">Övningar</h3>
         

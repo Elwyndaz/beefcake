@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'preact/hooks'
-import { getAllExercises, getVolumeOverTime, getFrequencyPerTemplate, getHeatmapData, getPRs, getCurrentStreak, getWeeklyTonnage, getEstimated1RM } from '../services/dataService'
+import { getAllExercises, getVolumeOverTime, getFrequencyPerTemplate, getHeatmapData, getPRs, getCurrentStreak, getWeeklyTonnage, getEstimated1RM, getVolumeByMuscleGroup } from '../services/dataService'
 import { formatDateShort, localDateISO, todayISO, parseLocalDate } from '../lib/date'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
@@ -88,6 +88,7 @@ export function Stats() {
   const [frequencyData, setFrequencyData] = useState<{ templateName: string; count: number }[]>([])
   const [heatmapData, setHeatmapData] = useState<{ date: string; count: number }[]>([])
   const [prs, setPRs] = useState<PR[]>([])
+  const [muscleGroupStats, setMuscleGroupStats] = useState<{ muscleGroup: string; volume: number; sessions: number }[]>([])
   const [streak, setStreak] = useState<{ streakDays: number; lastWorkoutDate: string | null }>({ streakDays: 0, lastWorkoutDate: null })
   const [thisWeekTonnage, setThisWeekTonnage] = useState<number>(0)
   const [oneRM, setOneRM] = useState<{ exerciseName: string; estimated1RM: number; date: string } | null>(null)
@@ -142,18 +143,20 @@ export function Stats() {
     try {
       setLoading(true)
       setError(null)
-      const [es, freq, heat, prsData, streakData, tonnageData] = await Promise.all([
+      const [es, freq, heat, prsData, streakData, tonnageData, muscleStats] = await Promise.all([
         getAllExercises(),
         getFrequencyPerTemplate(),
         getHeatmapData(30),
         getPRs(),
         getCurrentStreak(),
-        getThisWeekTonnage()
+        getThisWeekTonnage(),
+        getVolumeByMuscleGroup()
       ])
       setExercises(es)
       setFrequencyData(freq)
       setHeatmapData(heat)
       setPRs(prsData)
+      setMuscleGroupStats(muscleStats)
       setStreak(streakData)
       setThisWeekTonnage(tonnageData)
       if (es.length > 0 && !selectedExerciseId) {
@@ -511,6 +514,34 @@ export function Stats() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+        </Card>
+
+        <Card title="Muskelgrupper">
+          {muscleGroupStats.length === 0 ? (
+            <EmptyState
+              title="Inga muskelgrupper ännu"
+              message="Övningarna mappas automatiskt till muskelgrupper när du loggar pass."
+            />
+          ) : (
+            <div class="muscle-group-list">
+              {(() => {
+                const max = muscleGroupStats[0]?.volume || 1
+                return muscleGroupStats.map((mg) => (
+                  <div class="muscle-group-row" key={mg.muscleGroup}>
+                    <div class="flex justify-between items-center mb-1">
+                      <span class="text-sm font-600">{mg.muscleGroup}</span>
+                      <span class="text-sm text-muted tabular-nums">
+                        {mg.volume.toLocaleString('sv-SE')} kg · {mg.sessions} pass
+                      </span>
+                    </div>
+                    <div class="muscle-group-bar">
+                      <div class="muscle-group-fill" style={{ width: `${Math.max(4, (mg.volume / max) * 100)}%` }} />
+                    </div>
+                  </div>
+                ))
+              })()}
             </div>
           )}
         </Card>

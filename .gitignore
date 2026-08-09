@@ -13,3 +13,4 @@ npm-debug.log*
 .idea
 *.tsbuildinfo
 nul
+.playwright-shots
