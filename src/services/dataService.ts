@@ -143,8 +143,8 @@ export async function createSession(
 
   const history: ExerciseHistory[] = exercises.map(e => {
     // För varje setEntry i exercise, skapa en historikpost
-    // För nu: om det finns flera setEntries, summera volymen
-    const totalVolume = e.setEntries.reduce((sum, set) => sum + (set.sets * set.reps * set.weight), 0)
+    // Hoppa över setEntries med vikt 0 vid volymberäkning
+    const totalVolume = e.setEntries.reduce((sum, set) => sum + (set.weight > 0 ? set.sets * set.reps * set.weight : 0), 0)
     return {
       id: generateId(),
       date,
@@ -194,8 +194,8 @@ export async function updateSession(id: string, updates: Partial<Session>): Prom
   // statistiken läser. Skrivs bara passet blir graferna tyst fel. Bygg om
   // passets historikrader i samma transaktion som passet självt.
   const history: ExerciseHistory[] = updated.exercises.map((e, i) => {
-    // Summera volymen från alla setEntries
-    const totalVolume = e.setEntries.reduce((sum, set) => sum + (set.sets * set.reps * set.weight), 0)
+    // Summera volymen från alla setEntries, hoppa över vikt 0
+    const totalVolume = e.setEntries.reduce((sum, set) => sum + (set.weight > 0 ? set.sets * set.reps * set.weight : 0), 0)
     return {
       id: `${id}-${i}`,
       date: updated.date,
@@ -346,7 +346,9 @@ export async function getWeeklyTonnage(weekStartDate: string): Promise<number> {
     if (s.date >= weekStartDate && s.date <= weekEndISO) {
       for (const e of s.exercises) {
         for (const set of e.setEntries) {
-          totalVolume += set.sets * set.reps * set.weight
+          if (set.weight > 0) {
+            totalVolume += set.sets * set.reps * set.weight
+          }
         }
       }
     }
@@ -576,7 +578,7 @@ export async function syncSeed(): Promise<{ sessionsAdded: number; exercisesAdde
     
     // Skapa historik från migrerade exercises
     for (const e of migratedSession.exercises) {
-      const totalVolume = e.setEntries.reduce((sum, set) => sum + (set.sets * set.reps * set.weight), 0)
+      const totalVolume = e.setEntries.reduce((sum, set) => sum + (set.weight > 0 ? set.sets * set.reps * set.weight : 0), 0)
       newHistory.push({
         id: `${s.id}-${e.order}`,
         date: s.date,

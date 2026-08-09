@@ -1,8 +1,11 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
 
+export type ExerciseKind = 'weight' | 'bodyweight' | 'time' | 'distance'
+
 export interface Exercise {
   id: string
   name: string
+  kind?: ExerciseKind
   muscleGroup?: string
   equipment?: string
   createdAt: string

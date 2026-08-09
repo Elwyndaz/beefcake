@@ -23,7 +23,7 @@ const periodLabels: Record<FilterState['period'], string> = {
 
 function calculateTotalVolume(session: Session): number {
   return session.exercises.reduce((sum, e) => {
-    const exerciseVolume = e.setEntries.reduce((setSum, set) => setSum + (set.sets * set.reps * set.weight), 0)
+    const exerciseVolume = e.setEntries.reduce((setSum, set) => setSum + (set.weight > 0 ? set.sets * set.reps * set.weight : 0), 0)
     return sum + exerciseVolume
   }, 0)
 }

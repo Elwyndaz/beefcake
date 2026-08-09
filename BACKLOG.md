@@ -4,7 +4,7 @@
 
 ## Öppet
 
-- [ ] `[P0]` `Exercise.kind` för kroppsvikt, tid och distans. 95 konditionspass har volym 0 och kroppsviktsövningar räknas fel
+- [x] `[P0]` `Exercise.kind` för kroppsvikt, tid och distans. 95 konditionspass har volym 0 och kroppsviktsövningar räknas fel
 - [ ] `[P1]` Autosave av påbörjat pass, utkast i IndexedDB som går att återuppta
 - [ ] `[P1]` `importAllData` rensar databasen innan den validerar filen. En trasig JSON raderar allt. Validera först, backup före import
 - [ ] `[P1]` Övningssida med progression, estimerat 1RM och arbetsvikt över tid per övning
@@ -21,6 +21,8 @@
 ## Byggt
 
 - Datamodell med `SetEntry[]`, olika vikt och reps per set, migrering av all befintlig data
+- `ExerciseKind` typ och volymberäkning som hoppar över vikt 0 för konditionspass
+- Snabbvals-CTA:er på förstasidan för de 2-3 senaste passen
 - Historiksida med detaljvy, redigering, radering, undo och "kör igen"
 - Dashboard med nästa pass som primär handling, "förra gången" per övning vid loggning
 - Statistik: estimerat 1RM, tonnage per vecka, streak, periodfilter, tidsaxel, PR-lista

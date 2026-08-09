@@ -2,17 +2,20 @@
 schemaVersion: 1
 status: active
 currentGoal: Slutföra datamodellen med Exercise.kind för kroppsvikt, tid och distans
-nextAction: Lägg till kind på Exercise i src/db/schema.ts och låt volymberäkningen hoppa över pass utan vikt, så de 95 konditionspassen slutar räknas som volym 0
+nextAction: Backfilla Exercise.kind på befintliga övningar (Hopprep = time, Armhävningar/Chins = bodyweight)
 blockers: []
 reviewedAt: 2026-08-09
 ---
 
 ## Recent work
 
+- `ExerciseKind` typ tillagd i schema.ts (`'weight' | 'bodyweight' | 'time' | 'distance'`), `Exercise.kind` som optional field
+- Volymberäkning uppdaterad i createSession, updateSession, syncSeed, getWeeklyTonnage, History.tsx och SessionDetail.tsx för att hoppa över setEntries med vikt 0
+- Snabbvals-CTA:er på förstasidan för att välja bland de 2-3 senaste passen
 - `SetEntry[]` ersätter `sets`/`reps`/`weight` genom hela kedjan: schema, models, dataService, LogSession, SessionDetail, Templates. Legacy-typer och migreringsfunktioner kvar för gammal seed-struktur.
 - Designsystem-refresh: tokens i `app.css`, Geist self-hostad, komponenterna i `src/components/` används i alla vyer.
 - Inline mallhantering i logg- och redigeringsläge: "Spara som mall" i LogSession, "Spara övningarna till mallen" + "Spara som ny mall" i SessionDetail.
-- Muskelgrupper: `MUSCLE_GROUP_MAP` (namn → grupp), backfill i `syncSeed`, nytt "Muskelgrupper"-kort i Statistik med volym per grupp.
+- Muskelgrupper: `MUSCLE_GROUP_MAP` (namn → grupp), backfill i `syncSeed`, nytt "Muskelgrupper"
 - Data-tappning: `restoreFromLocalStorage()` i `syncSeed` (körs före render i `main.tsx`), `autoBackup()` efter varje mutation. Verifierat: wipe av IndexedDB → reload → alla pass tillbaka.
 - Dokumenten städade 2026-08-09: `AUDIT.md`, `MISTRAL-WORKPLAN.md` och `DESIGN-AUDIT.md` raderade, öppna poster flyttade till `BACKLOG.md`, domänmodellen samlad i `CONTEXT.md`.
 

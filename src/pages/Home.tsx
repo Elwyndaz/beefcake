@@ -137,6 +137,23 @@ export function Home() {
         </Card>
       </div>
 
+      {recentSessions.length >= 2 && (
+        <Card>
+          <h2 class="m-0 mb-sm">Snabbval</h2>
+          <div class="flex gap-sm flex-wrap">
+            {recentSessions.slice(0, 3).map((session) => (
+              <Button
+                key={session.id}
+                variant="secondary"
+                onClick={() => navigate(`/history/${session.id}`)}
+              >
+                {formatDateWithWeekday(session.date)}: {session.templateName}
+              </Button>
+            ))}
+          </div>
+        </Card>
+      )}
+
       <Card padding="none">
         <div class="flex justify-between items-center mb-sm" style="padding: var(--space-6) var(--space-6) var(--space-2) var(--space-6)">
           <h2 class="m-0">Senaste pass</h2>
@@ -163,7 +180,7 @@ export function Home() {
               <tbody>
                 {recentSessions.map((session) => {
                   const sessionVolume = session.exercises.reduce((sum, e) => {
-                    const exerciseVolume = e.setEntries.reduce((setSum, set) => setSum + (set.sets * set.reps * set.weight), 0)
+                    const exerciseVolume = e.setEntries.reduce((setSum, set) => setSum + (set.weight > 0 ? set.sets * set.reps * set.weight : 0), 0)
                     return sum + exerciseVolume
                   }, 0)
                   return (

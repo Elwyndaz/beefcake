@@ -25,7 +25,7 @@ interface FormExercise {
 }
 
 function calculateExerciseVolume(ex: FormExercise | SessionExercise): number {
-  return ex.setEntries.reduce((sum, set) => sum + (set.sets * set.reps * set.weight), 0)
+  return ex.setEntries.reduce((sum, set) => sum + (set.weight > 0 ? set.sets * set.reps * set.weight : 0), 0)
 }
 
 function calculateTotalVolume(exercises: (FormExercise | SessionExercise)[]): number {
