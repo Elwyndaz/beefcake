@@ -125,7 +125,6 @@ export function Home() {
             {recentSessions.slice(0, 3).map((session) => (
               <Button
                 key={session.id}
-                variant="secondary"
                 size="sm"
                 onClick={() => navigate(`/history/${session.id}`)}
               >
