@@ -102,7 +102,7 @@ export function Home() {
             <svg width="20" height="20" viewBox="0 0 24 24" class="text-danger">
               <path fill="currentColor" d="M12 2L1 21h20L12 2zm0 3.23L19.39 20H4.61L12 5.23zM12 12.77L14.14 17h-4.28L12 12.77z"/>
             </svg>
-            <span>Du har inte tränat på {showReminder.daysSince} dagar. Den jävla latmasken.</span>
+            <span>Du har inte tränat på {showReminder.daysSince} dagar. Din jävla latmask.</span>
           </span>
           <button class="banner-dismiss" onClick={dismissReminder} aria-label="Stäng">
             <svg width="16" height="16" viewBox="0 0 19 19"><use href={icon('x-icon')} /></svg>
