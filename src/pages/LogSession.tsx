@@ -2,14 +2,12 @@ import { useState, useEffect, useRef } from 'preact/hooks'
 import { getAllTemplates, getAllExercises, createSession, getOrCreateExercise, getSession } from '../services/dataService'
 import { todayISO } from '../models'
 import { icon } from '../icons'
-import type { Template, Exercise, TemplateExercise } from '../models'
+import type { Template, Exercise, TemplateExercise, SetEntry } from '../models'
 
 interface FormExercise {
   exerciseId: string
   exerciseName: string
-  sets: number
-  reps: number
-  weight: number
+  setEntries: SetEntry[]
 }
 
 export function LogSession() {
@@ -42,9 +40,7 @@ export function LogSession() {
             const formExercises: FormExercise[] = session.exercises.map(e => ({
               exerciseId: e.exerciseId,
               exerciseName: e.exerciseName,
-              sets: e.sets,
-              reps: e.reps,
-              weight: e.weight
+              setEntries: e.setEntries
             }))
             setExercises(formExercises)
             setDate(todayISO())
@@ -96,9 +92,7 @@ export function LogSession() {
       const formExercises: FormExercise[] = template.exercises.map((te: TemplateExercise) => ({
         exerciseId: te.exerciseId,
         exerciseName: exMap.get(te.exerciseId) || '',
-        sets: te.defaultSets,
-        reps: te.defaultReps,
-        weight: te.defaultWeight
+        setEntries: [te.defaultSetEntry]
       }))
       setExercises(formExercises)
     }
@@ -118,7 +112,12 @@ export function LogSession() {
             const ex = await getOrCreateExercise(e.exerciseName)
             exerciseId = ex.id
           }
-          return { ...e, exerciseId }
+          return { 
+            exerciseId,
+            exerciseName: e.exerciseName,
+            setEntries: e.setEntries,
+            order: 0 // Order kommer att sättas i createSession
+          }
         })
       )
 
@@ -128,20 +127,20 @@ export function LogSession() {
       setTimeout(() => setSaved(false), 2000)
     } catch (err) {
       console.error(err)
-      alert('Kunde inte spara pass')
+      setError('Kunde inte spara pass')
     } finally {
       setSaving(false)
     }
   }
 
-  function updateExercise(idx: number, field: keyof FormExercise, value: any) {
+  function updateExercise(idx: number, field: keyof FormExercise, value: string | number | SetEntry[]) {
     const newExercises = [...exercises]
     newExercises[idx] = { ...newExercises[idx], [field]: value }
     setExercises(newExercises)
   }
 
   function addExercise() {
-    setExercises([...exercises, { exerciseId: `new-${Date.now()}`, exerciseName: '', sets: 3, reps: 10, weight: 0 }])
+    setExercises([...exercises, { exerciseId: `new-${Date.now()}`, exerciseName: '', setEntries: [{ sets: 3, reps: 10, weight: 0 }] }])
   }
 
   function removeExercise(idx: number) {
@@ -149,10 +148,39 @@ export function LogSession() {
     setExercises(newExercises)
   }
 
-  function handleInputChange(e: Event, idx: number, field: keyof FormExercise) {
+  function addSetToExercise(exerciseIdx: number) {
+    const newExercises = [...exercises]
+    newExercises[exerciseIdx] = {
+      ...newExercises[exerciseIdx],
+      setEntries: [...newExercises[exerciseIdx].setEntries, { sets: 1, reps: 10, weight: 0 }]
+    }
+    setExercises(newExercises)
+  }
+
+  function removeSetFromExercise(exerciseIdx: number, setIdx: number) {
+    const newExercises = [...exercises]
+    if (newExercises[exerciseIdx].setEntries.length > 1) {
+      newExercises[exerciseIdx] = {
+        ...newExercises[exerciseIdx],
+        setEntries: newExercises[exerciseIdx].setEntries.filter((_, i) => i !== setIdx)
+      }
+      setExercises(newExercises)
+    }
+  }
+
+  function handleInputChange(e: Event, idx: number, field: keyof FormExercise, setIdx?: number, nestedField?: keyof SetEntry) {
     const target = e.target as HTMLInputElement
     const value = target.type === 'number' ? (parseFloat(target.value) || 0) : target.value
-    updateExercise(idx, field, value)
+    
+    if (field === 'setEntries' && setIdx !== undefined && nestedField) {
+      // Uppdatera nested field i setEntries array
+      const exercise = exercises[idx]
+      const newSetEntries = [...exercise.setEntries]
+      newSetEntries[setIdx] = { ...newSetEntries[setIdx], [nestedField]: value }
+      updateExercise(idx, 'setEntries', newSetEntries)
+    } else {
+      updateExercise(idx, field, value)
+    }
   }
 
   function handleDateChange(e: Event) {
@@ -247,13 +275,35 @@ export function LogSession() {
                           />
                         </td>
                         <td>
-                          <input type="number" min="1" max="20" value={ex.sets} onChange={e => handleInputChange(e, idx, 'sets')} class="table-input" />
+                          <input 
+                            type="number" 
+                            min="1" 
+                            max="20" 
+                            value={ex.setEntries[0]?.sets || 0} 
+                            onChange={e => handleInputChange(e, idx, 'setEntries', 0, 'sets')} 
+                            class="table-input" 
+                          />
                         </td>
                         <td>
-                          <input type="number" min="1" max="50" value={ex.reps} onChange={e => handleInputChange(e, idx, 'reps')} class="table-input" />
+                          <input 
+                            type="number" 
+                            min="1" 
+                            max="50" 
+                            value={ex.setEntries[0]?.reps || 0} 
+                            onChange={e => handleInputChange(e, idx, 'setEntries', 0, 'reps')} 
+                            class="table-input" 
+                          />
                         </td>
                         <td>
-                          <input type="number" min="0" step="0.5" max="500" value={ex.weight} onChange={e => handleInputChange(e, idx, 'weight')} class="table-input" />
+                          <input 
+                            type="number" 
+                            min="0" 
+                            step="0.5" 
+                            max="500" 
+                            value={ex.setEntries[0]?.weight || 0} 
+                            onChange={e => handleInputChange(e, idx, 'setEntries', 0, 'weight')} 
+                            class="table-input" 
+                          />
                         </td>
                         <td class="remove-cell">
                           <button class="btn-remove" onClick={() => removeExercise(idx)} aria-label="Ta bort">
@@ -289,20 +339,47 @@ export function LogSession() {
                           list="exercise-suggestions"
                         />
                       </div>
-                      <div class="input-group grid-3">
-                        <div>
-                          <label>Set</label>
-                          <input type="number" min="1" max="20" value={ex.sets} onChange={e => handleInputChange(e, idx, 'sets')} />
+                      {ex.setEntries.map((set, setIdx) => (
+                        <div key={setIdx} class="input-group grid-3">
+                          <div>
+                            <label>Set {setIdx + 1}</label>
+                            <input 
+                              type="number" 
+                              min="1" 
+                              max="20" 
+                              value={set.sets} 
+                              onChange={e => handleInputChange(e, idx, 'setEntries', setIdx, 'sets')} 
+                            />
+                          </div>
+                          <div>
+                            <label>Reps</label>
+                            <input 
+                              type="number" 
+                              min="1" 
+                              max="50" 
+                              value={set.reps} 
+                              onChange={e => handleInputChange(e, idx, 'setEntries', setIdx, 'reps')} 
+                            />
+                          </div>
+                          <div>
+                            <label>Vikt (kg)</label>
+                            <input 
+                              type="number" 
+                              min="0" 
+                              step="0.5" 
+                              max="500" 
+                              value={set.weight} 
+                              onChange={e => handleInputChange(e, idx, 'setEntries', setIdx, 'weight')} 
+                            />
+                          </div>
+                          {ex.setEntries.length > 1 && (
+                            <div class="m-0">
+                              <button class="btn btn-danger btn-sm h-full" onClick={() => removeSetFromExercise(idx, setIdx)}>Ta bort</button>
+                            </div>
+                          )}
                         </div>
-                        <div>
-                          <label>Reps</label>
-                          <input type="number" min="1" max="50" value={ex.reps} onChange={e => handleInputChange(e, idx, 'reps')} />
-                        </div>
-                        <div>
-                          <label>Vikt (kg)</label>
-                          <input type="number" min="0" step="0.5" max="500" value={ex.weight} onChange={e => handleInputChange(e, idx, 'weight')} />
-                        </div>
-                      </div>
+                      ))}
+                      <button class="btn btn-secondary btn-sm mt-1" onClick={() => addSetToExercise(idx)}>+ Lägg till set</button>
                     </div>
                   </div>
                 ))}

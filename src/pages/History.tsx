@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'preact/hooks'
 import { useLocation } from 'wouter'
 import { getAllSessions, getAllTemplates, deleteSession } from '../services/dataService'
 import { icon } from '../icons'
+import { formatDateShort, formatDateWithWeekday, getMonthKey, monthNames } from '../lib/date'
 import type { Session, Template } from '../models'
 
 interface FilterState {
@@ -16,26 +17,11 @@ const periodLabels: Record<FilterState['period'], string> = {
   'all': 'Alltid'
 }
 
-const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Maj', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dec']
-
-function formatDateShort(isoDate: string): string {
-  const date = new Date(isoDate)
-  return `${date.getDate()} ${monthNames[date.getMonth()]} ${date.getFullYear()}`
-}
-
-function formatDateWithWeekday(isoDate: string): string {
-  const date = new Date(isoDate)
-  const weekdayNames = ['Sön', 'Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör']
-  return `${weekdayNames[date.getDay()]} ${date.getDate()} ${monthNames[date.getMonth()]} ${date.getFullYear()}`
-}
-
-function getMonthKey(date: string): string {
-  const d = new Date(date)
-  return `${monthNames[d.getMonth()]} ${d.getFullYear()}`
-}
-
 function calculateTotalVolume(session: Session): number {
-  return session.exercises.reduce((sum, e) => sum + e.sets * e.reps * e.weight, 0)
+  return session.exercises.reduce((sum, e) => {
+    const exerciseVolume = e.setEntries.reduce((setSum, set) => setSum + (set.sets * set.reps * set.weight), 0)
+    return sum + exerciseVolume
+  }, 0)
 }
 
 function filterSessions(sessions: Session[], filters: FilterState): Session[] {

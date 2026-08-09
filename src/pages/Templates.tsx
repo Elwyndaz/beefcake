@@ -1,13 +1,61 @@
 import { useState, useEffect } from 'preact/hooks'
 import { getAllTemplates, getAllExercises, createTemplate, updateTemplate, deleteTemplate, getOrCreateExercise } from '../services/dataService'
-import type { Template, Exercise } from '../models'
+import { icon } from '../icons'
+import type { Template, Exercise, SetEntry } from '../models'
 
 interface FormExercise {
   exerciseId: string
   exerciseName: string
-  defaultSets: number
-  defaultReps: number
-  defaultWeight: number
+  defaultSetEntry: SetEntry
+}
+
+// Delete confirmation dialog
+function DeleteDialog({
+  isOpen,
+  onClose,
+  onConfirm,
+  title,
+  message
+}: {
+  isOpen: boolean
+  onClose: () => void
+  onConfirm: () => void
+  title: string
+  message: string
+}) {
+  if (!isOpen) return null
+
+  return (
+    <div class="dialog-overlay" onClick={onClose}>
+      <div class="dialog" onClick={e => e.stopPropagation()}>
+        <div class="flex justify-between items-center mb">
+          <h3 class="m-0">{title}</h3>
+          <button class="banner-dismiss" onClick={onClose} aria-label="Stäng">
+            <svg width="16" height="16" viewBox="0 0 19 19"><use href={icon('x-icon')} /></svg>
+          </button>
+        </div>
+        <p>{message}</p>
+        <div class="flex gap mt justify-end">
+          <button class="btn btn-secondary" onClick={onClose}>Avbryt</button>
+          <button class="btn btn-danger" onClick={onConfirm}>Radera</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Toast component
+function Toast({ message, onDismiss }: { message: string; onDismiss: () => void }) {
+  useEffect(() => {
+    const timer = setTimeout(onDismiss, 3000)
+    return () => clearTimeout(timer)
+  }, [onDismiss])
+
+  return (
+    <div class="toast" onClick={onDismiss}>
+      {message}
+    </div>
+  )
 }
 
 export function Templates() {
@@ -19,6 +67,8 @@ export function Templates() {
   const [showForm, setShowForm] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [deleteDialog, setDeleteDialog] = useState<{ id: string; name: string } | null>(null)
+  const [toastMessage, setToastMessage] = useState<string | null>(null)
 
   useEffect(() => {
     loadData()
@@ -47,9 +97,7 @@ export function Templates() {
       return {
         exerciseId: te.exerciseId,
         exerciseName: ex?.name || '',
-        defaultSets: te.defaultSets,
-        defaultReps: te.defaultReps,
-        defaultWeight: te.defaultWeight
+        defaultSetEntry: te.defaultSetEntry
       }
     })
     setFormExercises(exercises)
@@ -59,7 +107,7 @@ export function Templates() {
   function startCreate() {
     setEditingId(null)
     setFormName('')
-    setFormExercises([{ exerciseId: '', exerciseName: '', defaultSets: 3, defaultReps: 10, defaultWeight: 0 }])
+    setFormExercises([{ exerciseId: '', exerciseName: '', defaultSetEntry: { sets: 3, reps: 10, weight: 0 } }])
     setShowForm(true)
   }
 
@@ -80,9 +128,7 @@ export function Templates() {
         }
         return {
           exerciseId,
-          defaultSets: fe.defaultSets,
-          defaultReps: fe.defaultReps,
-          defaultWeight: fe.defaultWeight,
+          defaultSetEntry: fe.defaultSetEntry,
           order: i
         }
       })
@@ -98,34 +144,62 @@ export function Templates() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('Radera mall? Det går inte att ångra.')) return
-    await deleteTemplate(id)
-    await loadData()
+    const template = templates.find(t => t.id === id)
+    if (template) {
+      setDeleteDialog({ id, name: template.name })
+    }
   }
 
-  function updateFormExercise(idx: number, field: keyof FormExercise, value: any) {
+  async function confirmDelete() {
+    if (!deleteDialog) return
+    setDeleteDialog(null)
+    try {
+      await deleteTemplate(deleteDialog.id)
+      setToastMessage(`Mall "${deleteDialog.name}" raderad.`)
+      await loadData()
+    } catch (err) {
+      console.error('Kunde inte radera mall:', err)
+      setToastMessage('Kunde inte radera mall. Försök igen.')
+    }
+  }
+
+  function dismissDeleteDialog() {
+    setDeleteDialog(null)
+  }
+
+  function updateFormExercise(idx: number, field: keyof FormExercise, value: string | number | SetEntry) {
     const newExercises = [...formExercises]
     newExercises[idx] = { ...newExercises[idx], [field]: value }
     setFormExercises(newExercises)
   }
 
   function addFormExercise() {
-    setFormExercises([...formExercises, { exerciseId: `new-${Date.now()}`, exerciseName: '', defaultSets: 3, defaultReps: 10, defaultWeight: 0 }])
+    setFormExercises([...formExercises, { exerciseId: `new-${Date.now()}`, exerciseName: '', defaultSetEntry: { sets: 3, reps: 10, weight: 0 } }])
   }
 
   function removeFormExercise(idx: number) {
     setFormExercises(formExercises.filter((_, i) => i !== idx))
   }
 
-  function handleInputChange(e: Event, idx: number, field: keyof FormExercise) {
+  function handleInputChange(e: Event, idx: number, field: keyof FormExercise, nestedField?: keyof SetEntry) {
     const target = e.target as HTMLInputElement
     const value = target.type === 'number' ? (parseFloat(target.value) || 0) : target.value
-    updateFormExercise(idx, field, value)
+    
+    if (nestedField && field === 'defaultSetEntry') {
+      // Uppdatera nested field i defaultSetEntry
+      updateFormExercise(idx, field, { ...formExercises[idx].defaultSetEntry, [nestedField]: value })
+    } else {
+      updateFormExercise(idx, field, value)
+    }
   }
 
   function handleNameChange(e: Event) {
     const target = e.target as HTMLInputElement
     setFormName(target.value)
+  }
+
+  function dismissToast() {
+    setToastMessage(null)
   }
 
   if (loading) {
@@ -136,6 +210,7 @@ export function Templates() {
           <button class="btn btn-primary" disabled>+ Ny mall</button>
         </div>
         <div class="card skeleton skeleton-card"></div>
+        {toastMessage && <Toast message={toastMessage} onDismiss={dismissToast} />}
       </div>
     )
   }
@@ -146,6 +221,7 @@ export function Templates() {
         <h3>Fel vid laddning</h3>
         <p>{error}</p>
         <button class="btn btn-primary mt" onClick={loadData}>Försök igen</button>
+        {toastMessage && <Toast message={toastMessage} onDismiss={dismissToast} />}
       </div>
     )
   }
@@ -184,15 +260,15 @@ export function Templates() {
               </div>
               <div class="input-group m-0">
                 <label>Set</label>
-                <input type="number" min="1" max="20" value={fe.defaultSets} onChange={e => handleInputChange(e, idx, 'defaultSets')} />
+                <input type="number" min="1" max="20" value={fe.defaultSetEntry.sets} onChange={e => handleInputChange(e, idx, 'defaultSetEntry', 'sets')} />
               </div>
               <div class="input-group m-0">
                 <label>Reps</label>
-                <input type="number" min="1" max="50" value={fe.defaultReps} onChange={e => handleInputChange(e, idx, 'defaultReps')} />
+                <input type="number" min="1" max="50" value={fe.defaultSetEntry.reps} onChange={e => handleInputChange(e, idx, 'defaultSetEntry', 'reps')} />
               </div>
               <div class="input-group m-0">
                 <label>Vikt (kg)</label>
-                <input type="number" min="0" step="0.5" max="500" value={fe.defaultWeight} onChange={e => handleInputChange(e, idx, 'defaultWeight')} />
+                <input type="number" min="0" step="0.5" max="500" value={fe.defaultSetEntry.weight} onChange={e => handleInputChange(e, idx, 'defaultSetEntry', 'weight')} />
               </div>
               <div class="m-0">
                 <button class="btn btn-danger btn-sm h-full" onClick={() => removeFormExercise(idx)}>Ta bort</button>
@@ -245,6 +321,17 @@ export function Templates() {
           </div>
         )}
       </div>
+
+      {/* Delete dialog */}
+      <DeleteDialog
+        isOpen={deleteDialog !== null}
+        onClose={dismissDeleteDialog}
+        onConfirm={confirmDelete}
+        title="Radera mall"
+        message={`Är du säker på att du vill radera mall "${deleteDialog?.name}"? Det går inte att ångra.`}
+      />
+
+      {toastMessage && <Toast message={toastMessage} onDismiss={dismissToast} />}
     </div>
   )
 }

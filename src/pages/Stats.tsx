@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'preact/hooks'
 import { getAllExercises, getVolumeOverTime, getFrequencyPerTemplate, getHeatmapData, getPRs } from '../services/dataService'
 import { Chart, registerables } from 'chart.js'
 import 'chartjs-adapter-date-fns'
+import { formatDateShort, localDateISO } from '../lib/date'
 import type { Exercise } from '../models'
 
 Chart.register(...registerables)
@@ -13,22 +14,6 @@ interface PR {
   maxVolume: number
   maxWeightDate: string
   maxVolumeDate: string
-}
-
-function localDateISO(d: Date): string {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
-
-function formatDateShort(isoDate: string): string {
-  const date = new Date(isoDate)
-  const day = date.getDate()
-  const month = date.getMonth()
-  const year = date.getFullYear()
-  const monthNames = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec']
-  return `${day} ${monthNames[month]} ${year}`
 }
 
 export function Stats() {

@@ -1,4 +1,4 @@
-import { getLatestSessionDate } from './dataService'
+import { getAllSessions } from './dataService'
 
 function todayLocal(): Date {
   const d = new Date()
@@ -12,10 +12,10 @@ function dateFromISO(iso: string): Date {
 }
 
 export async function checkReminder(): Promise<{ show: boolean; daysSince: number } | null> {
-  const latestDate = await getLatestSessionDate()
-  if (!latestDate) return null
+  const sessions = await getAllSessions()
+  if (sessions.length === 0) return null
 
-  const latest = dateFromISO(latestDate)
+  const latest = dateFromISO(sessions[0].date)
   const today = todayLocal()
 
   const diffTime = today.getTime() - latest.getTime()

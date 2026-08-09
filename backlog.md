@@ -20,13 +20,17 @@ Excel-importen i webbläsaren är **borttagen** (commit `410efd1`). `xlsx` 0.18.
 
 ## P0 — kritiskt
 
-- [ ] Automatisk backup: JSON-export till fil, plus varning om ingen export gjorts på 30 dagar
+- [x] Automatisk backup: JSON-export till fil, plus varning om ingen export gjorts på 30 dagar
 - [x] Importera de 72 saknade passen (2025-11-19 → 2026-07-28) från `C:\dev\Styrkepass v2.xlsx`, idempotent, matchad på naturlig nyckel
 - [ ] Datamodell: `SetEntry[]` istället för `sets`/`reps`/`weight`, plus `Exercise.kind` för kroppsvikt, tid och distans
 - [x] Historiksida med detaljvy, redigera, radera och upprepa
 - [x] Ta bort `alert()` vid appstart, ersätt med banner
 - [ ] Städa `undefined`-mallen ur datan
-- [ ] Gör `createSession` atomär, en transaktion istället för tre
+- [x] Gör `createSession` atomär, en transaktion istället för tre
+- [x] Ta bort alla `alert()`/`confirm()`/`prompt()` från codebase (P0-blocker)
+- [x] Ta bort alla `any` typer (P0-blocker)
+- [x] Ta bort 6 oanvända designsystem-komponenter (P0-blocker)
+- [x] Ta bort `nul` artifact och lägg till i .gitignore (P0-blocker)
 
 ## P1 — hög påverkan
 
@@ -38,6 +42,9 @@ Excel-importen i webbläsaren är **borttagen** (commit `410efd1`). `xlsx` 0.18.
 - [ ] Statistik som svarar på rätt frågor: estimerat 1RM, tonnage per vecka, streak, periodfilter
 - [ ] Övningssida med progression
 - [x] Chart.js-läckor fixade (race conditions i LogSession kvar)
+- [x] Central datumhantering (tidszon-säker) - `src/lib/date.ts`
+- [x] Optimera `getLatestSessionDate()` - tagit bort double-read
+- [x] Gör `deleteSession` och `deleteTemplate` atomära
 
 ## P2 — polish
 

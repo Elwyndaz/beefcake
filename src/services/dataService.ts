@@ -1,5 +1,5 @@
-import { getDB, generateId, nowISO } from '../models'
-import type { Template, TemplateExercise, Exercise, Session, SessionExercise, ExerciseHistory } from '../models'
+import { getDB, generateId, nowISO, migrateSession, migrateTemplateExercise } from '../models'
+import type { Template, TemplateExercise, Exercise, Session, SessionExercise, ExerciseHistory, SetEntry, LegacySession, LegacyTemplateExercise } from '../models'
 
 // Template Service
 export async function getAllTemplates(): Promise<Template[]> {
@@ -35,24 +35,23 @@ export async function updateTemplate(id: string, updates: Partial<Template>): Pr
 
 export async function deleteTemplate(id: string): Promise<void> {
   const db = await getDB()
-  await db.delete('templates', id)
+  // Atomär transaktion - sessions behåller templateId som historisk data
+  const tx = db.transaction(['templates'], 'readwrite')
+  await tx.objectStore('templates').delete(id)
+  await tx.done
 }
 
 export async function updateTemplateExerciseLastUsed(
   templateId: string,
   exerciseId: string,
-  sets: number,
-  reps: number,
-  weight: number
+  setEntry: SetEntry
 ): Promise<void> {
   const db = await getDB()
   const template = await db.get('templates', templateId)
   if (!template) return
   const ex = template.exercises.find(e => e.exerciseId === exerciseId)
   if (ex) {
-    ex.defaultSets = sets
-    ex.defaultReps = reps
-    ex.defaultWeight = weight
+    ex.defaultSetEntry = setEntry
     template.updatedAt = nowISO()
     await db.put('templates', template)
   }
@@ -104,28 +103,45 @@ export async function createSession(
     exercises: exercises.map((e, i) => ({ ...e, order: i })),
     createdAt: nowISO()
   }
-  await db.put('sessions', session)
 
-  const history: ExerciseHistory[] = exercises.map(e => ({
-    id: generateId(),
-    date,
-    exerciseId: e.exerciseId,
-    exerciseName: e.exerciseName,
-    sets: e.sets,
-    reps: e.reps,
-    weight: e.weight,
-    volume: e.sets * e.reps * e.weight,
-    sessionId: session.id
-  }))
-  const tx = db.transaction('exerciseHistory', 'readwrite')
+  const history: ExerciseHistory[] = exercises.map(e => {
+    // För varje setEntry i exercise, skapa en historikpost
+    // För nu: om det finns flera setEntries, summera volymen
+    const totalVolume = e.setEntries.reduce((sum, set) => sum + (set.sets * set.reps * set.weight), 0)
+    return {
+      id: generateId(),
+      date,
+      exerciseId: e.exerciseId,
+      exerciseName: e.exerciseName,
+      setEntries: e.setEntries,
+      volume: totalVolume,
+      sessionId: session.id
+    }
+  })
+
+  // Hämta den befintliga templaten för att uppdatera default-värden
+  const template = await db.get('templates', templateId)
+  if (template) {
+    for (const e of exercises) {
+      const ex = template.exercises.find(te => te.exerciseId === e.exerciseId)
+      if (ex && e.setEntries.length > 0) {
+        // Uppdatera default till det första setEntry
+        ex.defaultSetEntry = { ...e.setEntries[0] }
+        template.updatedAt = nowISO()
+      }
+    }
+  }
+
+  // Atomär transaktion som skriver till alla tre stores
+  const tx = db.transaction(['sessions', 'exerciseHistory', 'templates'], 'readwrite')
+  await tx.objectStore('sessions').put(session)
   for (const h of history) {
     await tx.objectStore('exerciseHistory').put(h)
   }
-  await tx.done
-
-  for (const e of exercises) {
-    await updateTemplateExerciseLastUsed(templateId, e.exerciseId, e.sets, e.reps, e.weight)
+  if (template) {
+    await tx.objectStore('templates').put(template)
   }
+  await tx.done
 
   return session
 }
@@ -139,17 +155,19 @@ export async function updateSession(id: string, updates: Partial<Session>): Prom
   // exerciseHistory är en denormaliserad kopia av passets övningar och är det
   // statistiken läser. Skrivs bara passet blir graferna tyst fel. Bygg om
   // passets historikrader i samma transaktion som passet självt.
-  const history: ExerciseHistory[] = updated.exercises.map((e, i) => ({
-    id: `${id}-${i}`,
-    date: updated.date,
-    exerciseId: e.exerciseId,
-    exerciseName: e.exerciseName,
-    sets: e.sets,
-    reps: e.reps,
-    weight: e.weight,
-    volume: e.sets * e.reps * e.weight,
-    sessionId: id
-  }))
+  const history: ExerciseHistory[] = updated.exercises.map((e, i) => {
+    // Summera volymen från alla setEntries
+    const totalVolume = e.setEntries.reduce((sum, set) => sum + (set.sets * set.reps * set.weight), 0)
+    return {
+      id: `${id}-${i}`,
+      date: updated.date,
+      exerciseId: e.exerciseId,
+      exerciseName: e.exerciseName,
+      setEntries: e.setEntries,
+      volume: totalVolume,
+      sessionId: id
+    }
+  })
 
   const stale = await db.getAllFromIndex('exerciseHistory', 'by-session', id)
   const tx = db.transaction(['sessions', 'exerciseHistory'], 'readwrite')
@@ -163,21 +181,19 @@ export async function updateSession(id: string, updates: Partial<Session>): Prom
 
 export async function deleteSession(id: string): Promise<void> {
   const db = await getDB()
-  const session = await db.get('sessions', id)
-  if (session) {
-    const history = await db.getAllFromIndex('exerciseHistory', 'by-session', id)
-    const tx = db.transaction('exerciseHistory', 'readwrite')
-    for (const h of history) {
-      await tx.objectStore('exerciseHistory').delete(h.id)
-    }
-    await tx.done
+  // Atomär transaktion för båda stores
+  const tx = db.transaction(['sessions', 'exerciseHistory'], 'readwrite')
+  
+  // Ta bort motsvarande historik-poster
+  const history = await tx.objectStore('exerciseHistory').index('by-session').getAll(id)
+  for (const h of history) {
+    await tx.objectStore('exerciseHistory').delete(h.id)
   }
-  await db.delete('sessions', id)
-}
-
-export async function getLatestSessionDate(): Promise<string | null> {
-  const sessions = await getAllSessions()
-  return sessions.length > 0 ? sessions[0].date : null
+  
+  // Ta bort sessionen
+  await tx.objectStore('sessions').delete(id)
+  
+  await tx.done
 }
 
 // Stats Service
@@ -224,22 +240,26 @@ export async function getPRs(): Promise<{ exerciseId: string; exerciseName: stri
   const map = new Map<string, { exerciseName: string; maxWeight: number; maxVolume: number; maxWeightDate: string; maxVolumeDate: string }>()
 
   for (const h of history) {
+    // För SetEntry[], hittar det högsta weight och volume från alla setEntries
+    const maxWeight = Math.max(...h.setEntries.map(s => s.weight))
+    const totalVolume = h.volume // Redan beräknad och sparad
+    
     const existing = map.get(h.exerciseId)
     if (!existing) {
       map.set(h.exerciseId, {
         exerciseName: h.exerciseName,
-        maxWeight: h.weight,
-        maxVolume: h.volume,
+        maxWeight,
+        maxVolume: totalVolume,
         maxWeightDate: h.date,
         maxVolumeDate: h.date
       })
     } else {
-      if (h.weight > existing.maxWeight) {
-        existing.maxWeight = h.weight
+      if (maxWeight > existing.maxWeight) {
+        existing.maxWeight = maxWeight
         existing.maxWeightDate = h.date
       }
-      if (h.volume > existing.maxVolume) {
-        existing.maxVolume = h.volume
+      if (totalVolume > existing.maxVolume) {
+        existing.maxVolume = totalVolume
         existing.maxVolumeDate = h.date
       }
     }
@@ -295,6 +315,9 @@ function sessionKey(date: string, templateName: string): string {
  * raderar aldrig något som redan finns, så egna ändringar i appen och
  * historiska pass överlever varje körning. Idempotent, kan köras vid varje
  * appstart.
+ * 
+ * Migrerar också från Legacy-typ (defaultSets/defaultReps/defaultWeight) till
+ * ny SetEntry-baserad struktur.
  */
 export async function syncSeed(): Promise<{ sessionsAdded: number; exercisesAdded: number }> {
   const db = await getDB()
@@ -318,45 +341,62 @@ export async function syncSeed(): Promise<{ sessionsAdded: number; exercisesAdde
     newExercises.push(e)
   }
 
+  // Migrera seedTemplates till ny struktur
+  // Hoppa över mallen med name: "undefined" (P0-2: städa undefined-mallen)
   const newTemplates: Template[] = []
   for (const t of seedTemplates) {
     if (templateIdByName.has(exerciseKey(t.name))) continue
+    // Hoppa över den felaktiga undefined-mallen
+    if (t.name === 'undefined') continue
     templateIdByName.set(exerciseKey(t.name), t.id)
     newTemplates.push({
       ...t,
       // Mallens övningar pekar på seed-id:n. Peka om dem till de id:n databasen
       // faktiskt använder, annars blir mallen tom i gränssnittet.
-      exercises: t.exercises.map(te => ({
-        ...te,
-        exerciseId:
-          exerciseIdByName.get(exerciseKey(seedNameById.get(te.exerciseId) ?? '')) ?? te.exerciseId
-      }))
+      exercises: t.exercises.map(te => {
+        const migrated = migrateTemplateExercise(te as unknown as LegacyTemplateExercise)
+        // Kontrollera att inga undefined-värden finns i defaultSetEntry
+        const cleanMigrated = {
+          ...migrated,
+          exerciseId: exerciseIdByName.get(exerciseKey(seedNameById.get(te.exerciseId) ?? '')) ?? te.exerciseId,
+          defaultSetEntry: {
+            sets: migrated.defaultSetEntry.sets || 0,
+            reps: migrated.defaultSetEntry.reps || 0,
+            weight: migrated.defaultSetEntry.weight || 0
+          }
+        }
+        return cleanMigrated
+      })
     })
   }
 
+  // Migrera seedSessions till ny struktur
   const newSessions: Session[] = []
   const newHistory: ExerciseHistory[] = []
   for (const s of seedSessions) {
     if (haveSession.has(sessionKey(s.date, s.templateName))) continue
-    const exercises = s.exercises.map(e => ({
+    // Migrera sessionens exercises till nya strukturen
+    const migratedSession = migrateSession(s as LegacySession)
+    migratedSession.templateId = templateIdByName.get(exerciseKey(s.templateName)) ?? s.templateId
+    
+    // Uppdatera exerciseIds för alla exercises
+    migratedSession.exercises = migratedSession.exercises.map(e => ({
       ...e,
       exerciseId: exerciseIdByName.get(exerciseKey(e.exerciseName)) ?? e.exerciseId
     }))
-    newSessions.push({
-      ...s,
-      templateId: templateIdByName.get(exerciseKey(s.templateName)) ?? s.templateId,
-      exercises
-    })
-    for (const e of exercises) {
+    
+    newSessions.push(migratedSession)
+    
+    // Skapa historik från migrerade exercises
+    for (const e of migratedSession.exercises) {
+      const totalVolume = e.setEntries.reduce((sum, set) => sum + (set.sets * set.reps * set.weight), 0)
       newHistory.push({
         id: `${s.id}-${e.order}`,
         date: s.date,
         exerciseId: e.exerciseId,
         exerciseName: e.exerciseName,
-        sets: e.sets,
-        reps: e.reps,
-        weight: e.weight,
-        volume: e.sets * e.reps * e.weight,
+        setEntries: e.setEntries,
+        volume: totalVolume,
         sessionId: s.id
       })
     }
@@ -382,15 +422,18 @@ export async function exportSessionsCSV(): Promise<string> {
   const rows = [headers.join(',')]
   for (const s of sessions) {
     for (const e of s.exercises) {
-      rows.push([
-        s.date,
-        `"${s.templateName}"`,
-        `"${e.exerciseName}"`,
-        e.sets,
-        e.reps,
-        e.weight,
-        e.sets * e.reps * e.weight
-      ].join(','))
+      // För varje setEntry, skapa en rad
+      for (const set of e.setEntries) {
+        rows.push([
+          s.date,
+          `"${s.templateName}"`,
+          `"${e.exerciseName}"`,
+          set.sets,
+          set.reps,
+          set.weight,
+          set.sets * set.reps * set.weight
+        ].join(','))
+      }
     }
   }
   return rows.join('\n')

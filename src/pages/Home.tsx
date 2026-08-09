@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'preact/hooks'
 import { useLocation } from 'wouter'
-import { getAllSessions, getLatestSessionDate, getAllTemplates } from '../services/dataService'
+import { getAllSessions, getAllTemplates } from '../services/dataService'
 import { checkReminder } from '../services/reminderService'
+import { formatDateWithWeekday } from '../lib/date'
 import { icon } from '../icons'
 import type { Session } from '../models'
 
@@ -46,8 +47,6 @@ export function Home() {
       if (sessions.length > 0) {
         setLastWorkout(sessions[0].date)
       }
-      const latest = await getLatestSessionDate()
-      if (latest) setLastWorkout(latest)
     } catch (err) {
       setError('Kunde inte ladda data. Försök igen.')
       console.error('Fel vid laddning:', err)
@@ -57,8 +56,7 @@ export function Home() {
   }
 
   function formatDate(dateStr: string): string {
-    const d = new Date(dateStr + 'T00:00:00')
-    return d.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' })
+    return formatDateWithWeekday(dateStr)
   }
 
   if (loading) {
@@ -148,7 +146,10 @@ export function Home() {
                     <td><span class="badge badge-primary">{session.templateName}</span></td>
                     <td>{session.exercises.length}</td>
                     <td>
-                      {session.exercises.reduce((sum, e) => sum + e.sets * e.reps * e.weight, 0).toLocaleString('sv-SE')} kg
+                      {session.exercises.reduce((sum, e) => {
+                        const exerciseVolume = e.setEntries.reduce((setSum, set) => setSum + (set.sets * set.reps * set.weight), 0)
+                        return sum + exerciseVolume
+                      }, 0).toLocaleString('sv-SE')} kg
                     </td>
                   </tr>
                 ))}

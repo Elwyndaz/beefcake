@@ -8,31 +8,17 @@ import {
   getOrCreateExercise 
 } from '../services/dataService'
 import { icon } from '../icons'
-import type { Session, Exercise, SessionExercise } from '../models'
+import { formatDateFull, formatDateShort } from '../lib/date'
+import type { Session, Exercise, SessionExercise, SetEntry } from '../models'
 
 interface FormExercise {
   exerciseId: string
   exerciseName: string
-  sets: number
-  reps: number
-  weight: number
-}
-
-const monthNames = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec']
-
-function formatDateFull(isoDate: string): string {
-  const date = new Date(isoDate)
-  const weekdayNames = ['Söndag', 'Måndag', 'Tisdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lördag']
-  return `${weekdayNames[date.getDay()]} ${date.getDate()} ${monthNames[date.getMonth()]} ${date.getFullYear()}`
-}
-
-function formatDateShort(isoDate: string): string {
-  const date = new Date(isoDate)
-  return `${date.getDate()} ${monthNames[date.getMonth()]} ${date.getFullYear()}`
+  setEntries: SetEntry[]
 }
 
 function calculateExerciseVolume(ex: FormExercise | SessionExercise): number {
-  return ex.sets * ex.reps * ex.weight
+  return ex.setEntries.reduce((sum, set) => sum + (set.sets * set.reps * set.weight), 0)
 }
 
 function calculateTotalVolume(exercises: (FormExercise | SessionExercise)[]): number {
@@ -140,9 +126,7 @@ export function SessionDetail() {
           const formEx: FormExercise[] = sess.exercises.map(e => ({
             exerciseId: e.exerciseId,
             exerciseName: e.exerciseName,
-            sets: e.sets,
-            reps: e.reps,
-            weight: e.weight
+            setEntries: e.setEntries
           }))
           setFormExercises(formEx)
         }
@@ -189,9 +173,7 @@ export function SessionDetail() {
           return {
             exerciseId,
             exerciseName: e.exerciseName,
-            sets: e.sets,
-            reps: e.reps,
-            weight: e.weight,
+            setEntries: e.setEntries,
             order: i
           }
         })
@@ -212,9 +194,7 @@ export function SessionDetail() {
       setFormExercises(validExercises.map(e => ({
         exerciseId: e.exerciseId,
         exerciseName: e.exerciseName,
-        sets: e.sets,
-        reps: e.reps,
-        weight: e.weight
+        setEntries: e.setEntries
       })))
       setEditing(false)
       setSaved(true)
@@ -264,9 +244,7 @@ export function SessionDetail() {
         setFormExercises(session.exercises.map(e => ({
           exerciseId: e.exerciseId,
           exerciseName: e.exerciseName,
-          sets: e.sets,
-          reps: e.reps,
-          weight: e.weight
+          setEntries: e.setEntries
         })))
       }
     }
@@ -280,15 +258,13 @@ export function SessionDetail() {
       setFormExercises(session.exercises.map(e => ({
         exerciseId: e.exerciseId,
         exerciseName: e.exerciseName,
-        sets: e.sets,
-        reps: e.reps,
-        weight: e.weight
+        setEntries: e.setEntries
       })))
     }
   }
 
   // Form handlers
-  function updateExercise(idx: number, field: keyof FormExercise, value: any) {
+  function updateExercise(idx: number, field: keyof FormExercise, value: string | number | SetEntry[]) {
     const newExercises = [...formExercises]
     newExercises[idx] = { ...newExercises[idx], [field]: value }
     setFormExercises(newExercises)
@@ -298,10 +274,28 @@ export function SessionDetail() {
     setFormExercises([...formExercises, {
       exerciseId: `new-${Date.now()}`,
       exerciseName: '',
-      sets: 3,
-      reps: 10,
-      weight: 0
+      setEntries: [{ sets: 3, reps: 10, weight: 0 }]
     }])
+  }
+
+  function addSetToExercise(exerciseIdx: number) {
+    const newExercises = [...formExercises]
+    newExercises[exerciseIdx] = {
+      ...newExercises[exerciseIdx],
+      setEntries: [...newExercises[exerciseIdx].setEntries, { sets: 1, reps: 10, weight: 0 }]
+    }
+    setFormExercises(newExercises)
+  }
+
+  function removeSetFromExercise(exerciseIdx: number, setIdx: number) {
+    const newExercises = [...formExercises]
+    if (newExercises[exerciseIdx].setEntries.length > 1) {
+      newExercises[exerciseIdx] = {
+        ...newExercises[exerciseIdx],
+        setEntries: newExercises[exerciseIdx].setEntries.filter((_, i) => i !== setIdx)
+      }
+      setFormExercises(newExercises)
+    }
   }
 
   function removeExercise(idx: number) {
@@ -309,10 +303,19 @@ export function SessionDetail() {
     setFormExercises(newExercises)
   }
 
-  function handleInputChange(e: Event, idx: number, field: keyof FormExercise) {
+  function handleInputChange(e: Event, idx: number, field: keyof FormExercise, setIdx?: number, nestedField?: keyof SetEntry) {
     const target = e.target as HTMLInputElement
     const value = target.type === 'number' ? (parseFloat(target.value) || 0) : target.value
-    updateExercise(idx, field, value)
+    
+    if (field === 'setEntries' && setIdx !== undefined && nestedField) {
+      // Uppdatera nested field i setEntries array
+      const exercise = formExercises[idx]
+      const newSetEntries = [...exercise.setEntries]
+      newSetEntries[setIdx] = { ...newSetEntries[setIdx], [nestedField]: value }
+      updateExercise(idx, 'setEntries', newSetEntries)
+    } else {
+      updateExercise(idx, field, value)
+    }
   }
 
   function handleDateChange(e: Event) {
@@ -363,6 +366,23 @@ export function SessionDetail() {
     )
   }
 
+  // Render empty state
+  if (session.exercises.length === 0) {
+    return (
+      <div>
+        <h1 class="page-title">Passdetaljer</h1>
+        <div class="card">
+          <div class="empty-state">
+            <h3>Passet har inga övningar</h3>
+            <p>
+              <a href="/history" class="btn btn-primary mt-sm">Tillbaka till historik</a>
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   // Render read mode (default)
   if (!editing) {
     return (
@@ -401,9 +421,15 @@ export function SessionDetail() {
                   {session.exercises.map((ex, idx) => (
                     <tr key={idx}>
                       <td>{ex.exerciseName}</td>
-                      <td class="tabular-nums">{ex.sets}</td>
-                      <td class="tabular-nums">{ex.reps}</td>
-                      <td class="tabular-nums">{ex.weight}</td>
+                      <td class="tabular-nums">
+                        {ex.setEntries.length > 1 ? `${ex.setEntries[0]?.sets}+` : ex.setEntries[0]?.sets}
+                      </td>
+                      <td class="tabular-nums">
+                        {ex.setEntries.length > 1 ? `${ex.setEntries[0]?.reps}+` : ex.setEntries[0]?.reps}
+                      </td>
+                      <td class="tabular-nums">
+                        {ex.setEntries.length > 1 ? `${ex.setEntries[0]?.weight}+` : ex.setEntries[0]?.weight}
+                      </td>
                       <td class="tabular-nums">{calculateExerciseVolume(ex).toLocaleString('sv-SE')} kg</td>
                     </tr>
                   ))}
@@ -496,13 +522,13 @@ export function SessionDetail() {
                       />
                     </td>
                     <td>
-                      <input type="number" min="1" max="20" value={ex.sets} onChange={e => handleInputChange(e, idx, 'sets')} class="table-input" />
+                      <input type="number" min="1" max="20" value={ex.setEntries[0]?.sets || 0} onChange={e => handleInputChange(e, idx, 'setEntries', 0, 'sets')} class="table-input" />
                     </td>
                     <td>
-                      <input type="number" min="1" max="50" value={ex.reps} onChange={e => handleInputChange(e, idx, 'reps')} class="table-input" />
+                      <input type="number" min="1" max="50" value={ex.setEntries[0]?.reps || 0} onChange={e => handleInputChange(e, idx, 'setEntries', 0, 'reps')} class="table-input" />
                     </td>
                     <td>
-                      <input type="number" min="0" step="0.5" max="500" value={ex.weight} onChange={e => handleInputChange(e, idx, 'weight')} class="table-input" />
+                      <input type="number" min="0" step="0.5" max="500" value={ex.setEntries[0]?.weight || 0} onChange={e => handleInputChange(e, idx, 'setEntries', 0, 'weight')} class="table-input" />
                     </td>
                     <td class="remove-cell">
                       <button class="btn-remove" onClick={() => removeExercise(idx)} aria-label="Ta bort">
@@ -538,20 +564,28 @@ export function SessionDetail() {
                       list="session-exercise-suggestions"
                     />
                   </div>
-                  <div class="input-group grid-3">
-                    <div>
-                      <label>Set</label>
-                      <input type="number" min="1" max="20" value={ex.sets} onChange={e => handleInputChange(e, idx, 'sets')} />
+                  {ex.setEntries.map((set, setIdx) => (
+                    <div key={setIdx} class="input-group grid-3">
+                      <div>
+                        <label>Set {setIdx + 1}</label>
+                        <input type="number" min="1" max="20" value={set.sets} onChange={e => handleInputChange(e, idx, 'setEntries', setIdx, 'sets')} />
+                      </div>
+                      <div>
+                        <label>Reps</label>
+                        <input type="number" min="1" max="50" value={set.reps} onChange={e => handleInputChange(e, idx, 'setEntries', setIdx, 'reps')} />
+                      </div>
+                      <div>
+                        <label>Vikt (kg)</label>
+                        <input type="number" min="0" step="0.5" max="500" value={set.weight} onChange={e => handleInputChange(e, idx, 'setEntries', setIdx, 'weight')} />
+                      </div>
+                      {ex.setEntries.length > 1 && (
+                        <div class="m-0">
+                          <button class="btn btn-danger btn-sm h-full" onClick={() => removeSetFromExercise(idx, setIdx)}>Ta bort</button>
+                        </div>
+                      )}
                     </div>
-                    <div>
-                      <label>Reps</label>
-                      <input type="number" min="1" max="50" value={ex.reps} onChange={e => handleInputChange(e, idx, 'reps')} />
-                    </div>
-                    <div>
-                      <label>Vikt (kg)</label>
-                      <input type="number" min="0" step="0.5" max="500" value={ex.weight} onChange={e => handleInputChange(e, idx, 'weight')} />
-                    </div>
-                  </div>
+                  ))}
+                  <button class="btn btn-secondary btn-sm mt-1" onClick={() => addSetToExercise(idx)}>+ Lägg till set</button>
                 </div>
               </div>
             ))}

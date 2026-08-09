@@ -1,0 +1,66 @@
+/**
+ * Central datumhantering - tidszon-säker för Stockholm (UTC+2)
+ * All datumhantering sker med lokal tid för att undvika UTC-buggar
+ */
+
+export const monthNames = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec']
+const weekdayNames = ['Söndag', 'Måndag', 'Tisdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lördag']
+const weekdayShortNames = ['Sön', 'Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör']
+
+/**
+ * Parsa ISO-datumstring (YYYY-MM-DD) som lokal tid, inte UTC
+ * Fixar buggen där new Date('2025-08-09') tolkas som UTC och visas fel i lokal tid
+ */
+export function parseLocalDate(iso: string): Date {
+  const [year, month, day] = iso.split('-').map(Number)
+  return new Date(year, month - 1, day)
+}
+
+/**
+ * Formatera datum som "D Mmm YYYY" (t.ex. "9 aug 2025")
+ */
+export function formatDateShort(isoDate: string): string {
+  const date = parseLocalDate(isoDate)
+  return `${date.getDate()} ${monthNames[date.getMonth()]} ${date.getFullYear()}`
+}
+
+/**
+ * Formatera datum som "Ve D Mmm YYYY" (t.ex. "Lör 9 aug 2025")
+ */
+export function formatDateWithWeekday(isoDate: string): string {
+  const date = parseLocalDate(isoDate)
+  return `${weekdayShortNames[date.getDay()]} ${date.getDate()} ${monthNames[date.getMonth()]} ${date.getFullYear()}`
+}
+
+/**
+ * Formatera datum som "Veckodag D Mmm YYYY" (t.ex. "Lördag 9 aug 2025")
+ */
+export function formatDateFull(isoDate: string): string {
+  const date = parseLocalDate(isoDate)
+  return `${weekdayNames[date.getDay()]} ${date.getDate()} ${monthNames[date.getMonth()]} ${date.getFullYear()}`
+}
+
+/**
+ * Returnera månadsnyckel som "Mmm YYYY" (t.ex. "aug 2025")
+ */
+export function getMonthKey(date: string): string {
+  const d = parseLocalDate(date)
+  return `${monthNames[d.getMonth()]} ${d.getFullYear()}`
+}
+
+/**
+ * Konvertera Date-objekt till ISO-datumstring (YYYY-MM-DD) med lokal tid
+ */
+export function localDateISO(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+/**
+ * Returnera dagens datum som ISO-string (YYYY-MM-DD) i lokal tid
+ */
+export function todayISO(): string {
+  return localDateISO(new Date())
+}
