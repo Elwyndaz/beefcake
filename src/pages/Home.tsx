@@ -8,16 +8,15 @@ import { Card } from '../components/Card'
 import { Button } from '../components/Button'
 import { Stat } from '../components/Stat'
 import { EmptyState } from '../components/EmptyState'
-import type { Session, Template } from '../models'
+import type { Session } from '../models'
 
 export function Home() {
   const [, navigate] = useLocation()
   const [recentSessions, setRecentSessions] = useState<Session[]>([])
-  const [templates, setTemplates] = useState<Template[]>([])
+  const [recentTemplates, setRecentTemplates] = useState<string[]>([])
   const [templateCount, setTemplateCount] = useState(0)
   const [totalSessions, setTotalSessions] = useState(0)
   const [lastWorkout, setLastWorkout] = useState<string | null>(null)
-  const [lastUsedTemplate, setLastUsedTemplate] = useState<string | null>(null)
   const [showReminder, setShowReminder] = useState<{ show: boolean; daysSince: number } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -43,33 +42,30 @@ export function Home() {
     try {
       setLoading(true)
       setError(null)
-      const [sessions, ts] = await Promise.all([
+      const [sessions, allTemplates] = await Promise.all([
         getAllSessions(),
         getAllTemplates()
       ])
-      setTemplates(ts.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)))
       setRecentSessions(sessions.slice(0, 5))
-      setTemplateCount(ts.length)
+      setTemplateCount(allTemplates.length)
       setTotalSessions(sessions.length)
       if (sessions.length > 0) {
         setLastWorkout(sessions[0].date)
-        setLastUsedTemplate(sessions[0].templateName)
+        // Extrahera unika template-namn från senaste sessioner
+        const uniqueTemplates: string[] = []
+        for (const s of sessions) {
+          if (!uniqueTemplates.includes(s.templateName)) {
+            uniqueTemplates.push(s.templateName)
+          }
+          if (uniqueTemplates.length >= 3) break
+        }
+        setRecentTemplates(uniqueTemplates)
       }
     } catch (err) {
       setError('Kunde inte ladda data. Försök igen.')
       console.error('Fel vid laddning:', err)
     } finally {
       setLoading(false)
-    }
-  }
-
-  function handleQuickLog() {
-    if (lastUsedTemplate) {
-      navigate(`/log?template=${encodeURIComponent(lastUsedTemplate)}`)
-    } else if (templates.length > 0) {
-      navigate(`/log?template=${encodeURIComponent(templates[0].name)}`)
-    } else {
-      navigate('/log')
     }
   }
 
@@ -117,19 +113,16 @@ export function Home() {
 
       <Card>
         <h2 class="m-0 mb-sm">Nästa pass</h2>
-        <Button size="lg" class="btn-block mb-sm" onClick={handleQuickLog}>
-          {lastUsedTemplate ? `Kör "${lastUsedTemplate}" igen` : templates.length > 0 ? `Logga nytt pass` : `Skapa mall först`}
-        </Button>
-        {templates.length >= 2 && (
-          <>
-            <Button size="lg" class="btn-block mb-sm" onClick={() => navigate(`/log?template=${encodeURIComponent(templates[0].name)}`)}>
-              Kör "{templates[0].name}" igen
-            </Button>
-            <Button size="lg" class="btn-block mb-sm" onClick={() => navigate(`/log?template=${encodeURIComponent(templates[1].name)}`)}>
-              Kör "{templates[1].name}" igen
-            </Button>
-          </>
-        )}
+        {recentTemplates.slice(0, 3).map((templateName) => (
+          <Button
+            key={templateName}
+            size="lg"
+            class="btn-block mb-sm"
+            onClick={() => navigate(`/log?template=${encodeURIComponent(templateName)}`)}
+          >
+            Kör "{templateName}" igen
+          </Button>
+        ))}
       </Card>
 
       <div class="grid grid-3 mb">
