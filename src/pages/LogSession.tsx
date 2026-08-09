@@ -36,7 +36,8 @@ export function LogSession() {
       const fromSessionId = urlParams.get('from')
       const templateName = urlParams.get('template')
       
-      await loadTemplates()
+      const ts = await getAllTemplates()
+      setTemplates(ts)
       
       if (fromSessionId) {
         fromSessionRef.current = fromSessionId
@@ -58,12 +59,15 @@ export function LogSession() {
         }
       } else if (templateName) {
         // Match template by name (case-insensitive)
-        const matchedTemplate = templates.find(t => t.name.toLowerCase() === templateName.toLowerCase())
+        const matchedTemplate = ts.find(t => t.name.toLowerCase() === templateName.toLowerCase())
         if (matchedTemplate) {
           setSelectedTemplateId(matchedTemplate.id)
           window.history.replaceState({}, '', window.location.pathname)
         }
       }
+      
+      const es = await getAllExercises()
+      setAllExercises(es)
     } catch (err) {
       setError('Kunde inte ladda mallar. Försök igen.')
       console.error('Fel vid laddning:', err)
@@ -83,15 +87,6 @@ export function LogSession() {
       setExercises([])
     }
   }, [selectedTemplateId, templates])
-
-  async function loadTemplates() {
-    const [ts, es] = await Promise.all([getAllTemplates(), getAllExercises()])
-    setTemplates(ts)
-    setAllExercises(es)
-    if (ts.length > 0 && !selectedTemplateId) {
-      setSelectedTemplateId(ts[0].id)
-    }
-  }
 
   async function loadTemplateExercises() {
     const template = templates.find(t => t.id === selectedTemplateId)
