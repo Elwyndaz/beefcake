@@ -6,62 +6,28 @@ Beständigt projektminne för AI-agenter som arbetar i det här repot. Du har in
 
 ---
 
-## Vad produkten är
+## De fyra dokumenten
 
-Beefcake, en personlig träningslogg för styrketräning. Ersätter ett Excel-ark. Svenskt gränssnitt, bara kilo. Två användare i praktiken: Patrik på dator, hans tjej på mobil.
+| Fil | Innehåll | Ensam sanning om |
+|---|---|---|
+| `CONTEXT.md` | Vad produkten är, domänmodell, arkitektur, konventioner, säkerhetsläge | domänen |
+| `BACKLOG.md` | Vad som är byggt och vad som är kvar, prioritetsmärkt | arbetet |
+| `HANDOFF.md` | Mål, nästa steg, blockerare | läget just nu |
+| `AGENTS.md` | Den här filen: hårda regler, minor som kostat tid, verifiering | hur man arbetar här |
 
-Live på https://orgutveckling.se/beefcake/ via GitHub Pages. Bas-sökväg `/beefcake/`. Push till `master` bygger och deployar automatiskt.
+**Läs `CONTEXT.md` innan du rör kod.** Datamodellen, rutterna och konventionerna står där och står bara där. Upprepa dem inte här, det var precis så båda filerna hann bli fel samtidigt.
 
-Ingen backend. All data ligger i webbläsarens IndexedDB.
-
-## Stack
-
-Vite 8 · Preact 10 · TypeScript strict · wouter · `idb` · Chart.js · vite-plugin-pwa. Cirka 2 000 rader källkod.
-
-## Dokument som gäller
-
-| Fil | Vad |
-|---|---|
-| `AGENTS.md` | Den här filen. Beständigt minne och hårda regler |
-| `AUDIT.md` | Full genomlysning: buggar, UX, design, datamodell, säkerhet, roadmap P0–P3 |
-| `MISTRAL-WORKPLAN.md` | Färdiga arbetsuppgifter med acceptanskriterier |
-| `BACKLOG.md` | Snabböversikt av vad som är byggt och vad som är kvar |
-| `CONTEXT.md` | Domänmodell och konventioner |
-| `HANDOFF.md` | Nuläge: mål, nästa steg, blockerare. Läses av cockpiten |
-
-Filnamnen med versaler är ett krav: cockpiten (`cockpit.buildapp.se`) hämtar exakt `HANDOFF.md`, `CONTEXT.md` och `BACKLOG.md`. Döp inte om dem till gemener.
-
-## Datamodell
-
-```ts
-Exercise         { id, name, muscleGroup?, equipment?, createdAt }
-TemplateExercise { exerciseId, defaultSets, defaultReps, defaultWeight, order }
-Template         { id, name, exercises: TemplateExercise[], updatedAt }
-SessionExercise  { exerciseId, exerciseName, sets, reps, weight, order }
-Session          { id, date (YYYY-MM-DD), templateId, templateName, exercises, createdAt }
-ExerciseHistory  { id, date, exerciseId, exerciseName, sets, reps, weight, volume, sessionId }
-```
-
-`exerciseHistory` är en **denormaliserad kopia** av passens övningar och är det statistiken läser. Skriver du ett pass utan att skriva om dess historikrader blir graferna tyst fel. `createSession`, `updateSession` och `deleteSession` sköter det. Skriv aldrig till `sessions` direkt förbi dem.
-
-Modellen har en känd begränsning: ett `sets`, ett `reps`, ett `weight` per övning. Den klarar inte olika vikt per set, kroppsvikt, kondition eller RIR. Se `AUDIT.md` avsnitt 8. Bygg inget som gör den svårare att byta.
-
-## Rutter
-
-`/` Hem · `/log` Logga pass (stödjer `?from=<sessionId>` för att förifylla från ett tidigare pass) · `/templates` Mallar · `/history` Historik · `/history/:id` Passdetaljer med redigera, radera, kör igen · `/stats` Statistik · `/settings` Inställningar.
-
-Navigering: sidebar på desktop med alla fem plus Inställningar, ikonräls på tablet, bottennavigering på mobil med Hem, Logga pass, Historik, Statistik. Mallar och Inställningar ligger som ikoner i mobilheadern.
+Versalerna är ett krav: cockpiten (`cockpit.buildapp.se`) hämtar exakt `HANDOFF.md`, `CONTEXT.md` och `BACKLOG.md`, och GitHubs API är skiftlägeskänsligt. Döp dem inte till gemener. Uppdatera `HANDOFF.md`, inklusive `reviewedAt`, när du rapporterar klart.
 
 ## Hårda regler
 
-1. **`src/db/seedData.ts` är genererad. Redigera den aldrig för hand.** Den innehåller 418 verkliga träningspass. Kör `python scripts/generate-seed.py` om den ska byggas om.
+1. **`src/db/seedData.ts` är genererad. Redigera den aldrig för hand.** Den innehåller alla verkliga träningspass. Kör `python scripts/generate-seed.py` om den ska byggas om.
 2. **Radera eller skriv aldrig om historisk träningsdata.** Inte i seed, inte i IndexedDB, inte i en migrering. Additivt eller inget.
 3. **Excel-filen `C:\dev\Styrkepass v2.xlsx` öppnas bara för läsning.** Aldrig skrivning.
 4. TypeScript strict. Ingen `any`. `npm run build` måste gå igenom.
-5. Svenskt gränssnitt. Decimalkomma (12,5), mellanslag som tusentalsavgränsare (12 500). **Aldrig tankstreck.** Använd komma, kolon, parentes eller ny mening.
-6. Desktop är den primära upplevelsen, mobilen ska ändå vara fullvärdig. Brytpunkter: mobil under 768 px, tablet 768–1199 px, desktop från 1200 px.
-7. Minsta ändring som helt löser uppgiften. Inga refaktoreringar på vägen.
-8. **Återställ aldrig en fil du blivit tillsagd att inte röra.** Ligger det okommitterade ändringar där är de någon annans pågående arbete. Lämna dem. Se nedan.
+5. Svenskt gränssnitt och svenska konventioner, **aldrig tankstreck**. Se `CONTEXT.md`.
+6. Minsta ändring som helt löser uppgiften. Inga refaktoreringar på vägen.
+7. **Återställ aldrig en fil du blivit tillsagd att inte röra.** Ligger det okommitterade ändringar där är de någon annans pågående arbete. Lämna dem. Se nedan.
 
 ## Minor som kostat tid
 
@@ -76,9 +42,8 @@ Navigering: sidebar på desktop med alla fem plus Inställningar, ikonräls på 
 - **`alert()`, `confirm()` och `prompt()` är förbjudna.** De blockerar hela appen och gör automatiserad testning omöjlig.
 - **Ett spökpass finns med flit:** 2025-11-19 "Bröst, axlar & biceps" är en artefakt av `=TODAY()`-drift i arket. Passet är verkligt men fel daterat och finns redan under rätt datum. Patrik har valt att lämna det. Städa inte bort det.
 - **`geist`-npm-paketet fungerar inte i Vite/Preact.** Det är byggt för Next.js och har `next` som peer-dependency. Variant-fonten ligger i `node_modules/geist/dist/fonts/geist-sans/Geist-Variable.woff2` och är vendored till `src/assets/fonts/` med `@font-face` i app.css. Återställ det inte till en Google Fonts-länk, PWA:n ska fungera offline.
-- **DESIGN-AUDIT.md förutsätter att Button/Card/Stat/EmptyState/Field fanns i `src/components/`.** De togs bort i `194249a` (upptagna som "unused"). Återskapade i design-sprinten 2026-08-09. Auditen skrevs mot ett äldre träd, verifiera läget i koden innan du litar på den.
-- **Chart.js hämtar sina färger via `getCSSVar()` i Stats.tsx**, aldrig hårdkodade hex. Temaändringar görs i app.css-tokens, inte i Stats.tsx.
-- **Alla sidor använder komponenterna i `src/components/`** (Button, Card, Stat, EmptyState, Field). Skriv nya vyer med dem, inte ad-hoc `class="card"`.
+- **Button/Card/Stat/EmptyState/Field raderades en gång som "unused"** (`194249a`) och fick återskapas i design-sprinten 2026-08-09. De används av alla sidor nu. En komponent utan importer är inte automatiskt död.
+- **Ett dokument som beskriver koden hinner bli fel.** AUDIT.md, MISTRAL-WORKPLAN.md och DESIGN-AUDIT.md var ögonblicksbilder som påstod saker som inte längre stämde, och två av dem hade var sin kopia av datamodellen. Raderade 2026-08-09. Skriv inte nya. Öppna poster hör hemma i `BACKLOG.md`, allt annat i git-historiken.
 
 ## Flera agenter i samma repo
 

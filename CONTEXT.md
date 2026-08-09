@@ -1,53 +1,80 @@
-# Beefcake — Context
+# Beefcake — kontext
 
-## Project Overview
-Träningsapp (PWA) som ersätter Excel-ark för styrketräning. Desktop-first, mobil-fungerande, offline-first.
+Personlig träningslogg för styrketräning, ersätter ett Excel-ark. Svenskt gränssnitt, bara kilo. Två användare i praktiken: Patrik på dator, hans tjej på mobil. Offline-först, ingen backend.
 
-## Core Domain
-- **Template** = färdigt pass (namn + lista av övningar med standard set/reps/vikt)
-- **Exercise** = övningsnamn + valfri metadata (muskelgrupp, utrustning)
-- **Session** = datum + vald template + för varje övning: faktiska set/reps/vikt (kan avvíka från template)
-- **History** = alla sessionsrader denormaliserade för grafer/statistik
+Live på https://orgutveckling.se/beefcake/ (GitHub Pages, bas-sökväg `/beefcake/`). Push till `master` bygger och deployar.
 
-## Key Features (MVP)
-1. Logga pass: välj template → förifyllda övningar → justera set/reps/vikt → spara
-2. Mallhantering: CRUD för templates, "minns" senaste vikt/set/reps per övning
-3. Statistik: volym/övning över tid, frekvens per template, heatmap, PR-lista
-4. Påminnelse: lokal check vid app-start om >3 dagar sedan senaste pass
-5. Export/import: JSON (hela DB) + CSV (platt sessionslista)
-6. Migration: seed genererad ur `C:\dev\Styrkepass v2.xlsx` vid byggtid, laddas av `seedIfEmpty()`
+**Den här filen äger domänmodellen och konventionerna.** Upprepa dem inte i andra filer, länka hit. `AGENTS.md` beskriver hur man arbetar i repot, `BACKLOG.md` vad som är kvar, `HANDOFF.md` var arbetet står just nu.
 
-## Status
+## Kärnuppgiften
 
-Se `AUDIT.md` för full genomlysning och prioriterad roadmap, `BACKLOG.md` för snabböversikt och `MISTRAL-WORKPLAN.md` för färdiga arbetsuppgifter.
+> Öppna appen, välj dagens pass, se vad du lyfte förra gången, justera vikterna, spara. Sedan se att du blir starkare.
 
-Två saker att känna till innan man rör datan:
-- Excel-import i webbläsaren är borttagen (commit `410efd1`). Seedning sker med skript vid byggtid, aldrig i klienten.
-- `seedIfEmpty()` kör bara mot tom databas. Uppdateringar av datan måste ske som idempotent upsert på naturlig nyckel, inte som ny seed.
+## Begrepp
 
-## Tech Stack
-- Vite + Preact + TypeScript
-- IndexedDB via `idb` (wrapper)
-- Chart.js för grafer
-- date-fns för datumhantering
-- vite-plugin-pwa (Workbox) för offline/PWA
-- Cloudflare Pages deployment
+- **Exercise** är en övning i katalogen. Har id, så ett namnbyte inte splittrar historiken.
+- **Template** är ett färdigt pass: namn plus lista av övningar med standardvärden.
+- **Session** är ett genomfört pass: datum, mall, och per övning de set som faktiskt kördes.
+- **ExerciseHistory** är en denormaliserad kopia av passens övningar. Det är den statistiken läser.
 
-## Data Model (IndexedDB stores)
-- `templates` — { id, name, exercises: [{ exerciseId, defaultSets, defaultReps, defaultWeight, order }], updatedAt }
-- `exercises` — { id, name, muscleGroup?, equipment?, createdAt }
-- `sessions` — { id, date (ISO), templateId, templateName, exercises: [{ exerciseId, exerciseName, sets, reps, weight, order }], createdAt }
-- `exerciseHistory` — denormaliserad: { id, date, exerciseId, exerciseName, sets, reps, weight, volume, sessionId }
+Ordet **mall** används både om övningsprogram och passtyp i gränssnittet. Det är känt otydligt, se `BACKLOG.md`.
 
-## Reminder Logic
-- Vid app-start: läs senaste session.date → om diff > 3 dagar → visa toast/notis
+## Datamodell
 
-## Progressive Overload (future)
-- Template kan kopplas till program (5x5, GZCL, etc.)
-- Program-motor föreslår nästa vikt/reps baserat på history
+Fyra object stores i IndexedDB `beefcake-db`. Typerna bor i `src/db/schema.ts` och återexporteras via `src/models/index.ts`.
 
-## Conventions
-- Swedish UI, kg only
-- Desktop-first CSS (min-width breakpoints uppåt)
-- Strict TS: no `any`, explicit return types, throw on error
-- Functions: succeed or throw (no ambiguous returns)
+```ts
+SetEntry         { sets, reps, weight }
+Exercise         { id, name, muscleGroup?, equipment?, createdAt }
+TemplateExercise { exerciseId, defaultSetEntry: SetEntry, order }
+Template         { id, name, exercises: TemplateExercise[], updatedAt }
+SessionExercise  { exerciseId, exerciseName, setEntries: SetEntry[], order }
+Session          { id, date (YYYY-MM-DD), templateId, templateName, exercises: SessionExercise[], createdAt }
+ExerciseHistory  { id, date, exerciseId, exerciseName, setEntries: SetEntry[], volume, sessionId }
+```
+
+`setEntries` är en lista, så olika vikt eller reps per set fungerar. `Legacy*`-typerna och `migrate*`-funktionerna i `src/models/` konverterar gammal seed-struktur och får inte tas bort så länge `seedData.ts` har den gamla formen.
+
+Modellen saknar fortfarande `Exercise.kind` för kroppsvikt, tid och distans. Därför har 95 konditionspass volym 0 och kroppsviktsövningar räknas fel. Bygg inget som gör det svårare att lägga till.
+
+**Skriv aldrig till `sessions` direkt.** `createSession`, `updateSession` och `deleteSession` håller ihop passet och dess historikrader i en transaktion. Skriver du ett pass utan att skriva om historiken blir graferna tyst fel.
+
+## Data och seed
+
+- **All träningsdata är verklig.** 419 pass, 1 522 historikrader, till 2026-07-28. Radera eller skriv aldrig om historisk data, varken i seed, i IndexedDB eller i en migrering. Additivt eller inget.
+- `src/db/seedData.ts` är **genererad**, aldrig handredigerad. Bygg om med `python scripts/generate-seed.py`.
+- Källan är `C:\dev\Styrkepass v2.xlsx` och den öppnas **bara för läsning**.
+- `syncSeed()` är additiv och idempotent. Den matchar pass på `(datum, passnamn)` och övningar på gemener. Matcha aldrig på `seed-N`-id, sekvensen numreras om så fort en övning tillkommer i källan.
+- Ett spökpass 2025-11-19 "Bröst, axlar & biceps" finns med flit, en artefakt av `=TODAY()`-drift i arket. Städa inte bort det.
+
+## Arkitektur
+
+Vite 8 · Preact 10 · TypeScript strict · wouter · `idb` · Chart.js (lazy) · vite-plugin-pwa (Workbox). Cirka 2 000 rader källkod.
+
+```
+src/main.tsx              entry, syncSeed sedan render
+src/app.tsx               Router, navigering, rutter
+src/app.css               all styling, tokens överst
+src/components/           Button, Card, Stat, EmptyState, Field, PasswordGate
+src/db/schema.ts          IndexedDB-schema och typer
+src/db/seedData.ts        GENERERAD, all träningshistorik
+src/services/dataService.ts   alla läsningar, skrivningar och statistik
+src/pages/                Home, LogSession, Templates, History, SessionDetail, Stats, Settings
+```
+
+Rutter: `/` · `/log` (stödjer `?from=<sessionId>`) · `/templates` · `/history` · `/history/:id` · `/stats` · `/settings`.
+
+## Konventioner
+
+- TypeScript strict, ingen `any`, funktioner lyckas eller kastar.
+- Svenskt gränssnitt. Decimalkomma (12,5), mellanslag som tusentalsavgränsare (12 500), **aldrig tankstreck**.
+- Desktop är den primära upplevelsen, mobilen ska ändå vara fullvärdig. Brytpunkter: mobil under 768 px, tablet 768 till 1199 px, desktop från 1200 px. Tryckytor på mobil minst 44 × 44 px.
+- Alla vyer byggs med komponenterna i `src/components/`, aldrig ad-hoc `class="card"`.
+- Färger kommer alltid från tokens i `app.css`. Hårdkodad hex i `.tsx` är förbjudet, Chart.js läser via `getCSSVar()` i Stats.tsx. Nya tokens dokumenteras med kommentar i `app.css`.
+- Typografi: Geist, self-hostad. Rubriker 800 med `-0.02em`, brödtext `line-height: 1.7`, `tabular-nums` på allt numeriskt.
+- `alert()`, `confirm()` och `prompt()` är förbjudna. De blockerar appen och gör automatiserad testning omöjlig.
+- Minsta ändring som helt löser uppgiften. Inga refaktoreringar på vägen.
+
+## Säkerhet, känt och accepterat
+
+Lösenordsgrinden är enbart klientsida: `AUTH_HASH` ligger i bundlen, SHA-256 utan salt. Den hindrar en nyfiken förbipasserande, inget mer. Riktigt skydd kräver en server framför appen, till exempel Cloudflare Access, vilket ligger i `BACKLOG.md`. Återanvänd inte lösenordet någon annanstans. IndexedDB är okrypterat, och GitHub Pages kan inte sätta CSP-headers.

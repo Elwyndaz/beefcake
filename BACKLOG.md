@@ -1,70 +1,35 @@
-# Beefcake — Backlog
+# Beefcake — backlog
 
-Den fullständiga analysen och prioriteringen ligger i `AUDIT.md`. Färdiga arbetsuppgifter att lämna över ligger i `MISTRAL-WORKPLAN.md`. Den här filen är bara en snabböversikt.
+Öppna poster märks `[P0]` till `[P3]` i raden, det är så cockpiten räknar prioritet. Domänmodell och konventioner ligger i `CONTEXT.md`, nuläget i `HANDOFF.md`.
 
-## Byggt och i drift
+## Öppet
 
-- IndexedDB-schema med fyra stores (templates, exercises, sessions, exerciseHistory)
-- Template CRUD
-- Övningskatalog med id, seedad ur historiken
-- Logga pass: välj mall, förifyllda värden, spara
-- Statistik: volym per övning, frekvens per mall, 30-dagarsaktivitet, PR-lista
-- Påminnelse: kontroll vid appstart, mer än 3 dagar
-- Export JSON och CSV, import JSON
-- PWA med service worker och offline
-- Lösenordsgrind (klientsida)
-- Deploy via GitHub Actions till GitHub Pages, live på orgutveckling.se/beefcake
-- All historisk träningsdata inbakad som seed i `src/db/seedData.ts`
+- [ ] `[P0]` `Exercise.kind` för kroppsvikt, tid och distans. 95 konditionspass har volym 0 och kroppsviktsövningar räknas fel
+- [ ] `[P1]` Autosave av påbörjat pass, utkast i IndexedDB som går att återuppta
+- [ ] `[P1]` `importAllData` rensar databasen innan den validerar filen. En trasig JSON raderar allt. Validera först, backup före import
+- [ ] `[P1]` Övningssida med progression, estimerat 1RM och arbetsvikt över tid per övning
+- [ ] `[P2]` Vitest på dataService och statistikberäkningarna, plus ESLint, båda i CI
+- [ ] `[P2]` Race condition i mall-laddningen i LogSession, async-effekt utan avbrottsskydd
+- [ ] `[P2]` `<datalist id="template-exercise-suggestions">` renderas en gång per övningsrad i Templates.tsx. Samma id upprepas, ogiltig HTML. Rendera den en gång utanför loopen
+- [ ] `[P2]` Bestäm vokabulär: *pass* är något du gjorde, *program* är mallen. Byt genomgående
+- [ ] `[P3]` Web Push-påminnelser via service workern
+- [ ] `[P3]` Kortkommandon på desktop
+- [ ] `[P3]` Cloudflare Pages med Access istället för GitHub Pages, riktig autentisering
+- [ ] `[P3]` RIR/RPE och anteckningar i gränssnittet
+- [ ] `[P3]` Tvåanvändarstöd, om det verkligen behövs. Största produktbeslutet i listan
 
-Excel-importen i webbläsaren är **borttagen** (commit `410efd1`). `xlsx` 0.18.5 producerade en tom chunk under Vite 8. Återinför den inte; seedning sker med ett skript vid byggtid.
+## Byggt
 
-## P0 — kritiskt
-
-- [x] Automatisk backup: JSON-export till fil, plus varning om ingen export gjorts på 30 dagar
-- [x] Importera de 72 saknade passen (2025-11-19 → 2026-07-28) från `C:\dev\Styrkepass v2.xlsx`, idempotent, matchad på naturlig nyckel
-- [ ] Datamodell: `SetEntry[]` istället för `sets`/`reps`/`weight`, plus `Exercise.kind` för kroppsvikt, tid och distans
-- [x] Historiksida med detaljvy, redigera, radera och upprepa
-- [x] Ta bort `alert()` vid appstart, ersätt med banner
-- [ ] Städa `undefined`-mallen ur datan
-- [x] Gör `createSession` atomär, en transaktion istället för tre
-- [x] Ta bort alla `alert()`/`confirm()`/`prompt()` från codebase (P0-blocker)
-- [x] Ta bort alla `any` typer (P0-blocker)
-- [x] Ta bort 6 oanvända designsystem-komponenter (P0-blocker)
-- [x] Ta bort `nul` artifact och lägg till i .gitignore (P0-blocker)
-
-## P1 — hög påverkan
-
-- [x] Radera `src/index.css` (Vite-mallens starter-CSS styr fortfarande layouten)
-- [x] Visa "förra gången" per övning på loggningssidan — kan byta passmall i SessionDetail
-- [ ] Autosave av påbörjat pass
-- [x] Dashboard med "nästa pass" som primär handling
-- [x] Loggningsformuläret som tabell på desktop, kort på mobil
-- [x] Statistik som svarar på rätt frågor: estimerat 1RM, tonnage per vecka, streak, periodfilter
-- [ ] Övningssida med progression
-- [x] Chart.js-läckor fixade (race conditions i LogSession kvar)
-- [x] Central datumhantering (tidszon-säker) - `src/lib/date.ts`
-- [x] Optimera `getLatestSessionDate()` - tagit bort double-read
-- [x] Gör `deleteSession` och `deleteTemplate` atomära
-
-## P2 — polish
-
-- [x] Designsystem: tokens och sex komponenter, mörkt läge
-- [x] Desktop: sidebar (tvåkolumnslayout kvar)
-- [x] Mobil: bottennavigering, kort istället för tabeller, 44 px tryckytor
-- [x] Loading- och empty states överallt
-- [x] Undo vid radering
-- [x] Lazy-ladda Chart.js
-- [ ] Tester (Vitest) och ESLint, båda i CI
-- [x] Ta bort dubbel manifest-länk i `index.html`
-
-## P3 — senare
-
-- [ ] Web Push-påminnelser
-- [ ] Kortkommandon på desktop
-- [ ] Tvåanvändarstöd, om det verkligen behövs
-- [ ] Cloudflare Pages med Access istället för GitHub Pages
-- [ ] RIR/RPE och anteckningar i gränssnittet
+- Datamodell med `SetEntry[]`, olika vikt och reps per set, migrering av all befintlig data
+- Historiksida med detaljvy, redigering, radering, undo och "kör igen"
+- Dashboard med nästa pass som primär handling, "förra gången" per övning vid loggning
+- Statistik: estimerat 1RM, tonnage per vecka, streak, periodfilter, tidsaxel, PR-lista
+- Designsystem: tokens, sex komponenter, mörkt läge, Geist self-hostad, sidebar på desktop, bottennavigering på mobil
+- Loading- och empty states, lazy-laddad Chart.js, atomära skrivningar i createSession och deletes
+- Automatisk backup till LocalStorage, export JSON och CSV, import JSON
+- All träningsdata seedad ur Excel, additivt och idempotent via `syncSeed()`
+- PWA med service worker och offline, lösenordsgrind, deploy via GitHub Actions till Pages
 
 ## Bygg inte
 
-Program-motor (5×5, GZCL) · flerspråkighet · sociala funktioner och delade mallar · AI-förslag på vikter · egen backend enbart för synk · Excel-import i webbläsaren · trettio diagram.
+Program-motor (5×5, GZCL) · flerspråkighet · sociala funktioner och delade mallar · AI-förslag på vikter · egen backend enbart för synk · Excel-import i webbläsaren (borttagen i `410efd1`, `xlsx` 0.18.5 gav tom chunk under Vite 8) · trettio diagram · rest timer om du inte faktiskt vilar på klocka · superset och dropsets i gränssnittet, se bara till att modellen klarar dem.

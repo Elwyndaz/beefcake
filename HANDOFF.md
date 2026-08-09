@@ -9,25 +9,25 @@ reviewedAt: 2026-08-09
 
 ## Recent work
 
-- `SetEntry[]` ersätter `sets`/`reps`/`weight` i schema, models, LogSession, SessionDetail och Templates. Legacy-typer och migreringsfunktioner finns kvar för gammal seed-data.
-- Designsystem-refresh: tokens i `app.css`, Geist self-hostad i `src/assets/fonts`, komponenterna i `src/components/` används överallt. Se `DESIGN-AUDIT.md`.
-- Seed genereras ur Excel med `scripts/generate-seed.py`, `syncSeed()` är additiv och idempotent.
-- Live på https://orgutveckling.se/beefcake/ via GitHub Actions till Pages.
+- `SetEntry[]` ersätter `sets`/`reps`/`weight` genom hela kedjan: schema, models, dataService, LogSession, SessionDetail, Templates. Legacy-typer och migreringsfunktioner kvar för gammal seed-struktur.
+- Designsystem-refresh: tokens i `app.css`, Geist self-hostad, komponenterna i `src/components/` används i alla vyer.
+- Dokumenten städade 2026-08-09: `AUDIT.md`, `MISTRAL-WORKPLAN.md` och `DESIGN-AUDIT.md` raderade, öppna poster flyttade till `BACKLOG.md`, domänmodellen samlad i `CONTEXT.md`.
 
 ## Verification
 
-- Live-URL svarar 200 (2026-08-09).
-- 419 pass, 1 522 historikrader, 0 dubbletter efter seed-synk, andra körningen lade till noll.
+- Live-URL svarar 200, https://orgutveckling.se/beefcake/.
+- 419 pass, 1 522 historikrader, 0 dubbletter efter seed-synk. Andra körningen lade till noll.
+- Verifierat i koden 2026-08-09: `undefined`-mallen filtreras i `syncSeed` (`dataService.ts:535`), heatmap-kortet har ett tomt tillstånd (`Stats.tsx:471`), `date-fns` används av chart-adaptern och `workbox-window` är borta.
 - Responsiva skärmdumpar i `.playwright-shots/` för 390, 768, 1200 och 1600 px.
 
 ## Unresolved details
 
-- Okommitterat arbete i `src/app.tsx` och `src/services/dataService.ts`: muskelgruppskarta och `restoreFromLocalStorage()`.
-- Heatmap-kortet i Stats renderar ingenting när inga pass finns senaste 30 dagarna.
-- Frekvensdiagrammet visar en stapel märkt "undefined", mallen med tomt namn är inte städad.
+- Okommitterat arbete i `src/app.tsx` och `src/services/dataService.ts`: muskelgruppskarta och `restoreFromLocalStorage()`. Någon annans pågående arbete, rör det inte utan att fråga.
+- `importAllData` rensar databasen innan den validerar filen.
+- Race condition i mall-laddningen i LogSession, async-effekt utan avbrottsskydd.
+- Inga tester och ingen linter.
 - Spökpasset 2025-11-19 "Bröst, axlar & biceps" är kvar med flit.
-- Inga tester och ingen linter i CI.
 
 ## Resume here
 
-Börja med nextAction ovan. `BACKLOG.md` har snabböversikten, `AUDIT.md` hela genomlysningen, `AGENTS.md` de hårda reglerna för arbetsdelningen med Mistral.
+Börja med nextAction ovan. `CONTEXT.md` har domänmodellen, `BACKLOG.md` resten av det öppna, `AGENTS.md` de hårda reglerna och minorna som redan kostat tid.
