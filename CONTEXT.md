@@ -46,6 +46,19 @@ Modellen saknar fortfarande `Exercise.kind` för kroppsvikt, tid och distans. D�
 - Källan är `C:\dev\Styrkepass v2.xlsx` och den öppnas **bara för läsning**.
 - `syncSeed()` är additiv och idempotent. Den matchar pass på `(datum, passnamn)` och övningar på gemener. Matcha aldrig på `seed-N`-id, sekvensen numreras om så fort en övning tillkommer i källan.
 - Ett spökpass 2025-11-19 "Bröst, axlar & biceps" finns med flit, en artefakt av `=TODAY()`-drift i arket. Städa inte bort det.
+- Seeden innehåller 33 övningar, 9 mallar och 418 pass. Mallen med namnet `undefined` filtreras bort i `syncSeed`, så åtta laddas.
+
+## Backup
+
+Enda skyddet mot datatapp, eftersom allt bor i en webbläsare utan synk.
+
+- `autoBackup()` skriver hela databasen till LocalStorage efter varje mutation.
+- `restoreFromLocalStorage()` anropas i `syncSeed()`, som körs i `main.tsx` **före render**. Lägg aldrig ett andra restore-anrop i en komponent, det race:ar med seedningen.
+- Rensar användaren "site data", inte bara cache, försvinner LocalStorage också. Export JSON är den riktiga backupen.
+
+## Muskelgrupper
+
+`MUSCLE_GROUP_MAP` i `dataService.ts` mappar övningsnamn till muskelgrupp. `backfillMuscleGroups()` körs i `syncSeed` och fyller på det som saknas. Övningar utan mappning visas som "Övrigt" i statistiken. Gruppen härleds ur namnet, den väljs aldrig av användaren vid loggning.
 
 ## Arkitektur
 
@@ -58,6 +71,7 @@ src/app.css               all styling, tokens överst
 src/components/           Button, Card, Stat, EmptyState, Field, PasswordGate
 src/db/schema.ts          IndexedDB-schema och typer
 src/db/seedData.ts        GENERERAD, all träningshistorik
+src/lib/date.ts           all datumhantering, tidszonssäker. Använd den, aldrig new Date() rakt av
 src/services/dataService.ts   alla läsningar, skrivningar och statistik
 src/pages/                Home, LogSession, Templates, History, SessionDetail, Stats, Settings
 ```

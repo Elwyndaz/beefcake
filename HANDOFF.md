@@ -21,7 +21,8 @@ reviewedAt: 2026-08-09
 - Live-URL svarar 200, https://orgutveckling.se/beefcake/.
 - 419 pass, 1 522 historikrader, 0 dubbletter efter seed-synk. Andra körningen lade till noll.
 - Verifierat i koden 2026-08-09: `undefined`-mallen filtreras i `syncSeed` (`dataService.ts:535`), heatmap-kortet har ett tomt tillstånd (`Stats.tsx:471`), `date-fns` används av chart-adaptern och `workbox-window` är borta.
-- Responsiva skärmdumpar i `.playwright-shots/` för 390, 768, 1200 och 1600 px.
+- Bygget grönt (`npm run build` exit 0) och deployen lyckad 2026-08-09 19:45, verifierad med `gh run list`.
+- Responsivt verifierat på 390, 768, 1200 och 1600 px med skärmdumpar i `.playwright-shots/`. Den mappen är lokal och gitignorerad, dumparna finns inte i repot.
 
 ## Unresolved details
 

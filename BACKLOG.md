@@ -26,7 +26,9 @@
 - Statistik: estimerat 1RM, tonnage per vecka, streak, periodfilter, tidsaxel, PR-lista
 - Designsystem: tokens, sex komponenter, mörkt läge, Geist self-hostad, sidebar på desktop, bottennavigering på mobil
 - Loading- och empty states, lazy-laddad Chart.js, atomära skrivningar i createSession och deletes
-- Automatisk backup till LocalStorage, export JSON och CSV, import JSON. Återställs automatiskt om databasen töms (verifierat med wipe + reload)
+- Automatisk backup till LocalStorage med återställning före render, export JSON och CSV, import JSON
+- Inline mallhantering: spara aktuella övningar som ny mall från loggvyn och från passdetaljens redigeringsläge
+- Muskelgrupper per övning, härledda ur namnet, med volym per grupp i statistiken. Återställs automatiskt om databasen töms (verifierat med wipe + reload)
 - Muskelgrupper på övningar (auto-mappade från övningsnamn), volym per muskelgrupp i Statistik
 - Inline mallhantering i logg- och redigeringsläge: spara övningarna som ny mall, eller spara till befintlig mall
 - All träningsdata seedad ur Excel, additivt och idempotent via `syncSeed()`
