@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'preact/hooks'
 import { saveBackupToFile, shouldShowBackupBanner, dismissBackupBanner, getLastBackupDate } from '../services/backupService'
+import { Button } from './Button'
 
 export function BackupBanner() {
   const [showBanner, setShowBanner] = useState(false)
@@ -40,13 +41,13 @@ export function BackupBanner() {
         <strong>Backup saknas!</strong> Senaste backup gjordes {formattedDate}. Ladda ned nu.
       </span>
       <div class="flex items-center gap-sm">
-        <button 
-          class="btn btn-primary btn-sm" 
+        <Button 
+          size="sm" 
           onClick={handleDownloadBackup}
           disabled={isLoading}
         >
           {isLoading ? 'Laddar ned...' : 'Ladda ned backup'}
-        </button>
+        </Button>
         <button 
           class="banner-dismiss" 
           onClick={handleDismiss}

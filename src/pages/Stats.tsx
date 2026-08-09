@@ -1,21 +1,63 @@
 import { useState, useEffect, useRef } from 'preact/hooks'
 import { getAllExercises, getVolumeOverTime, getFrequencyPerTemplate, getHeatmapData, getPRs, getCurrentStreak, getWeeklyTonnage, getEstimated1RM } from '../services/dataService'
 import { formatDateShort, localDateISO, todayISO, parseLocalDate } from '../lib/date'
+import { Card } from '../components/Card'
+import { Button } from '../components/Button'
+import { EmptyState } from '../components/EmptyState'
+import { Field } from '../components/Field'
+import { Stat } from '../components/Stat'
 import type { Exercise } from '../models'
+import type { Chart } from 'chart.js'
 
 // Lazy load Chart.js
-let chartPromise: Promise<any> | null = null
-async function getChart() {
-  if (!chartPromise) {
-    chartPromise = Promise.all([
+let chartModule: typeof import('chart.js') | null = null
+async function getChartModule(): Promise<typeof import('chart.js')> {
+  if (!chartModule) {
+    const [mod] = await Promise.all([
       import('chart.js'),
       import('chartjs-adapter-date-fns')
-    ]).then(([ChartModule]) => {
-      ChartModule.Chart.register(...ChartModule.registerables)
-      return ChartModule.Chart
-    })
+    ])
+    mod.Chart.register(...mod.registerables)
+    chartModule = mod
   }
-  return chartPromise
+  return chartModule
+}
+
+// Read CSS tokens from the design system so charts inherit theme colors.
+// Never hardcode hex in this file.
+function getCSSVar(name: string, fallback: string): string {
+  if (typeof window === 'undefined') return fallback
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback
+}
+
+function hexToRgba(hex: string, opacity: number): string {
+  const value = hex.replace('#', '')
+  const r = parseInt(value.slice(0, 2), 16)
+  const g = parseInt(value.slice(2, 4), 16)
+  const b = parseInt(value.slice(4, 6), 16)
+  return `rgba(${r}, ${g}, ${b}, ${opacity})`
+}
+
+interface ChartTheme {
+  accent: string
+  accentBorder: string
+  primary: string
+  primaryFill: string
+  inactive: string
+  grid: string
+  text: string
+}
+
+function getChartTheme(): ChartTheme {
+  return {
+    accent: getCSSVar('--accent', '#ff4757'),
+    accentBorder: getCSSVar('--accent-hover', '#e63b4b'),
+    primary: getCSSVar('--primary', '#2c3e50'),
+    primaryFill: hexToRgba(getCSSVar('--primary', '#2c3e50'), 0.85),
+    inactive: getCSSVar('--border', '#e4e7ee'),
+    grid: getCSSVar('--border', '#e4e7ee'),
+    text: getCSSVar('--text-muted', '#5b6472')
+  }
 }
 
 interface PR {
@@ -40,9 +82,9 @@ export function Stats() {
   const [exercises, setExercises] = useState<Exercise[]>([])
   const [selectedExerciseId, setSelectedExerciseId] = useState<string>('')
   const [period, setPeriod] = useState<Period>('month')
-  const volumeChartRef = useRef<any>(null)
-  const frequencyChartRef = useRef<any>(null)
-  const heatmapChartRef = useRef<any>(null)
+  const volumeChartRef = useRef<Chart | null>(null)
+  const frequencyChartRef = useRef<Chart | null>(null)
+  const heatmapChartRef = useRef<Chart | null>(null)
   const [frequencyData, setFrequencyData] = useState<{ templateName: string; count: number }[]>([])
   const [heatmapData, setHeatmapData] = useState<{ date: string; count: number }[]>([])
   const [prs, setPRs] = useState<PR[]>([])
@@ -116,7 +158,6 @@ export function Stats() {
       setThisWeekTonnage(tonnageData)
       if (es.length > 0 && !selectedExerciseId) {
         setSelectedExerciseId(es[0].id)
-        // Load 1RM for first exercise
         const firstExercise1RM = await getEstimated1RM(es[0].id)
         if (firstExercise1RM) {
           setOneRM(firstExercise1RM)
@@ -133,7 +174,7 @@ export function Stats() {
   // Helper to get start of current week (Monday)
   function getMondayISO(): string {
     const now = parseLocalDate(todayISO())
-    const dayOfWeek = now.getDay() // 0=Sunday, 1=Monday...
+    const dayOfWeek = now.getDay()
     const monday = new Date(now)
     monday.setDate(now.getDate() - ((dayOfWeek + 6) % 7))
     return localDateISO(monday)
@@ -187,13 +228,16 @@ export function Stats() {
     const allData = await getVolumeOverTime(selectedExerciseId)
     const periodStart = getPeriodStartDate(period)
     
-    // Filter data by period
     const filteredData = allData.filter(d => d.date >= periodStart)
     
     const ctx = volumeCanvasRef.current
     if (!ctx) return
 
-    const Chart = await getChart()
+    const Chart = (await getChartModule()).Chart
+    Chart.defaults.font.family = getCSSVar('--font-sans', 'Geist, system-ui, sans-serif')
+    Chart.defaults.color = getCSSVar('--text-muted', '#5b6472')
+    const theme = getChartTheme()
+
     if (volumeChartRef.current) {
       volumeChartRef.current.data.labels = filteredData.map(d => d.date)
       volumeChartRef.current.data.datasets[0].data = filteredData.map(d => d.volume)
@@ -206,8 +250,8 @@ export function Stats() {
           datasets: [{
             label: 'Volym (kg)',
             data: filteredData.map(d => d.volume),
-            borderColor: '#2c3e50',
-            backgroundColor: 'rgba(44, 62, 80, 0.1)',
+            borderColor: theme.accent,
+            backgroundColor: hexToRgba(theme.accent, 0.12),
             fill: true,
             tension: 0.3,
             pointRadius: 4,
@@ -221,8 +265,8 @@ export function Stats() {
             legend: { display: false }
           },
           scales: {
-            x: { type: 'time', ticks: { maxTicksLimit: 10 } },
-            y: { beginAtZero: true }
+            x: { type: 'time', ticks: { maxTicksLimit: 10, color: theme.text }, grid: { color: theme.grid } },
+            y: { beginAtZero: true, ticks: { color: theme.text }, grid: { color: theme.grid } }
           }
         }
       })
@@ -234,7 +278,9 @@ export function Stats() {
     const ctx = frequencyCanvasRef.current
     if (!ctx) return
 
-    const Chart = await getChart()
+    const Chart = (await getChartModule()).Chart
+    const theme = getChartTheme()
+
     if (frequencyChartRef.current) {
       frequencyChartRef.current.data.labels = frequencyData.map(d => d.templateName)
       frequencyChartRef.current.data.datasets[0].data = frequencyData.map(d => d.count)
@@ -247,9 +293,8 @@ export function Stats() {
           datasets: [{
             label: 'Antal pass',
             data: frequencyData.map(d => d.count),
-            backgroundColor: 'rgba(44, 62, 80, 0.8)',
-            borderColor: '#2c3e50',
-            borderWidth: 1
+            backgroundColor: theme.primaryFill,
+            borderRadius: 4
           }]
         },
         options: {
@@ -257,7 +302,10 @@ export function Stats() {
           responsive: true,
           maintainAspectRatio: false,
           plugins: { legend: { display: false } },
-          scales: { x: { beginAtZero: true } }
+          scales: {
+            x: { beginAtZero: true, ticks: { color: theme.text }, grid: { color: theme.grid } },
+            y: { ticks: { color: theme.text }, grid: { display: false } }
+          }
         }
       })
       frequencyChartRef.current = chart
@@ -292,12 +340,13 @@ export function Stats() {
       values.push(found ? found.count : 0)
     }
 
-    const Chart = await getChart()
+    const Chart = (await getChartModule()).Chart
+    const theme = getChartTheme()
+
     if (heatmapChartRef.current) {
       heatmapChartRef.current.data.labels = labels
       heatmapChartRef.current.data.datasets[0].data = values
-      heatmapChartRef.current.data.datasets[0].backgroundColor = values.map(v => v > 0 ? '#e74c3c' : '#dee2e6')
-      heatmapChartRef.current.data.datasets[0].borderColor = values.map(v => v > 0 ? '#c0392b' : '#dee2e6')
+      heatmapChartRef.current.data.datasets[0].backgroundColor = values.map(v => v > 0 ? theme.accent : theme.inactive)
       heatmapChartRef.current.update()
     } else {
       const chart = new Chart(ctx, {
@@ -307,16 +356,19 @@ export function Stats() {
           datasets: [{
             label: 'Pass per dag',
             data: values,
-            backgroundColor: values.map(v => v > 0 ? '#e74c3c' : '#dee2e6'),
-            borderColor: values.map(v => v > 0 ? '#c0392b' : '#dee2e6'),
-            borderWidth: 1
+            backgroundColor: values.map(v => v > 0 ? theme.accent : theme.inactive),
+            borderWidth: 0,
+            borderRadius: 3
           }]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
           plugins: { legend: { display: false } },
-          scales: { x: { ticks: { maxTicksLimit: 10 } }, y: { beginAtZero: true } }
+          scales: {
+            x: { ticks: { maxTicksLimit: 10, color: theme.text }, grid: { display: false } },
+            y: { beginAtZero: true, ticks: { color: theme.text }, grid: { color: theme.grid } }
+          }
         }
       })
       heatmapChartRef.current = chart
@@ -333,12 +385,12 @@ export function Stats() {
       <div>
         <h1 class="page-title">Statistik</h1>
         <div class="grid grid-2 mb">
-          <div class="card skeleton skeleton-chart"></div>
-          <div class="card skeleton skeleton-chart"></div>
+          <Card class="skeleton skeleton-chart"></Card>
+          <Card class="skeleton skeleton-chart"></Card>
         </div>
         <div class="grid grid-2 mb">
-          <div class="card skeleton skeleton-chart"></div>
-          <div class="card skeleton skeleton-chart"></div>
+          <Card class="skeleton skeleton-chart"></Card>
+          <Card class="skeleton skeleton-chart"></Card>
         </div>
       </div>
     )
@@ -346,11 +398,11 @@ export function Stats() {
 
   if (error) {
     return (
-      <div class="empty-state">
-        <h3>Fel vid laddning</h3>
-        <p>{error}</p>
-        <button class="btn btn-primary mt" onClick={loadData}>Försök igen</button>
-      </div>
+      <EmptyState
+        title="Fel vid laddning"
+        message={error}
+        action={<Button onClick={loadData}>Försök igen</Button>}
+      />
     )
   }
 
@@ -360,85 +412,87 @@ export function Stats() {
 
       {/* Overview stats */}
       <div class="grid grid-3 mb">
-        <div class="card">
-          <h3>Streak</h3>
-          <p class="text-3xl font-bold text-primary">{streak.streakDays}</p>
-          <p class="text-sm text-muted">dagar i rad</p>
-        </div>
-        <div class="card">
-          <h3>Veckovolym</h3>
-          <p class="text-3xl font-bold text-primary">{thisWeekTonnage.toLocaleString('sv-SE')}</p>
-          <p class="text-sm text-muted">kg denna vecka</p>
-        </div>
-        <div class="card">
-          <h3>Est. 1RM</h3>
-          <p class="text-3xl font-bold text-primary">
-            {oneRM ? Math.round(oneRM.estimated1RM).toLocaleString('sv-SE') : '—'}
-          </p>
-          <p class="text-sm text-muted">{oneRM ? `${oneRM.exerciseName} (${formatDateShort(oneRM.date)})` : 'Välj övning'}</p>
-        </div>
+        <Card padding="sm">
+          <Stat
+            label="Streak"
+            value={streak.streakDays}
+            sub={streak.streakDays === 1 ? 'dag i rad' : 'dagar i rad'}
+          />
+        </Card>
+        <Card padding="sm">
+          <Stat
+            label="Veckovolym"
+            value={`${thisWeekTonnage.toLocaleString('sv-SE')} kg`}
+            sub="denna vecka"
+          />
+        </Card>
+        <Card padding="sm">
+          <Stat
+            label="Est. 1RM"
+            value={oneRM ? Math.round(oneRM.estimated1RM).toLocaleString('sv-SE') : 'Ingen'}
+            sub={oneRM ? `${oneRM.exerciseName} (${formatDateShort(oneRM.date)})` : 'Välj övning'}
+          />
+        </Card>
       </div>
 
       <div class="grid grid-2 mb">
-        <div class="card">
-          <h3>Volym över tid</h3>
+        <Card title="Volym över tid">
           <div class="grid grid-2 gap-sm mb-sm">
-            <div class="input-group m-0">
-              <label>Övning</label>
+            <Field label="Övning" class="m-0">
               <select value={selectedExerciseId} onChange={handleSelectChange}>
                 {exercises.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
               </select>
-            </div>
-            <div class="input-group m-0">
-              <label>Period</label>
+            </Field>
+            <Field label="Period" class="m-0">
               <select value={period} onChange={handlePeriodChange}>
                 {Object.entries(periodLabels).map(([key, label]) => (
                   <option key={key} value={key}>{label}</option>
                 ))}
               </select>
-            </div>
+            </Field>
           </div>
           <div class="h-300">
             <canvas ref={volumeCanvasRef} id="volume-chart"></canvas>
           </div>
-        </div>
+        </Card>
 
-        <div class="card">
-          <h3>Frekvens per pass</h3>
+        <Card title="Frekvens per pass">
           <div class="h-300">
             <canvas ref={frequencyCanvasRef} id="frequency-chart"></canvas>
           </div>
-        </div>
+        </Card>
       </div>
 
       <div class="grid grid-2 mb">
-        <div class="card">
-          <h3>Aktivitet (senaste 30 dagar)</h3>
+        <Card title="Aktivitet (senaste 30 dagar)">
           {heatmapData.length === 0 && exercises.length === 0 ? (
-            <div class="empty-state">
-              <h3>Inga pass registrerade än.</h3>
-            </div>
+            <EmptyState
+              title="Inga pass registrerade ännu"
+              message="Logga ett pass för att se din aktivitet här."
+              action={<Button href="/log">Logga pass</Button>}
+            />
           ) : allValuesZero() ? (
-            <div class="empty-state">
-              <h3>Ingen aktivitet</h3>
-              <p>Inga pass de senaste 30 dagarna.</p>
-            </div>
+            <EmptyState
+              title="Ingen aktivitet"
+              message="Inga pass de senaste 30 dagarna. Dags att träna?"
+              action={<Button href="/log">Logga pass</Button>}
+            />
           ) : (
             <div class="h-200">
               <canvas ref={heatmapCanvasRef} id="heatmap-chart"></canvas>
             </div>
           )}
-        </div>
+        </Card>
 
-        <div class="card">
-          <h3>Personliga rekord (PR)</h3>
+        <Card title="Personliga rekord (PR)">
           {prs.length === 0 ? (
-            <div class="empty-state">
-              <h3>Inga personliga rekord än</h3>
-              <p>Logga pass för att se dina PR.</p>
-            </div>
+            <EmptyState
+              title="Inga personliga rekord ännu"
+              message="Logga pass för att se dina PR."
+              action={<Button href="/log">Logga pass</Button>}
+            />
           ) : (
-            <div class="table-wrap max-h-300 overflow-y-auto">
+            <div class="table-wrap max-h-300 overflow-y-auto table-rows">
               <table>
                 <thead>
                   <tr>
@@ -451,15 +505,15 @@ export function Stats() {
                   {[...prs].sort((a, b) => a.exerciseName.localeCompare(b.exerciseName)).map((pr) => (
                     <tr key={pr.exerciseId}>
                       <td>{pr.exerciseName}</td>
-                      <td class="tabular-nums">{pr.maxWeight} kg (<span class="nowrap">{formatDateShort(pr.maxWeightDate)}</span>)</td>
-                      <td class="tabular-nums">{pr.maxVolume.toLocaleString('sv-SE')} kg (<span class="nowrap">{formatDateShort(pr.maxVolumeDate)}</span>)</td>
+                      <td class="tabular-nums">{pr.maxWeight} kg <span class="nowrap text-muted">({formatDateShort(pr.maxWeightDate)})</span></td>
+                      <td class="tabular-nums">{pr.maxVolume.toLocaleString('sv-SE')} kg <span class="nowrap text-muted">({formatDateShort(pr.maxVolumeDate)})</span></td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           )}
-        </div>
+        </Card>
       </div>
     </div>
   )

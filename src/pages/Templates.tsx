@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'preact/hooks'
 import { getAllTemplates, getAllExercises, createTemplate, updateTemplate, deleteTemplate, getOrCreateExercise } from '../services/dataService'
 import { icon } from '../icons'
+import { Card } from '../components/Card'
+import { Button } from '../components/Button'
+import { EmptyState } from '../components/EmptyState'
+import { Field } from '../components/Field'
 import type { Template, Exercise, SetEntry } from '../models'
 
 interface FormExercise {
@@ -36,8 +40,8 @@ function DeleteDialog({
         </div>
         <p>{message}</p>
         <div class="flex gap mt justify-end">
-          <button class="btn btn-secondary" onClick={onClose}>Avbryt</button>
-          <button class="btn btn-danger" onClick={onConfirm}>Radera</button>
+          <Button variant="secondary" onClick={onClose}>Avbryt</Button>
+          <Button variant="danger" onClick={onConfirm}>Radera</Button>
         </div>
       </div>
     </div>
@@ -186,7 +190,6 @@ export function Templates() {
     const value = target.type === 'number' ? (parseFloat(target.value) || 0) : target.value
     
     if (nestedField && field === 'defaultSetEntry') {
-      // Uppdatera nested field i defaultSetEntry
       updateFormExercise(idx, field, { ...formExercises[idx].defaultSetEntry, [nestedField]: value })
     } else {
       updateFormExercise(idx, field, value)
@@ -207,9 +210,9 @@ export function Templates() {
       <div>
         <div class="flex justify-between items-center mb">
           <h1 class="page-title m-0">Mallar</h1>
-          <button class="btn btn-primary" disabled>+ Ny mall</button>
+          <Button disabled>+ Ny mall</Button>
         </div>
-        <div class="card skeleton skeleton-card"></div>
+        <Card class="skeleton skeleton-card"></Card>
         {toastMessage && <Toast message={toastMessage} onDismiss={dismissToast} />}
       </div>
     )
@@ -217,12 +220,11 @@ export function Templates() {
 
   if (error) {
     return (
-      <div class="empty-state">
-        <h3>Fel vid laddning</h3>
-        <p>{error}</p>
-        <button class="btn btn-primary mt" onClick={loadData}>Försök igen</button>
-        {toastMessage && <Toast message={toastMessage} onDismiss={dismissToast} />}
-      </div>
+      <EmptyState
+        title="Fel vid laddning"
+        message={error}
+        action={<Button onClick={loadData}>Försök igen</Button>}
+      />
     )
   }
 
@@ -230,23 +232,21 @@ export function Templates() {
     <div>
       <div class="flex justify-between items-center mb">
         <h1 class="page-title m-0">Mallar</h1>
-        <button class="btn btn-primary" onClick={startCreate}>+ Ny mall</button>
+        <Button onClick={startCreate}>+ Ny mall</Button>
       </div>
 
       {showForm && (
-        <div class="card mb">
+        <Card>
           <h3 class="mb">{editingId ? 'Redigera mall' : 'Ny mall'}</h3>
 
-          <div class="input-group mb">
-            <label>Mallnamn</label>
+          <Field label="Mallnamn" class="mb">
             <input type="text" value={formName} onChange={handleNameChange} placeholder="T.ex. Bröst, axlar & biceps" />
-          </div>
+          </Field>
 
           <h4 class="mb-sm">Övningar</h4>
           {formExercises.map((fe, idx) => (
             <div key={idx} class="grid grid-4 mb items-end gap-3">
-              <div class="input-group m-0 flex-2">
-                <label>Övning</label>
+              <Field label="Övning" class="m-0 flex-2">
                 <input
                   type="text"
                   value={fe.exerciseName}
@@ -257,49 +257,47 @@ export function Templates() {
                 <datalist id="template-exercise-suggestions">
                   {allExercises.map(e => <option key={e.id} value={e.name} />)}
                 </datalist>
-              </div>
-              <div class="input-group m-0">
-                <label>Set</label>
+              </Field>
+              <Field label="Set" class="m-0">
                 <input type="number" min="1" max="20" value={fe.defaultSetEntry.sets} onChange={e => handleInputChange(e, idx, 'defaultSetEntry', 'sets')} />
-              </div>
-              <div class="input-group m-0">
-                <label>Reps</label>
+              </Field>
+              <Field label="Reps" class="m-0">
                 <input type="number" min="1" max="50" value={fe.defaultSetEntry.reps} onChange={e => handleInputChange(e, idx, 'defaultSetEntry', 'reps')} />
-              </div>
-              <div class="input-group m-0">
-                <label>Vikt (kg)</label>
+              </Field>
+              <Field label="Vikt (kg)" class="m-0">
                 <input type="number" min="0" step="0.5" max="500" value={fe.defaultSetEntry.weight} onChange={e => handleInputChange(e, idx, 'defaultSetEntry', 'weight')} />
-              </div>
+              </Field>
               <div class="m-0">
-                <button class="btn btn-danger btn-sm h-full" onClick={() => removeFormExercise(idx)}>Ta bort</button>
+                <Button variant="danger" size="sm" class="h-full" onClick={() => removeFormExercise(idx)}>Ta bort</Button>
               </div>
             </div>
           ))}
 
-          <button class="btn btn-secondary mb" onClick={addFormExercise}>+ Lägg till övning</button>
+          <Button variant="secondary" class="mb" onClick={addFormExercise}>+ Lägg till övning</Button>
 
           <div class="flex gap">
-            <button class="btn btn-primary" onClick={handleSave}>Spara</button>
-            <button class="btn btn-secondary" onClick={cancelEdit}>Avbryt</button>
+            <Button onClick={handleSave}>Spara</Button>
+            <Button variant="secondary" onClick={cancelEdit}>Avbryt</Button>
           </div>
-        </div>
+        </Card>
       )}
 
-      <div class="card">
+      <Card padding="none">
         {templates.length === 0 ? (
-          <div class="empty-state">
-            <h3>Inga mallar än</h3>
-            <p>Skapa din första mall för att komma igång.</p>
-          </div>
+          <EmptyState
+            title="Inga mallar ännu"
+            message="Skapa din första mall för att komma igång."
+            action={<Button onClick={startCreate}>+ Ny mall</Button>}
+          />
         ) : (
-          <div class="table-wrap">
+          <div class="table-wrap table-rows" style="padding: var(--space-6) var(--space-6) var(--space-6) var(--space-6)">
             <table>
               <thead>
                 <tr>
                   <th>Namn</th>
                   <th>Övningar</th>
                   <th>Uppdaterad</th>
-                  <th></th>
+                  <th class="text-right">Åtgärder</th>
                 </tr>
               </thead>
               <tbody>
@@ -308,10 +306,10 @@ export function Templates() {
                     <td><strong>{t.name}</strong></td>
                     <td>{t.exercises.length}</td>
                     <td>{new Date(t.updatedAt).toLocaleDateString('sv-SE')}</td>
-                    <td>
-                      <div class="flex gap-sm">
-                        <button class="btn btn-secondary btn-sm" onClick={() => startEdit(t)}>Redigera</button>
-                        <button class="btn btn-danger btn-sm" onClick={() => handleDelete(t.id)}>Radera</button>
+                    <td class="text-right">
+                      <div class="flex gap-sm justify-end">
+                        <Button variant="secondary" size="sm" onClick={() => startEdit(t)}>Redigera</Button>
+                        <Button variant="danger" size="sm" onClick={() => handleDelete(t.id)}>Radera</Button>
                       </div>
                     </td>
                   </tr>
@@ -320,7 +318,7 @@ export function Templates() {
             </table>
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Delete dialog */}
       <DeleteDialog

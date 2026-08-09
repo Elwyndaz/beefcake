@@ -3,6 +3,10 @@ import { useLocation } from 'wouter'
 import { getAllSessions, getAllTemplates, deleteSession } from '../services/dataService'
 import { icon } from '../icons'
 import { formatDateShort, formatDateWithWeekday, getMonthKey, monthNames, todayISO, parseLocalDate } from '../lib/date'
+import { Card } from '../components/Card'
+import { Button } from '../components/Button'
+import { EmptyState } from '../components/EmptyState'
+import { Field } from '../components/Field'
 import type { Session, Template } from '../models'
 
 interface FilterState {
@@ -35,12 +39,10 @@ function filterSessions(sessions: Session[], filters: FilterState): Session[] {
   }
 
   return sessions.filter(session => {
-    // Filter by template name
     if (filters.template !== 'Alla') {
       if (session.templateName !== filters.template) return false
     }
     
-    // Filter by period
     if (cutoffDate) {
       const sessionDate = parseLocalDate(session.date)
       if (sessionDate < cutoffDate) return false
@@ -89,8 +91,8 @@ function DeleteDialog({
         </div>
         <p>{message}</p>
         <div class="flex gap mt justify-end">
-          <button class="btn btn-secondary" onClick={onClose}>Avbryt</button>
-          <button class="btn btn-danger" onClick={onConfirm}>Radera</button>
+          <Button variant="secondary" onClick={onClose}>Avbryt</Button>
+          <Button variant="danger" onClick={onConfirm}>Radera</Button>
         </div>
       </div>
     </div>
@@ -121,8 +123,8 @@ function UndoToast({ message, onUndo, onDismiss }: { message: string; onUndo: ()
   return (
     <div class="toast undo-toast">
       <span>{message}</span>
-      <button class="btn btn-secondary btn-sm ml" onClick={onUndo}>Ångra</button>
-      <button class="btn btn-ghost btn-sm" onClick={onDismiss} aria-label="Stäng">
+      <Button variant="secondary" size="sm" class="ml" onClick={onUndo}>Ångra</Button>
+      <button class="banner-dismiss" onClick={onDismiss} aria-label="Stäng">
         <svg width="16" height="16" viewBox="0 0 19 19"><use href={icon('x-icon')} /></svg>
       </button>
     </div>
@@ -150,12 +152,12 @@ export function History() {
     try {
       setLoading(true)
       setError(null)
-      const [sessions, templates] = await Promise.all([
+      const [sessions, ts] = await Promise.all([
         getAllSessions(),
         getAllTemplates()
       ])
       setAllSessions(sessions)
-      setTemplates(templates)
+      setTemplates(ts)
     } catch (err) {
       setError('Kunde inte ladda historik. Försök igen.')
       console.error('Fel vid laddning av historik:', err)
@@ -184,7 +186,6 @@ export function History() {
   
   // Sort map by month key descending (newest first)
   const sortedMonthKeys = Array.from(groupedSessions.keys()).sort((a, b) => {
-    // Parse "Month YYYY" format
     const parseMonthKey = (key: string) => {
       const [month, year] = key.split(' ')
       const monthIndex = monthNames.findIndex(m => m === month)
@@ -221,7 +222,6 @@ export function History() {
   async function handleUndoDelete() {
     if (!deletedSession) return
     try {
-      // Re-create the session from the deleted data
       const { id, date, templateId, templateName, exercises, createdAt } = deletedSession
       const restoredSession: Session = {
         id,
@@ -231,8 +231,6 @@ export function History() {
         exercises: exercises.map(e => ({ ...e })),
         createdAt
       }
-      // Note: This doesn't restore to IndexedDB, but re-adds to local state
-      // Full restore would require a restoreSession function in dataService
       setAllSessions(prev => [...prev, restoredSession].sort((a, b) => b.date.localeCompare(a.date)))
       setShowUndoToast(false)
       setDeletedSession(null)
@@ -273,7 +271,7 @@ export function History() {
     return (
       <div>
         <h1 class="page-title">Historik</h1>
-        <div class="card skeleton skeleton-card"></div>
+        <Card class="skeleton skeleton-card"></Card>
       </div>
     )
   }
@@ -283,13 +281,11 @@ export function History() {
     return (
       <div>
         <h1 class="page-title">Historik</h1>
-        <div class="card">
-          <div class="empty-state">
-            <h3>Fel vid laddning</h3>
-            <p>{error}</p>
-            <button class="btn btn-primary mt" onClick={load}>Försök igen</button>
-          </div>
-        </div>
+        <EmptyState
+          title="Fel vid laddning"
+          message={error}
+          action={<Button onClick={load}>Försök igen</Button>}
+        />
       </div>
     )
   }
@@ -300,33 +296,29 @@ export function History() {
       <div>
         <h1 class="page-title">Historik</h1>
         
-        <div class="card mb">
+        <Card>
           <div class="grid grid-2 gap-3">
-            <div class="input-group m-0">
-              <label>Passtyp</label>
+            <Field label="Passtyp" class="m-0">
               <select value={filters.template} onChange={handleTemplateChange}>
                 {templateOptions.map(t => (
                   <option key={t} value={t}>{t}</option>
                 ))}
               </select>
-            </div>
-            <div class="input-group m-0">
-              <label>Period</label>
+            </Field>
+            <Field label="Period" class="m-0">
               <select value={filters.period} onChange={handlePeriodChange}>
                 {Object.entries(periodLabels).map(([key, label]) => (
                   <option key={key} value={key}>{label}</option>
                 ))}
               </select>
-            </div>
+            </Field>
           </div>
-        </div>
+        </Card>
         
-        <div class="card">
-          <div class="empty-state">
-            <h3>Inga pass matchar filtret</h3>
-            <p>Prova med andra filterinställningar.</p>
-          </div>
-        </div>
+        <EmptyState
+          title="Inga pass matchar filtret"
+          message="Prova med andra filterinställningar."
+        />
         
         {toastMessage && <Toast message={toastMessage} onDismiss={dismissToast} />}
       </div>
@@ -338,38 +330,35 @@ export function History() {
       <h1 class="page-title">Historik</h1>
 
       {/* Filters */}
-      <div class="card mb">
+      <Card>
         <div class="grid grid-2 gap-3">
-          <div class="input-group m-0">
-            <label>Passtyp</label>
+          <Field label="Passtyp" class="m-0">
             <select value={filters.template} onChange={handleTemplateChange}>
               {templateOptions.map(t => (
                 <option key={t} value={t}>{t}</option>
               ))}
             </select>
-          </div>
-          <div class="input-group m-0">
-            <label>Period</label>
+          </Field>
+          <Field label="Period" class="m-0">
             <select value={filters.period} onChange={handlePeriodChange}>
               {Object.entries(periodLabels).map(([key, label]) => (
                 <option key={key} value={key}>{label}</option>
               ))}
             </select>
-          </div>
+          </Field>
         </div>
-      </div>
+      </Card>
 
-      {/* Session list - Desktop/Tablet: Table */}
-      <div class="card">
+      {/* Session list */}
+      <Card>
         <div class="flex justify-between items-center mb-sm">
-          <span>{filteredSessions.length} pass totalt</span>
-          <a href="/log" class="btn btn-primary btn-sm">Logga nytt</a>
+          <span class="text-muted">{filteredSessions.length} pass totalt</span>
+          <Button href="/log" size="sm">Logga nytt</Button>
         </div>
         
-        <div class="history-list-table">
+        <div class="history-list-table table-rows">
           {sortedMonthKeys.map(monthKey => {
             const sessionsInMonth = groupedSessions.get(monthKey)!
-            // Limit displayed sessions
             const prevCounts = sortedMonthKeys.slice(0, sortedMonthKeys.indexOf(monthKey))
               .reduce((sum, mk) => sum + (groupedSessions.get(mk)?.length || 0), 0)
             
@@ -393,11 +382,11 @@ export function History() {
                   </thead>
                   <tbody>
                     {monthSessions.map(session => (
-                      <tr key={session.id} onClick={() => goToDetail(session.id)} class="history-row">
+                      <tr key={session.id} onClick={() => goToDetail(session.id)}>
                         <td class="nowrap">{formatDateWithWeekday(session.date)}</td>
                         <td><span class="badge badge-primary">{session.templateName}</span></td>
                         <td>{session.exercises.length}</td>
-                        <td class="tabular-nums">{calculateTotalVolume(session).toLocaleString('sv-SE')} kg</td>
+                        <td class="volume-hero">{calculateTotalVolume(session).toLocaleString('sv-SE')} kg</td>
                         <td class="history-actions">
                           <button 
                             class="btn-remove" 
@@ -460,12 +449,12 @@ export function History() {
         {/* Load more */}
         {!allDisplayed && (
           <div class="mt">
-            <button class="btn btn-secondary btn-block" onClick={loadMore}>
+            <Button variant="secondary" class="btn-block" onClick={loadMore}>
               Visa fler ({filteredSessions.length - displayCount} kvar)
-            </button>
+            </Button>
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Delete confirmation dialog */}
       <DeleteDialog

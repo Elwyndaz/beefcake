@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'preact/hooks'
 import type { ComponentChildren } from 'preact'
 import { AUTH_HASH, AUTH_KEY } from '../config'
+import { Button } from './Button'
 
 async function hashPassword(input: string): Promise<string> {
   const data = new TextEncoder().encode(input)
@@ -57,6 +58,7 @@ export function PasswordGate({ children }: Props) {
           }}
           placeholder="Lösenord"
           autoFocus
+          aria-label="Lösenord"
           class={error ? 'password-input password-input-error' : 'password-input'}
         />
         {error && (
@@ -64,12 +66,9 @@ export function PasswordGate({ children }: Props) {
             Fel lösenord.
           </p>
         )}
-        <button
-          type="submit"
-          class="btn btn-primary btn-block"
-        >
-          Logga in
-        </button>
+        <Button type="submit" class="btn-block">
+          Öppna träningsloggen
+        </Button>
       </form>
     </div>
   )

@@ -2,6 +2,10 @@ import { useState, useEffect, useRef } from 'preact/hooks'
 import { getAllTemplates, getAllExercises, createSession, getOrCreateExercise, getSession } from '../services/dataService'
 import { todayISO } from '../models'
 import { icon } from '../icons'
+import { Card } from '../components/Card'
+import { Button } from '../components/Button'
+import { EmptyState } from '../components/EmptyState'
+import { Field } from '../components/Field'
 import type { Template, Exercise, TemplateExercise, SetEntry } from '../models'
 
 interface FormExercise {
@@ -26,7 +30,6 @@ export function LogSession() {
     try {
       setLoading(true)
       setError(null)
-      // Check URL for ?from=<sessionId> parameter
       const urlParams = new URLSearchParams(window.location.search)
       const fromSessionId = urlParams.get('from')
       
@@ -35,7 +38,6 @@ export function LogSession() {
         try {
           const session = await getSession(fromSessionId)
           if (session) {
-            // Prefill with the session's template and exercises
             setSelectedTemplateId(session.templateId)
             const formExercises: FormExercise[] = session.exercises.map(e => ({
               exerciseId: e.exerciseId,
@@ -44,12 +46,10 @@ export function LogSession() {
             }))
             setExercises(formExercises)
             setDate(todayISO())
-            // Clear the URL parameter
             window.history.replaceState({}, '', window.location.pathname)
           }
         } catch (err) {
           console.error('Failed to load session for prefill:', err)
-          // Continue to load templates even if prefill fails
         }
       }
       
@@ -67,7 +67,6 @@ export function LogSession() {
   }, [])
 
   useEffect(() => {
-    // Only load template exercises if we haven't prefilled from a session
     if (selectedTemplateId && !fromSessionRef.current) {
       loadTemplateExercises()
     } else if (!selectedTemplateId) {
@@ -116,7 +115,7 @@ export function LogSession() {
             exerciseId,
             exerciseName: e.exerciseName,
             setEntries: e.setEntries,
-            order: 0 // Order kommer att sättas i createSession
+            order: 0
           }
         })
       )
@@ -173,7 +172,6 @@ export function LogSession() {
     const value = target.type === 'number' ? (parseFloat(target.value) || 0) : target.value
     
     if (field === 'setEntries' && setIdx !== undefined && nestedField) {
-      // Uppdatera nested field i setEntries array
       const exercise = exercises[idx]
       const newSetEntries = [...exercise.setEntries]
       newSetEntries[setIdx] = { ...newSetEntries[setIdx], [nestedField]: value }
@@ -191,7 +189,6 @@ export function LogSession() {
   function handleSelectChange(e: Event) {
     const target = e.target as HTMLSelectElement
     setSelectedTemplateId(target.value)
-    // Clear the prefill ref when user manually selects a template
     fromSessionRef.current = null
   }
 
@@ -199,19 +196,19 @@ export function LogSession() {
     return (
       <div>
         <h1 class="page-title">Logga pass</h1>
-        <div class="card mb skeleton skeleton-card"></div>
-        <div class="card mb skeleton skeleton-card"></div>
+        <Card class="skeleton skeleton-card mb"></Card>
+        <Card class="skeleton skeleton-card mb"></Card>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div class="empty-state">
-        <h3>Fel vid laddning</h3>
-        <p>{error}</p>
-        <button class="btn btn-primary mt" onClick={checkPrefill}>Försök igen</button>
-      </div>
+      <EmptyState
+        title="Fel vid laddning"
+        message={error}
+        action={<Button onClick={checkPrefill}>Försök igen</Button>}
+      />
     )
   }
 
@@ -219,29 +216,26 @@ export function LogSession() {
     <div>
       <h1 class="page-title">Logga pass</h1>
 
-      <div class="card mb">
+      <Card>
         <div class="grid grid-2 mb">
-          <div class="input-group">
-            <label>Datum</label>
+          <Field label="Datum" class="m-0">
             <input type="date" value={date} onChange={handleDateChange} />
-          </div>
-          <div class="input-group">
-            <label>Mall</label>
+          </Field>
+          <Field label="Mall" class="m-0">
             <select value={selectedTemplateId} onChange={handleSelectChange}>
               {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
-          </div>
+          </Field>
         </div>
-      </div>
+      </Card>
 
-      <div class="card mb">
-        <h3 class="mb">Övningar</h3>
-
+      <Card title="Övningar">
         {exercises.length === 0 ? (
-          <div class="empty-state">
-            <p>Välj en mall ovan eller lägg till övningar manuellt.</p>
-            <button class="btn btn-primary mt" onClick={addExercise}>Lägg till övning</button>
-          </div>
+          <EmptyState
+            title="Lägg till övningar"
+            message="Välj en mall ovan eller lägg till övningar manuellt."
+            action={<Button onClick={addExercise}>Lägg till övning</Button>}
+          />
         ) : (
           <>
             <datalist id="exercise-suggestions">
@@ -374,26 +368,26 @@ export function LogSession() {
                           </div>
                           {ex.setEntries.length > 1 && (
                             <div class="m-0">
-                              <button class="btn btn-danger btn-sm h-full" onClick={() => removeSetFromExercise(idx, setIdx)}>Ta bort</button>
+                              <Button variant="danger" size="sm" class="h-full" onClick={() => removeSetFromExercise(idx, setIdx)}>Ta bort</Button>
                             </div>
                           )}
                         </div>
                       ))}
-                      <button class="btn btn-secondary btn-sm mt-1" onClick={() => addSetToExercise(idx)}>+ Lägg till set</button>
+                      <Button variant="secondary" size="sm" class="mt-1" onClick={() => addSetToExercise(idx)}>+ Lägg till set</Button>
                     </div>
                   </div>
                 ))}
               </div>
+              <Button variant="secondary" class="mt" onClick={addExercise}>+ Lägg till övning</Button>
             </div>
-            <button class="btn btn-secondary mt" onClick={addExercise}>+ Lägg till övning</button>
           </>
         )}
-      </div>
+      </Card>
 
       <div class="flex gap">
-        <button class="btn btn-primary flex-1" onClick={handleSave} disabled={saving || exercises.length === 0}>
+        <Button class="flex-1" onClick={handleSave} disabled={saving || exercises.length === 0}>
           {saving ? 'Sparar...' : 'Spara pass'}
-        </button>
+        </Button>
       </div>
 
       {saved && (

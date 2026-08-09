@@ -8,11 +8,15 @@ export interface Exercise {
   createdAt: string
 }
 
+export interface SetEntry {
+  sets: number
+  reps: number
+  weight: number
+}
+
 export interface TemplateExercise {
   exerciseId: string
-  defaultSets: number
-  defaultReps: number
-  defaultWeight: number
+  defaultSetEntry: SetEntry
   order: number
 }
 
@@ -26,9 +30,7 @@ export interface Template {
 export interface SessionExercise {
   exerciseId: string
   exerciseName: string
-  sets: number
-  reps: number
-  weight: number
+  setEntries: SetEntry[]
   order: number
 }
 
@@ -42,6 +44,43 @@ export interface Session {
 }
 
 export interface ExerciseHistory {
+  id: string
+  date: string
+  exerciseId: string
+  exerciseName: string
+  setEntries: SetEntry[]
+  volume: number
+  sessionId: string
+}
+
+// Bakåtkompatibla typer för migrering från gammal seedData-structur
+export interface LegacyTemplateExercise {
+  exerciseId: string
+  defaultSets: number
+  defaultReps: number
+  defaultWeight: number
+  order: number
+}
+
+export interface LegacySessionExercise {
+  exerciseId: string
+  exerciseName: string
+  sets: number
+  reps: number
+  weight: number
+  order: number
+}
+
+export interface LegacySession {
+  id: string
+  date: string
+  templateId: string
+  templateName: string
+  exercises: LegacySessionExercise[]
+  createdAt: string
+}
+
+export interface LegacyExerciseHistory {
   id: string
   date: string
   exerciseId: string
@@ -124,4 +163,57 @@ export function nowISO(): string {
 export function todayISO(): string {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+// Migreringsfunktioner från Legacy-typ till ny SetEntry-baserad typ
+export function migrateTemplateExercise(legacy: LegacyTemplateExercise): TemplateExercise {
+  return {
+    exerciseId: legacy.exerciseId,
+    defaultSetEntry: {
+      sets: legacy.defaultSets,
+      reps: legacy.defaultReps,
+      weight: legacy.defaultWeight
+    },
+    order: legacy.order
+  }
+}
+
+export function migrateSessionExercise(legacy: LegacySessionExercise): SessionExercise {
+  return {
+    exerciseId: legacy.exerciseId,
+    exerciseName: legacy.exerciseName,
+    setEntries: [{
+      sets: legacy.sets,
+      reps: legacy.reps,
+      weight: legacy.weight
+    }],
+    order: legacy.order
+  }
+}
+
+export function migrateSession(legacy: LegacySession): Session {
+  return {
+    id: legacy.id,
+    date: legacy.date,
+    templateId: legacy.templateId,
+    templateName: legacy.templateName,
+    exercises: legacy.exercises.map(migrateSessionExercise),
+    createdAt: legacy.createdAt
+  }
+}
+
+export function migrateExerciseHistory(legacy: LegacyExerciseHistory): ExerciseHistory {
+  return {
+    id: legacy.id,
+    date: legacy.date,
+    exerciseId: legacy.exerciseId,
+    exerciseName: legacy.exerciseName,
+    setEntries: [{
+      sets: legacy.sets,
+      reps: legacy.reps,
+      weight: legacy.weight
+    }],
+    volume: legacy.volume,
+    sessionId: legacy.sessionId
+  }
 }

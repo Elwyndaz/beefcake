@@ -35,11 +35,11 @@ Excel-importen i webbläsaren är **borttagen** (commit `410efd1`). `xlsx` 0.18.
 ## P1 — hög påverkan
 
 - [x] Radera `src/index.css` (Vite-mallens starter-CSS styr fortfarande layouten)
-- [ ] Visa "förra gången" per övning på loggningssidan
+- [x] Visa "förra gången" per övning på loggningssidan — kan byta passmall i SessionDetail
 - [ ] Autosave av påbörjat pass
-- [ ] Dashboard med "nästa pass" som primär handling
+- [x] Dashboard med "nästa pass" som primär handling
 - [x] Loggningsformuläret som tabell på desktop, kort på mobil
-- [ ] Statistik som svarar på rätt frågor: estimerat 1RM, tonnage per vecka, streak, periodfilter
+- [x] Statistik som svarar på rätt frågor: estimerat 1RM, tonnage per vecka, streak, periodfilter
 - [ ] Övningssida med progression
 - [x] Chart.js-läckor fixade (race conditions i LogSession kvar)
 - [x] Central datumhantering (tidszon-säker) - `src/lib/date.ts`
@@ -52,8 +52,8 @@ Excel-importen i webbläsaren är **borttagen** (commit `410efd1`). `xlsx` 0.18.
 - [x] Desktop: sidebar (tvåkolumnslayout kvar)
 - [x] Mobil: bottennavigering, kort istället för tabeller, 44 px tryckytor
 - [x] Loading- och empty states överallt
-- [ ] Undo vid radering
-- [ ] Lazy-ladda Chart.js
+- [x] Undo vid radering
+- [x] Lazy-ladda Chart.js
 - [ ] Tester (Vitest) och ESLint, båda i CI
 - [x] Ta bort dubbel manifest-länk i `index.html`
 

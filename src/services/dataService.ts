@@ -21,6 +21,7 @@ export async function createTemplate(name: string, exercises: Omit<TemplateExerc
     updatedAt: nowISO()
   }
   await db.put('templates', template)
+  await autoBackup()
   return template
 }
 
@@ -30,6 +31,7 @@ export async function updateTemplate(id: string, updates: Partial<Template>): Pr
   if (!existing) throw new Error(`Template ${id} not found`)
   const updated = { ...existing, ...updates, updatedAt: nowISO() }
   await db.put('templates', updated)
+  await autoBackup()
   return updated
 }
 
@@ -39,6 +41,7 @@ export async function deleteTemplate(id: string): Promise<void> {
   const tx = db.transaction(['templates'], 'readwrite')
   await tx.objectStore('templates').delete(id)
   await tx.done
+  await autoBackup()
 }
 
 export async function updateTemplateExerciseLastUsed(
@@ -142,6 +145,7 @@ export async function createSession(
     await tx.objectStore('templates').put(template)
   }
   await tx.done
+  await autoBackup()
 
   return session
 }
@@ -175,6 +179,7 @@ export async function updateSession(id: string, updates: Partial<Session>): Prom
   for (const h of history) await tx.objectStore('exerciseHistory').put(h)
   await tx.objectStore('sessions').put(updated)
   await tx.done
+  await autoBackup()
 
   return updated
 }
@@ -194,6 +199,7 @@ export async function deleteSession(id: string): Promise<void> {
   await tx.objectStore('sessions').delete(id)
   
   await tx.done
+  await autoBackup()
 }
 
 // Stats Service
@@ -403,6 +409,10 @@ function sessionKey(date: string, templateName: string): string {
  * ny SetEntry-baserad struktur.
  */
 export async function syncSeed(): Promise<{ sessionsAdded: number; exercisesAdded: number }> {
+  // Återställ från LocalStorage om DB är tom, INNAN seed-data laddas
+  await restoreFromLocalStorage()
+  await autoBackup()
+
   const db = await getDB()
   const { seedTemplates, seedExercises, seedSessions } = await import('../db/seedData')
 
@@ -532,4 +542,32 @@ export async function clearAllData(): Promise<void> {
     tx.objectStore('exerciseHistory').clear()
   ])
   await tx.done
+  await autoBackup()
+}
+
+// Backup/Restore functions
+async function isDBEmpty(): Promise<boolean> {
+  const db = await getDB()
+  const count = await db.getAll('sessions')
+  return count.length === 0
+}
+
+export async function autoBackup(): Promise<void> {
+  try {
+    const data = await exportAllData()
+    localStorage.setItem('beefcake-backup', data)
+  } catch (err) {
+    console.error('Backup failed:', err)
+  }
+}
+
+export async function restoreFromLocalStorage(): Promise<void> {
+  try {
+    const backup = localStorage.getItem('beefcake-backup')
+    if (backup && await isDBEmpty()) {
+      await importAllData(backup)
+    }
+  } catch (err) {
+    console.error('Restore failed:', err)
+  }
 }

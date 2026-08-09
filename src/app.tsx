@@ -10,6 +10,7 @@ import { Templates } from './pages/Templates'
 import { Settings } from './pages/Settings'
 import { History } from './pages/History'
 import { SessionDetail } from './pages/SessionDetail'
+import { Card } from './components/Card'
 import { icon } from './icons'
 import './app.css'
 
@@ -127,7 +128,7 @@ function AppContent() {
             <Route path="/history" component={History} />
             <Route path="/history/:id" component={SessionDetail} />
             <Route path="/stats" component={() => (
-              <Suspense fallback={<div class="card skeleton skeleton-card"></div>}>
+              <Suspense fallback={<Card class="skeleton skeleton-card"></Card>}>
                 <Stats />
               </Suspense>
             )} />

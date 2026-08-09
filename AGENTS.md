@@ -72,6 +72,10 @@ Navigering: sidebar på desktop med alla fem plus Inställningar, ikonräls på 
 - **Chart.js-instanser hör hemma i `useRef`, inte `useState`.** Cleanup-funktioner stänger in gamla state-värden och diagram förstörs då inte.
 - **`alert()`, `confirm()` och `prompt()` är förbjudna.** De blockerar hela appen och gör automatiserad testning omöjlig.
 - **Ett spökpass finns med flit:** 2025-11-19 "Bröst, axlar & biceps" är en artefakt av `=TODAY()`-drift i arket. Passet är verkligt men fel daterat och finns redan under rätt datum. Patrik har valt att lämna det. Städa inte bort det.
+- **`geist`-npm-paketet fungerar inte i Vite/Preact.** Det är byggt för Next.js och har `next` som peer-dependency. Variant-fonten ligger i `node_modules/geist/dist/fonts/geist-sans/Geist-Variable.woff2` och är vendored till `src/assets/fonts/` med `@font-face` i app.css. Återställ det inte till en Google Fonts-länk, PWA:n ska fungera offline.
+- **DESIGN-AUDIT.md förutsätter att Button/Card/Stat/EmptyState/Field fanns i `src/components/`.** De togs bort i `194249a` (upptagna som "unused"). Återskapade i design-sprinten 2026-08-09. Auditen skrevs mot ett äldre träd, verifiera läget i koden innan du litar på den.
+- **Chart.js hämtar sina färger via `getCSSVar()` i Stats.tsx**, aldrig hårdkodade hex. Temaändringar görs i app.css-tokens, inte i Stats.tsx.
+- **Alla sidor använder komponenterna i `src/components/`** (Button, Card, Stat, EmptyState, Field). Skriv nya vyer med dem, inte ad-hoc `class="card"`.
 
 ## Flera agenter i samma repo
 

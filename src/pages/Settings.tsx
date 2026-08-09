@@ -2,6 +2,10 @@ import { useState, useEffect } from 'preact/hooks'
 import { getAllTemplates, exportAllData, importAllData, exportSessionsCSV, clearAllData } from '../services/dataService'
 import { saveBackupToFile } from '../services/backupService'
 import { icon } from '../icons'
+import { Card } from '../components/Card'
+import { Button } from '../components/Button'
+import { EmptyState } from '../components/EmptyState'
+import { Field } from '../components/Field'
 import type { Template } from '../models'
 
 // Toast component
@@ -45,8 +49,8 @@ function DeleteDialog({
         </div>
         <p>{message}</p>
         <div class="flex gap mt justify-end">
-          <button class="btn btn-secondary" onClick={onClose}>Avbryt</button>
-          <button class="btn btn-danger" onClick={onConfirm}>Radera</button>
+          <Button variant="secondary" onClick={onClose}>Avbryt</Button>
+          <Button variant="danger" onClick={onConfirm}>Radera</Button>
         </div>
       </div>
     </div>
@@ -197,9 +201,9 @@ export function Settings() {
     return (
       <div>
         <h1 class="page-title">Inställningar</h1>
-        <div class="card skeleton skeleton-card"></div>
-        <div class="card skeleton skeleton-card"></div>
-        <div class="card skeleton skeleton-card"></div>
+        <Card class="skeleton skeleton-card"></Card>
+        <Card class="skeleton skeleton-card"></Card>
+        <Card class="skeleton skeleton-card"></Card>
         {toastMessage && <Toast message={toastMessage} onDismiss={dismissToast} />}
       </div>
     )
@@ -209,13 +213,11 @@ export function Settings() {
     return (
       <div>
         <h1 class="page-title">Inställningar</h1>
-        <div class="card">
-          <div class="empty-state">
-            <h3>Något gick fel</h3>
-            <p>{error}</p>
-            <button class="btn btn-primary mt" onClick={dismissError}>Försök igen</button>
-          </div>
-        </div>
+        <EmptyState
+          title="Något gick fel"
+          message={error}
+          action={<Button onClick={dismissError}>Försök igen</Button>}
+        />
         {toastMessage && <Toast message={toastMessage} onDismiss={dismissToast} />}
       </div>
     )
@@ -226,50 +228,46 @@ export function Settings() {
       <h1 class="page-title">Inställningar</h1>
 
       {templates.length === 0 ? (
-        <div class="card mb">
-          <div class="empty-state">
-            <h3>Inga mallar än</h3>
-            <p>Skapa din första mall för att komma igång.</p>
-            <a href="/templates" class="btn btn-primary mt">Skapa mall</a>
-          </div>
-        </div>
+        <Card class="mb">
+          <EmptyState
+            title="Inga mallar ännu"
+            message="Skapa din första mall för att komma igång."
+            action={<Button href="/templates">Skapa mall</Button>}
+          />
+        </Card>
       ) : null}
 
-      <div class="card mb">
-        <h3>Export / Import</h3>
+      <Card title="Export / Import">
         <div class="flex gap mb">
-          <button class="btn btn-secondary" onClick={handleExportJSON}>Export JSON (hela DB)</button>
-          <button class="btn btn-secondary" onClick={handleExportCSV}>Export CSV (passlista)</button>
+          <Button variant="secondary" onClick={handleExportJSON}>Export JSON (hela DB)</Button>
+          <Button variant="secondary" onClick={handleExportCSV}>Export CSV (passlista)</Button>
         </div>
         <div class="flex gap mb">
-          <button class="btn btn-primary" onClick={handleBackup}>Ladda ned full backup</button>
+          <Button onClick={handleBackup}>Ladda ned full backup</Button>
         </div>
-        <div class="input-group">
-          <label>Import JSON</label>
+        <Field label="Import JSON" class="m-0">
           <input
             type="file"
             accept=".json"
             onChange={handleFileImport}
             disabled={importing}
           />
-        </div>
-      </div>
+        </Field>
+      </Card>
 
-      <div class="card mb">
-        <h3>Data</h3>
+      <Card title="Data">
         <p class="mb text-muted">
           All data lagras lokalt i din webbläsare (IndexedDB). Inget skickas till server.
         </p>
-        <button class="btn btn-danger" onClick={handleClearAll}>Radera ALL data</button>
-      </div>
+        <Button variant="danger" onClick={handleClearAll}>Radera ALL data</Button>
+      </Card>
 
-      <div class="card">
-        <h3>Om</h3>
-        <p>Beefcake — Träningslogg för styrketräning</p>
-        <p class="text-sm text-muted">
+      <Card title="Om">
+        <p>Beefcake, träningslogg för styrketräning</p>
+        <p class="text-sm text-muted m-0">
           Byggd med Preact, TypeScript, IndexedDB, Chart.js, Workbox PWA.
         </p>
-      </div>
+      </Card>
 
       {/* Import confirmation dialog */}
       <DeleteDialog
@@ -281,30 +279,32 @@ export function Settings() {
       />
 
       {/* Clear all data dialog with text confirmation */}
-      <div class="dialog-overlay" style={{ display: clearDialogOpen ? 'block' : 'none' }} onClick={dismissClearDialog}>
-        <div class="dialog" onClick={e => e.stopPropagation()}>
-          <div class="flex justify-between items-center mb">
-            <h3 class="m-0">Radera ALL data</h3>
-            <button class="banner-dismiss" onClick={dismissClearDialog} aria-label="Stäng">
-              <svg width="16" height="16" viewBox="0 0 19 19"><use href={icon('x-icon')} /></svg>
-            </button>
-          </div>
-          <p>VARNING: Detta raderar ALL data permanent. Är du helt säker?</p>
-          <p class="mt">Skriv "RADERA" för att bekräfta:</p>
-          <div class="input-group mt">
-            <input
-              type="text"
-              value={clearConfirmText}
-              onChange={handleClearConfirmChange}
-              placeholder="RADERA"
-            />
-          </div>
-          <div class="flex gap mt justify-end">
-            <button class="btn btn-secondary" onClick={dismissClearDialog}>Avbryt</button>
-            <button class="btn btn-danger" onClick={confirmClearAll}>Radera</button>
+      {clearDialogOpen && (
+        <div class="dialog-overlay" onClick={dismissClearDialog}>
+          <div class="dialog" onClick={e => e.stopPropagation()}>
+            <div class="flex justify-between items-center mb">
+              <h3 class="m-0">Radera ALL data</h3>
+              <button class="banner-dismiss" onClick={dismissClearDialog} aria-label="Stäng">
+                <svg width="16" height="16" viewBox="0 0 19 19"><use href={icon('x-icon')} /></svg>
+              </button>
+            </div>
+            <p>VARNING: Detta raderar ALL data permanent. Är du helt säker?</p>
+            <p class="mt">Skriv "RADERA" för att bekräfta:</p>
+            <div class="input-group mt">
+              <input
+                type="text"
+                value={clearConfirmText}
+                onChange={handleClearConfirmChange}
+                placeholder="RADERA"
+              />
+            </div>
+            <div class="flex gap mt justify-end">
+              <Button variant="secondary" onClick={dismissClearDialog}>Avbryt</Button>
+              <Button variant="danger" onClick={confirmClearAll}>Radera</Button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {toastMessage && <Toast message={toastMessage} onDismiss={dismissToast} />}
     </div>

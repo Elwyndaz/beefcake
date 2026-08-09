@@ -13,8 +13,8 @@ export default defineConfig({
         name: 'Beefcake',
         short_name: 'Beefcake',
         description: 'Träningslogg för styrketräning',
-        theme_color: '#1a1a2e',
-        background_color: '#16213e',
+        theme_color: '#1b2634',
+        background_color: '#1b2634',
         display: 'standalone',
         orientation: 'portrait-primary',
         scope: '/beefcake/',
@@ -35,23 +35,7 @@ export default defineConfig({
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts-cache',
-              expiration: {
-                maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365
-              },
-              cacheableResponse: {
-                statuses: [0, 200]
-              }
-            }
-          }
-        ]
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}']
       }
     })
   ],

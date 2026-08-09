@@ -10,6 +10,10 @@ import {
 } from '../services/dataService'
 import { icon } from '../icons'
 import { formatDateFull, formatDateShort } from '../lib/date'
+import { Card } from '../components/Card'
+import { Button } from '../components/Button'
+import { EmptyState } from '../components/EmptyState'
+import { Field } from '../components/Field'
 import type { Session, Exercise, SessionExercise, SetEntry, Template } from '../models'
 
 interface FormExercise {
@@ -57,8 +61,8 @@ function DeleteDialog({
           Det går inte att ångra.
         </p>
         <div class="flex gap mt justify-end">
-          <button class="btn btn-secondary" onClick={onClose}>Avbryt</button>
-          <button class="btn btn-danger" onClick={onConfirm}>Radera</button>
+          <Button variant="secondary" onClick={onClose}>Avbryt</Button>
+          <Button variant="danger" onClick={onConfirm}>Radera</Button>
         </div>
       </div>
     </div>
@@ -96,14 +100,12 @@ export function SessionDetail() {
   const [, navigate] = useLocation()
   const [toastMessage, setToastMessage] = useState<string | null>(null)
 
-  // Get session ID from URL
   const getSessionId = useCallback((): string | null => {
     const pathParts = window.location.pathname.split('/')
     const idIndex = pathParts.findIndex(p => p === 'history') + 1
     return idIndex > 0 && idIndex < pathParts.length ? pathParts[idIndex] : null
   }, [])
 
-  // Load session data
   useEffect(() => {
     async function load() {
       const sessionId = getSessionId()
@@ -114,7 +116,7 @@ export function SessionDetail() {
       }
 
       try {
-        const [sess, exercises, templates] = await Promise.all([
+        const [sess, es, ts] = await Promise.all([
           getSession(sessionId),
           getAllExercises(),
           getAllTemplates()
@@ -124,11 +126,10 @@ export function SessionDetail() {
           setNotFound(true)
         } else {
           setSession(sess)
-          setAllExercises(exercises)
-          setAllTemplates(templates)
+          setAllExercises(es)
+          setAllTemplates(ts)
           setFormDate(sess.date)
           setFormTemplateId(sess.templateId)
-          // Convert session exercises to form exercises
           const formEx: FormExercise[] = sess.exercises.map(e => ({
             exerciseId: e.exerciseId,
             exerciseName: e.exerciseName,
@@ -146,7 +147,6 @@ export function SessionDetail() {
     load()
   }, [getSessionId])
 
-  // Reset saved message
   useEffect(() => {
     if (saved) {
       const timer = setTimeout(() => setSaved(false), 2000)
@@ -154,18 +154,15 @@ export function SessionDetail() {
     }
   }, [saved])
 
-  // Dismiss toast
   function dismissToast() {
     setToastMessage(null)
   }
 
-  // Handle template change
   function handleTemplateChange(e: Event) {
     const target = e.target as HTMLSelectElement
     setFormTemplateId(target.value)
   }
 
-  // Handle save
   async function handleSave() {
     if (formExercises.length === 0) return
     setSaving(true)
@@ -174,7 +171,6 @@ export function SessionDetail() {
       const sessionId = getSessionId()
       if (!sessionId || !session) return
 
-      // Validate exercises
       const validExercises = await Promise.all(
         formExercises.map(async (e, i) => {
           let exerciseId = e.exerciseId
@@ -191,7 +187,6 @@ export function SessionDetail() {
         })
       )
 
-      // Find the selected template
       const selectedTemplate = allTemplates.find(t => t.id === formTemplateId)
       const templateName = selectedTemplate?.name || session.templateName
       const templateId = selectedTemplate?.id || session.templateId
@@ -203,7 +198,6 @@ export function SessionDetail() {
         exercises: validExercises
       })
       
-      // Update local state
       const updatedSession = {
         ...session,
         date: formDate,
@@ -227,7 +221,6 @@ export function SessionDetail() {
     }
   }
 
-  // Handle delete
   async function handleDelete() {
     const sessionId = getSessionId()
     if (!sessionId || !session) return
@@ -238,7 +231,6 @@ export function SessionDetail() {
     try {
       await deleteSession(sessionId)
       setToastMessage(`Pass "${session.templateName}" (${session.date}) raderat.`)
-      // Navigate back to history after a brief delay
       setTimeout(() => {
         navigate('/history')
       }, 500)
@@ -248,16 +240,13 @@ export function SessionDetail() {
     }
   }
 
-  // Run again - navigate to /log?from=<sessionId>
   function handleRunAgain() {
     if (!session) return
     navigate(`/log?from=${session.id}`)
   }
 
-  // Toggle edit mode
   function toggleEdit() {
     setEditing(!editing)
-    // Reset saved state when entering edit mode
     if (!editing) {
       setSaved(false)
       if (session) {
@@ -272,7 +261,6 @@ export function SessionDetail() {
     }
   }
 
-  // Cancel edit
   function cancelEdit() {
     setEditing(false)
     if (session) {
@@ -331,7 +319,6 @@ export function SessionDetail() {
     const value = target.type === 'number' ? (parseFloat(target.value) || 0) : target.value
     
     if (field === 'setEntries' && setIdx !== undefined && nestedField) {
-      // Uppdatera nested field i setEntries array
       const exercise = formExercises[idx]
       const newSetEntries = [...exercise.setEntries]
       newSetEntries[setIdx] = { ...newSetEntries[setIdx], [nestedField]: value }
@@ -351,7 +338,7 @@ export function SessionDetail() {
     return (
       <div>
         <h1 class="page-title">Passdetaljer</h1>
-        <div class="card skeleton skeleton-card"></div>
+        <Card class="skeleton skeleton-card"></Card>
       </div>
     )
   }
@@ -361,13 +348,11 @@ export function SessionDetail() {
     return (
       <div>
         <h1 class="page-title">Passdetaljer</h1>
-        <div class="card">
-          <div class="empty-state">
-            <h3>Fel vid laddning</h3>
-            <p>{error}</p>
-            <button class="btn btn-primary mt" onClick={() => window.location.reload()}>Försök igen</button>
-          </div>
-        </div>
+        <EmptyState
+          title="Fel vid laddning"
+          message={error}
+          action={<Button onClick={() => window.location.reload()}>Försök igen</Button>}
+        />
       </div>
     )
   }
@@ -377,14 +362,10 @@ export function SessionDetail() {
     return (
       <div>
         <h1 class="page-title">Passdetaljer</h1>
-        <div class="card">
-          <div class="empty-state">
-            <h3>Passet hittades inte</h3>
-            <p>
-              <a href="/history" class="btn btn-primary mt-sm">Tillbaka till historik</a>
-            </p>
-          </div>
-        </div>
+        <EmptyState
+          title="Passet hittades inte"
+          action={<Button href="/history">Tillbaka till historik</Button>}
+        />
       </div>
     )
   }
@@ -394,14 +375,10 @@ export function SessionDetail() {
     return (
       <div>
         <h1 class="page-title">Passdetaljer</h1>
-        <div class="card">
-          <div class="empty-state">
-            <h3>Passet har inga övningar</h3>
-            <p>
-              <a href="/history" class="btn btn-primary mt-sm">Tillbaka till historik</a>
-            </p>
-          </div>
-        </div>
+        <EmptyState
+          title="Passet har inga övningar"
+          action={<Button href="/history">Tillbaka till historik</Button>}
+        />
       </div>
     )
   }
@@ -412,24 +389,24 @@ export function SessionDetail() {
       <div>
         <h1 class="page-title">Passdetaljer</h1>
 
-        <div class="card mb">
+        <Card>
           <div class="flex justify-between items-center mb">
             <div>
               <h2 class="mb-1">{session.templateName}</h2>
               <p class="m-0 text-muted">{formatDateFull(session.date)}</p>
             </div>
             <div class="flex gap-sm">
-              <button class="btn btn-primary btn-sm" onClick={handleRunAgain}>Kör igen</button>
-              <button class="btn btn-secondary btn-sm" onClick={toggleEdit}>Redigera</button>
-              <button class="btn btn-danger btn-sm" onClick={() => setDeleteDialogOpen(true)}>Radera</button>
+              <Button size="sm" onClick={handleRunAgain}>Kör igen</Button>
+              <Button variant="secondary" size="sm" onClick={toggleEdit}>Redigera</Button>
+              <Button variant="danger" size="sm" onClick={() => setDeleteDialogOpen(true)}>Radera</Button>
             </div>
           </div>
-        </div>
+        </Card>
 
-        <div class="card mb">
+        <Card>
           <h3 class="mb-sm">Övningar</h3>
           <div class="session-detail-exercise-list">
-            <div class="session-detail-table">
+            <div class="session-detail-table table-rows">
               <table>
                 <thead>
                   <tr>
@@ -453,7 +430,7 @@ export function SessionDetail() {
                       <td class="tabular-nums">
                         {ex.setEntries.length > 1 ? `${ex.setEntries[0]?.weight}+` : ex.setEntries[0]?.weight}
                       </td>
-                      <td class="tabular-nums">{calculateExerciseVolume(ex).toLocaleString('sv-SE')} kg</td>
+                      <td class="volume-hero">{calculateExerciseVolume(ex).toLocaleString('sv-SE')} kg</td>
                     </tr>
                   ))}
                 </tbody>
@@ -467,9 +444,9 @@ export function SessionDetail() {
             </div>
           </div>
           <p class="mt-sm text-right text-muted">
-            <a href="/history" class="btn btn-secondary btn-sm">Tillbaka till historik</a>
+            <Button variant="secondary" size="sm" href="/history">Tillbaka till historik</Button>
           </p>
-        </div>
+        </Card>
 
         {/* Delete dialog */}
         <DeleteDialog
@@ -491,34 +468,32 @@ export function SessionDetail() {
     <div>
       <h1 class="page-title">Redigera pass</h1>
 
-      <div class="card mb">
+      <Card>
         <div class="flex justify-between items-center mb">
           <h2 class="m-0">{session.templateName}</h2>
           <div class="flex gap-sm">
-            <button class="btn btn-secondary btn-sm" onClick={cancelEdit}>Avbryt</button>
-            <button 
-              class="btn btn-primary btn-sm" 
+            <Button variant="secondary" size="sm" onClick={cancelEdit}>Avbryt</Button>
+            <Button 
+              size="sm" 
               onClick={handleSave} 
               disabled={saving || formExercises.length === 0}
             >
               {saving ? 'Sparar...' : 'Spara'}
-            </button>
+            </Button>
           </div>
         </div>
 
-        <div class="input-group mb">
-          <label>Datum</label>
+        <Field label="Datum" class="mb">
           <input type="date" value={formDate} onChange={handleDateChange} />
-        </div>
+        </Field>
 
-        <div class="input-group mb">
-          <label>Passmall</label>
+        <Field label="Passmall" class="mb">
           <select value={formTemplateId} onChange={handleTemplateChange}>
             {allTemplates.map(t => (
               <option key={t.id} value={t.id}>{t.name}</option>
             ))}
           </select>
-        </div>
+        </Field>
 
         <h3 class="mb-sm">Övningar</h3>
         
@@ -612,19 +587,19 @@ export function SessionDetail() {
                       </div>
                       {ex.setEntries.length > 1 && (
                         <div class="m-0">
-                          <button class="btn btn-danger btn-sm h-full" onClick={() => removeSetFromExercise(idx, setIdx)}>Ta bort</button>
+                          <Button variant="danger" size="sm" class="h-full" onClick={() => removeSetFromExercise(idx, setIdx)}>Ta bort</Button>
                         </div>
                       )}
                     </div>
                   ))}
-                  <button class="btn btn-secondary btn-sm mt-1" onClick={() => addSetToExercise(idx)}>+ Lägg till set</button>
+                  <Button variant="secondary" size="sm" class="mt-1" onClick={() => addSetToExercise(idx)}>+ Lägg till set</Button>
                 </div>
               </div>
             ))}
           </div>
-          <button class="btn btn-secondary mt" onClick={addExercise}>+ Lägg till övning</button>
+          <Button variant="secondary" class="mt" onClick={addExercise}>+ Lägg till övning</Button>
         </div>
-      </div>
+      </Card>
 
       {saved && (
         <div class="toast">Pass sparat!</div>
