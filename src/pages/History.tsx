@@ -364,6 +364,40 @@ export function History() {
     <div>
       <h1 class="page-title">Historik</h1>
 
+      <Card class="history-calendar-card">
+        <div class="history-calendar-header">
+          <div>
+            <h2 class="card-title m-0">Månadsvy</h2>
+            <p class="text-muted text-sm m-0">Klicka på en träningsdag för att öppna passet.</p>
+          </div>
+          <div class="history-calendar-nav">
+            <Button variant="secondary" size="sm" onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1))} ariaLabel="Föregående månad">‹</Button>
+            <strong>{monthTitle(calendarMonth)}</strong>
+            <Button variant="secondary" size="sm" onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1))} ariaLabel="Nästa månad">›</Button>
+          </div>
+        </div>
+        <div class="history-calendar-weekdays">
+          {calendarWeekdays.map(day => <span key={day}>{day}</span>)}
+        </div>
+        <div class="history-calendar-grid">
+          {calendarDays.map(day => {
+            const date = localDateISO(day)
+            const daySessions = sessionsByDate.get(date) || []
+            const isCurrentMonth = day.getMonth() === calendarMonth.getMonth()
+            return (
+              <div class={`history-calendar-day${isCurrentMonth ? '' : ' outside'}${daySessions.length ? ' trained' : ''}`} key={date}>
+                <span class="history-calendar-date">{day.getDate()}</span>
+                {daySessions.map(session => (
+                  <button type="button" class="history-calendar-session" key={session.id} onClick={() => goToDetail(session.id)} title={session.templateName}>
+                    {session.templateName}
+                  </button>
+                ))}
+              </div>
+            )
+          })}
+        </div>
+      </Card>
+
       {/* Session list */}
       <Card>
         <div class="history-toolbar mb-sm">
@@ -470,40 +504,6 @@ export function History() {
             </Button>
           </div>
         )}
-      </Card>
-
-      <Card class="history-calendar-card">
-        <div class="history-calendar-header">
-          <div>
-            <h2 class="card-title m-0">Månadsvy</h2>
-            <p class="text-muted text-sm m-0">Klicka på en träningsdag för att öppna passet.</p>
-          </div>
-          <div class="history-calendar-nav">
-            <Button variant="secondary" size="sm" onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1))} ariaLabel="Föregående månad">‹</Button>
-            <strong>{monthTitle(calendarMonth)}</strong>
-            <Button variant="secondary" size="sm" onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1))} ariaLabel="Nästa månad">›</Button>
-          </div>
-        </div>
-        <div class="history-calendar-weekdays">
-          {calendarWeekdays.map(day => <span key={day}>{day}</span>)}
-        </div>
-        <div class="history-calendar-grid">
-          {calendarDays.map(day => {
-            const date = localDateISO(day)
-            const daySessions = sessionsByDate.get(date) || []
-            const isCurrentMonth = day.getMonth() === calendarMonth.getMonth()
-            return (
-              <div class={`history-calendar-day${isCurrentMonth ? '' : ' outside'}${daySessions.length ? ' trained' : ''}`} key={date}>
-                <span class="history-calendar-date">{day.getDate()}</span>
-                {daySessions.map(session => (
-                  <button type="button" class="history-calendar-session" key={session.id} onClick={() => goToDetail(session.id)} title={session.templateName}>
-                    {session.templateName}
-                  </button>
-                ))}
-              </div>
-            )
-          })}
-        </div>
       </Card>
 
       {/* Delete confirmation dialog */}

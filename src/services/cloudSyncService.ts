@@ -18,6 +18,8 @@ const apiUrl = typeof import.meta.env.VITE_BEEFCAKE_API_URL === 'string'
   ? import.meta.env.VITE_BEEFCAKE_API_URL.replace(/\/$/, '')
   : ''
 let syncQueue: Promise<void> = Promise.resolve()
+let syncError: string | null = null
+const syncErrorListeners = new Set<(error: string | null) => void>()
 
 export function isCloudSyncConfigured(): boolean {
   return apiUrl.length > 0
@@ -33,6 +35,26 @@ async function getKnownRevision(): Promise<number> {
 async function setKnownRevision(revision: number): Promise<void> {
   const db = await getDB()
   await db.put('settings', { key: REVISION_SETTING_KEY, value: revision })
+}
+
+function setSyncError(error: string | null): void {
+  syncError = error
+  for (const listener of syncErrorListeners) listener(error)
+}
+
+export function getCloudSyncError(): string | null {
+  return syncError
+}
+
+export function subscribeToCloudSyncError(listener: (error: string | null) => void): () => void {
+  syncErrorListeners.add(listener)
+  return () => {
+    syncErrorListeners.delete(listener)
+  }
+}
+
+export function getCloudSyncLoginUrl(): string {
+  return `${apiUrl}/api/health`
 }
 
 async function getServerSnapshot(): Promise<ServerSnapshot> {
@@ -68,38 +90,71 @@ export async function syncSnapshot(snapshot: SnapshotData): Promise<void> {
   return next
 }
 
+export async function loadSnapshotFromCloud(local: SnapshotData): Promise<SnapshotData> {
+  if (!isCloudSyncConfigured()) return local
+
+  try {
+    const server = await getServerSnapshot()
+    await setKnownRevision(server.revision)
+    setSyncError(null)
+    return server.data ? mergeSnapshots(server.data, local) : local
+  } catch (error) {
+    const message = syncErrorMessage(error, 'D1 kunde inte läsas.')
+    setSyncError(message)
+    throw new Error(message, { cause: error })
+  }
+}
+
 async function syncSnapshotNow(snapshot: SnapshotData): Promise<void> {
   if (!isCloudSyncConfigured()) return
 
-  const knownRevision = await getKnownRevision()
-  const server = await getServerSnapshot()
-  let data = snapshot
-  let expectedRevision = knownRevision
+  try {
+    const knownRevision = await getKnownRevision()
+    const server = await getServerSnapshot()
+    let data = snapshot
+    let expectedRevision = knownRevision
 
-  if (server.revision === 0 && server.data === null) {
-    expectedRevision = 0
-  } else if (knownRevision === 0 && server.data) {
-    // Första anslutningen: slå ihop lokal data och serverdata så inget av dem
-    // försvinner. Därefter kräver alla skrivningar rätt revision.
-    data = mergeSnapshots(snapshot, server.data)
-    const { mergeDataIntoLocal } = await import('./dataService')
-    await mergeDataIntoLocal(data)
-    expectedRevision = server.revision
-  } else if (server.revision !== knownRevision) {
-    throw new Error(`Serverkonflikt: lokal revision ${knownRevision}, serverrevision ${server.revision}.`)
+    if (server.revision === 0 && server.data === null) {
+      expectedRevision = 0
+    } else if (knownRevision === 0 && server.data) {
+      // Första anslutningen: slå ihop lokal data och serverdata så inget av dem
+      // försvinner. Därefter kräver alla skrivningar rätt revision.
+      data = mergeSnapshots(snapshot, server.data)
+      const { mergeDataIntoLocal } = await import('./dataService')
+      await mergeDataIntoLocal(data)
+      expectedRevision = server.revision
+    } else if (server.revision !== knownRevision) {
+      throw new Error(`Serverkonflikt: lokal revision ${knownRevision}, serverrevision ${server.revision}.`)
+    }
+
+    if (server.data && JSON.stringify(data) === JSON.stringify(server.data)) {
+      await setKnownRevision(server.revision)
+      setSyncError(null)
+      return
+    }
+
+    const response = await fetch(`${apiUrl}/api/snapshot`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ expectedRevision, data })
+    })
+    if (!response.ok) {
+      if (response.status === 409) throw new Error('Servern har ändrats. Ingen lokal data skrevs över.')
+      throw new Error(`Servern kunde inte spara (${response.status}).`)
+    }
+
+    const result = await response.json() as { revision: number }
+    await setKnownRevision(result.revision)
+    setSyncError(null)
+  } catch (error) {
+    const message = syncErrorMessage(error, 'D1 kunde inte spara snapshoten.')
+    setSyncError(message)
+    throw new Error(message, { cause: error })
   }
+}
 
-  const response = await fetch(`${apiUrl}/api/snapshot`, {
-    method: 'PUT',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ expectedRevision, data })
-  })
-  if (!response.ok) {
-    if (response.status === 409) throw new Error('Servern har ändrats. Ingen lokal data skrevs över.')
-    throw new Error(`Servern kunde inte spara (${response.status}).`)
-  }
-
-  const result = await response.json() as { revision: number }
-  await setKnownRevision(result.revision)
+function syncErrorMessage(error: unknown, fallback: string): string {
+  const detail = error instanceof Error && error.message ? error.message : fallback
+  return `${detail} Ändringarna finns kvar på denna enhet men är inte sparade i D1.`
 }

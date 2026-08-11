@@ -3,7 +3,7 @@
 import { Router, Link, Switch, Route, useLocation } from 'wouter'
 import { lazy, Suspense } from 'preact/compat'
 import { PasswordGate } from './components/PasswordGate'
-import { BackupBanner } from './components/BackupBanner'
+import { CloudSyncStatus } from './components/CloudSyncStatus'
 import { Card } from './components/Card'
 import { Home } from './pages/Home'
 import { LogSession } from './pages/LogSession'
@@ -120,7 +120,7 @@ function AppContent() {
           <HeaderNav />
         </header>
         <main class="main">
-          <BackupBanner />
+          <CloudSyncStatus />
           <Switch>
             <Route path="/" component={Home} />
             <Route path="/log" component={LogSession} />

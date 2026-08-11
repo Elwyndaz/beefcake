@@ -43,7 +43,7 @@ export default {
       if (url.pathname === '/api/snapshot' && request.method === 'GET') {
         return await readSnapshot(env.DB, user.email, headers)
       }
-      if (url.pathname === '/api/snapshot' && request.method === 'PUT') {
+      if (url.pathname === '/api/snapshot' && request.method === 'POST') {
         return await writeSnapshot(request, env.DB, user.email, headers)
       }
 
@@ -67,7 +67,17 @@ async function writeSnapshot(request: Request, db: D1Database, owner: string, he
   const contentLength = Number(request.headers.get('content-length') ?? 0)
   if (contentLength > MAX_PAYLOAD_BYTES) throw new ApiError(413, 'payload_too_large', 'Snapshoten är för stor.')
 
-  const body: unknown = await request.json()
+  const rawBody = await request.text()
+  if (new TextEncoder().encode(rawBody).byteLength > MAX_PAYLOAD_BYTES) {
+    throw new ApiError(413, 'payload_too_large', 'Snapshoten är för stor.')
+  }
+
+  let body: unknown
+  try {
+    body = JSON.parse(rawBody)
+  } catch {
+    throw new ApiError(400, 'invalid_snapshot', 'Snapshoten har fel format.')
+  }
   if (!isRecord(body) || typeof body.expectedRevision !== 'number' || !isSnapshotPayload(body.data)) {
     throw new ApiError(400, 'invalid_snapshot', 'Snapshoten har fel format.')
   }
@@ -119,7 +129,7 @@ function isAllowedOrigin(origin: string, configured: string): boolean {
 function corsHeaders(origin: string | null, configured: string): Headers {
   const headers = new Headers({
     'Access-Control-Allow-Headers': 'content-type',
-    'Access-Control-Allow-Methods': 'GET,PUT,OPTIONS',
+    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
     'Access-Control-Allow-Credentials': 'true',
     'Cache-Control': 'no-store',
     'Content-Type': 'application/json'

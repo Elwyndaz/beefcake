@@ -108,7 +108,9 @@ export function Settings() {
 
   async function handleBackup() {
     try {
-      await saveBackupToFile()
+      const result = await saveBackupToFile()
+      if (!result.success) throw new Error(result.error ?? 'Okänt fel')
+      setToastMessage('Manuell backup sparad')
     } catch (err) {
       console.error('Fel vid backup:', err)
       setError('Kunde inte spara backup. Försök igen.')
@@ -243,11 +245,10 @@ export function Settings() {
           <Button variant="secondary" onClick={handleExportCSV}>Export CSV (passlista)</Button>
         </div>
         <div class="flex gap mb">
-          <Button onClick={handleBackup}>Välj eller skriv backupfil</Button>
+          <Button onClick={handleBackup}>Spara manuell backup</Button>
         </div>
         <p class="mb text-muted">
-          Första gången väljer du en JSON-fil. Därefter skrivs den om automatiskt efter varje ändring,
-          så passen inte bara finns i webbläsarens lagring.
+          Export och import är en manuell nödräddning. D1 är appens ordinarie lagring.
         </p>
         <Field label="Import JSON" class="m-0">
           <input
@@ -261,8 +262,7 @@ export function Settings() {
 
       <Card title="Data">
         <p class="mb text-muted">
-          Passen lagras i IndexedDB och kan automatiskt säkerhetskopieras till den valda JSON-filen.
-          När serverkopplingen är aktiverad sparas också en krypterad Access-skyddad kopia på servern.
+          D1 är sanningskällan. IndexedDB är lokal cache och serverkopplingen skyddas av Cloudflare Access.
         </p>
         <Button variant="danger" onClick={handleClearAll}>Radera ALL data</Button>
       </Card>

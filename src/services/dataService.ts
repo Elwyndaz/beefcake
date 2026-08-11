@@ -1,7 +1,6 @@
 import { getDB, generateId, nowISO, migrateSession, migrateTemplateExercise } from '../models'
 import type { Template, TemplateExercise, Exercise, Session, SessionExercise, ExerciseHistory, SetEntry, LegacySession, LegacyTemplateExercise } from '../models'
-import { hasConfiguredBackup, restoreFromBackupFile, saveAutomaticBackup } from './backupService'
-import { syncSnapshot } from './cloudSyncService'
+import { loadSnapshotFromCloud, syncSnapshot } from './cloudSyncService'
 
 // Exercise name → muscle group mapping for seed data and new exercises
 const MUSCLE_GROUP_MAP: Record<string, string> = {
@@ -70,7 +69,7 @@ export async function createTemplate(name: string, exercises: Omit<TemplateExerc
     updatedAt: nowISO()
   }
   await db.put('templates', template)
-  await autoBackup()
+  await syncCloudData()
   return template
 }
 
@@ -80,7 +79,7 @@ export async function updateTemplate(id: string, updates: Partial<Template>): Pr
   if (!existing) throw new Error(`Template ${id} not found`)
   const updated = { ...existing, ...updates, updatedAt: nowISO() }
   await db.put('templates', updated)
-  await autoBackup()
+  await syncCloudData()
   return updated
 }
 
@@ -90,7 +89,7 @@ export async function deleteTemplate(id: string): Promise<void> {
   const tx = db.transaction(['templates'], 'readwrite')
   await tx.objectStore('templates').delete(id)
   await tx.done
-  await autoBackup()
+  await syncCloudData()
 }
 
 export async function updateTemplateExerciseLastUsed(
@@ -181,7 +180,7 @@ export async function createSession(
     await tx.objectStore('templates').put(template)
   }
   await tx.done
-  await autoBackup()
+  await syncCloudData()
 
   return session
 }
@@ -215,7 +214,7 @@ export async function updateSession(id: string, updates: Partial<Session>): Prom
   for (const h of history) await tx.objectStore('exerciseHistory').put(h)
   await tx.objectStore('sessions').put(updated)
   await tx.done
-  await autoBackup()
+  await syncCloudData()
 
   return updated
 }
@@ -235,7 +234,7 @@ export async function deleteSession(id: string): Promise<void> {
   await tx.objectStore('sessions').delete(id)
   
   await tx.done
-  await autoBackup()
+  await syncCloudData()
 }
 
 // Stats Service
@@ -484,6 +483,7 @@ export async function importAllData(json: string): Promise<void> {
   for (const s of sessions) await tx.objectStore('sessions').put(s as unknown as Session)
   for (const h of exerciseHistory) await tx.objectStore('exerciseHistory').put(h as unknown as ExerciseHistory)
   await tx.done
+  await syncCloudData()
 }
 
 /** Lägg till eller uppdatera från en servermerge utan att rensa lokal data. */
@@ -525,13 +525,14 @@ function sessionKey(date: string, templateName: string): string {
  * ny SetEntry-baserad struktur.
  */
 export async function syncSeed(): Promise<{ sessionsAdded: number; exercisesAdded: number }> {
-  // Återställ från den valda backupfilen om DB är tom, INNAN seed-data laddas
-  if (await isDBEmpty()) {
-    const restored = await restoreFromBackupFile()
-    if (!restored && await hasConfiguredBackup()) {
-      throw new Error('Backupfilen kunde inte läsas. Ingen seeddata laddades för att skydda dina pass.')
-    }
-  }
+  // D1 är sanningskällan. Hämta och slå ihop serverdata innan lokal seed fylls på.
+  const cloudData = await loadSnapshotFromCloud(JSON.parse(await exportAllData()) as {
+    templates: Template[]
+    exercises: Exercise[]
+    sessions: Session[]
+    exerciseHistory: ExerciseHistory[]
+  })
+  await mergeDataIntoLocal(cloudData)
   // Fyll på muskelgrupper på övningar som saknar dem (mappas från övningsnamnet)
   await backfillMuscleGroups()
 
@@ -620,7 +621,7 @@ export async function syncSeed(): Promise<{ sessionsAdded: number; exercisesAdde
   }
 
   if (!newExercises.length && !newTemplates.length && !newSessions.length) {
-    await autoBackup()
+    await syncCloudData()
     return { sessionsAdded: 0, exercisesAdded: 0 }
   }
 
@@ -631,7 +632,7 @@ export async function syncSeed(): Promise<{ sessionsAdded: number; exercisesAdde
   for (const h of newHistory) await tx.objectStore('exerciseHistory').put(h)
   await tx.done
 
-  await autoBackup()
+  await syncCloudData()
 
   return { sessionsAdded: newSessions.length, exercisesAdded: newExercises.length }
 }
@@ -680,27 +681,15 @@ export async function clearAllData(): Promise<void> {
     tx.objectStore('exerciseHistory').clear()
   ])
   await tx.done
-  await autoBackup()
+  await syncCloudData()
 }
 
-// Backup/Restore functions
-async function isDBEmpty(): Promise<boolean> {
-  const db = await getDB()
-  const count = await db.getAll('sessions')
-  return count.length === 0
-}
-
-export async function autoBackup(): Promise<void> {
-  try {
-    const data = await exportAllData()
-    await saveAutomaticBackup(data)
-    await syncSnapshot(JSON.parse(data) as {
-      templates: Template[]
-      exercises: Exercise[]
-      sessions: Session[]
-      exerciseHistory: ExerciseHistory[]
-    })
-  } catch (err) {
-    console.error('Backup failed:', err)
-  }
+async function syncCloudData(): Promise<void> {
+  const data = await exportAllData()
+  await syncSnapshot(JSON.parse(data) as {
+    templates: Template[]
+    exercises: Exercise[]
+    sessions: Session[]
+    exerciseHistory: ExerciseHistory[]
+  })
 }
