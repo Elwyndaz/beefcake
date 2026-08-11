@@ -7,6 +7,7 @@ import { Button } from '../components/Button'
 import { EmptyState } from '../components/EmptyState'
 import { Field } from '../components/Field'
 import type { Template, Exercise, TemplateExercise, SetEntry } from '../models'
+import { RestTimer } from '../components/RestTimer'
 
 interface FormExercise {
   exerciseId: string
@@ -249,8 +250,10 @@ export function LogSession() {
   }
 
   return (
-    <div>
-      <h1 class="page-title">Logga pass</h1>
+    <div class="log-session-layout">
+      <aside class="log-session-timer"><RestTimer /></aside>
+      <div>
+        <h1 class="page-title">Logga pass</h1>
 
       <Card>
         <div class="grid grid-2 mb">
@@ -459,6 +462,7 @@ export function LogSession() {
       {saved && (
         <div class="toast">Pass sparat!</div>
       )}
+      </div>
     </div>
   )
 }
