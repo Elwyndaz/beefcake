@@ -302,14 +302,25 @@ export function Templates() {
               </thead>
               <tbody>
                 {templates.map(t => (
-                  <tr key={t.id}>
+                  <tr
+                    key={t.id}
+                    class="template-row-clickable"
+                    onClick={() => startEdit(t)}
+                    onKeyDown={event => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault()
+                        startEdit(t)
+                      }
+                    }}
+                    tabIndex={0}
+                    aria-label={`Redigera mall ${t.name}`}
+                  >
                     <td><strong>{t.name}</strong></td>
                     <td>{t.exercises.length}</td>
                     <td>{new Date(t.updatedAt).toLocaleDateString('sv-SE')}</td>
                     <td class="text-right">
                       <div class="flex gap-sm justify-end">
-                        <Button variant="secondary" size="sm" onClick={() => startEdit(t)}>Redigera</Button>
-                        <Button variant="danger" size="sm" onClick={() => handleDelete(t.id)}>Radera</Button>
+                        <Button variant="danger" size="sm" onClick={event => { event.stopPropagation(); handleDelete(t.id) }}>Radera</Button>
                       </div>
                     </td>
                   </tr>

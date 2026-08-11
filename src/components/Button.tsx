@@ -36,8 +36,11 @@ export function Button({
   ].filter(Boolean).join(' ')
 
   if (href) {
+    const targetHref = href.startsWith('/')
+      ? `${import.meta.env.BASE_URL}${href.slice(1)}`
+      : href
     return (
-      <a href={href} class={classes} aria-label={ariaLabel} title={title}>
+      <a href={targetHref} class={classes} aria-label={ariaLabel} title={title}>
         {children}
       </a>
     )

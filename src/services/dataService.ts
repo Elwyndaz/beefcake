@@ -486,6 +486,22 @@ export async function importAllData(json: string): Promise<void> {
   await tx.done
 }
 
+/** Lägg till eller uppdatera från en servermerge utan att rensa lokal data. */
+export async function mergeDataIntoLocal(data: {
+  templates: Template[]
+  exercises: Exercise[]
+  sessions: Session[]
+  exerciseHistory: ExerciseHistory[]
+}): Promise<void> {
+  const db = await getDB()
+  const tx = db.transaction(['templates', 'exercises', 'sessions', 'exerciseHistory'], 'readwrite')
+  for (const t of data.templates) await tx.objectStore('templates').put(t)
+  for (const e of data.exercises) await tx.objectStore('exercises').put(e)
+  for (const s of data.sessions) await tx.objectStore('sessions').put(s)
+  for (const h of data.exerciseHistory) await tx.objectStore('exerciseHistory').put(h)
+  await tx.done
+}
+
 /** Övningsnamn jämförs skiftlägesokänsligt, så "Hantelrodd" och "hantelrodd"
  *  blir samma övning istället för att splittra historiken på två poster. */
 function exerciseKey(name: string): string {

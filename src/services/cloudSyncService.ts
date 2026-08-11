@@ -82,8 +82,8 @@ async function syncSnapshotNow(snapshot: SnapshotData): Promise<void> {
     // Första anslutningen: slå ihop lokal data och serverdata så inget av dem
     // försvinner. Därefter kräver alla skrivningar rätt revision.
     data = mergeSnapshots(snapshot, server.data)
-    const { importAllData } = await import('./dataService')
-    await importAllData(JSON.stringify(data))
+    const { mergeDataIntoLocal } = await import('./dataService')
+    await mergeDataIntoLocal(data)
     expectedRevision = server.revision
   } else if (server.revision !== knownRevision) {
     throw new Error(`Serverkonflikt: lokal revision ${knownRevision}, serverrevision ${server.revision}.`)

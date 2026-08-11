@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'preact/hooks'
 import { useLocation } from 'wouter'
 import { getAllSessions, getAllTemplates, deleteSession } from '../services/dataService'
 import { icon } from '../icons'
-import { formatDateShort, formatDateWithWeekday, getMonthKey, monthNames, todayISO, parseLocalDate } from '../lib/date'
+import { formatDateShort, formatDateWithWeekday, getMonthKey, monthNames, todayISO, parseLocalDate, localDateISO } from '../lib/date'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
 import { EmptyState } from '../components/EmptyState'
@@ -62,6 +62,44 @@ function groupSessionsByMonth(sessions: Session[]): Map<string, Session[]> {
     map.get(monthKey)!.push(session)
   }
   return map
+}
+
+const calendarWeekdays = ['Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör', 'Sön']
+
+function monthStart(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), 1)
+}
+
+function monthTitle(date: Date): string {
+  const title = date.toLocaleDateString('sv-SE', { month: 'long', year: 'numeric' })
+  return title.charAt(0).toUpperCase() + title.slice(1)
+}
+
+function HistoryFilters({
+  filters,
+  templateOptions,
+  onTemplateChange,
+  onPeriodChange
+}: {
+  filters: FilterState
+  templateOptions: string[]
+  onTemplateChange: (event: Event) => void
+  onPeriodChange: (event: Event) => void
+}) {
+  return (
+    <div class="history-filters-inline">
+      <Field label="Passtyp" class="m-0">
+        <select value={filters.template} onChange={onTemplateChange}>
+          {templateOptions.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+      </Field>
+      <Field label="Period" class="m-0">
+        <select value={filters.period} onChange={onPeriodChange}>
+          {Object.entries(periodLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+        </select>
+      </Field>
+    </div>
+  )
 }
 
 // Custom delete confirmation dialog component
@@ -146,6 +184,7 @@ export function History() {
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const [deletedSession, setDeletedSession] = useState<Session | null>(null)
   const [showUndoToast, setShowUndoToast] = useState(false)
+  const [calendarMonth, setCalendarMonth] = useState(() => monthStart(parseLocalDate(todayISO())))
 
   // Load data
   async function load() {
@@ -260,6 +299,19 @@ export function History() {
 
   // Template options
   const templateOptions = ['Alla', ...templates.map(t => t.name).sort((a, b) => a.localeCompare(b))]
+  const calendarStart = monthStart(calendarMonth)
+  const firstWeekday = (calendarStart.getDay() + 6) % 7
+  const calendarDays = Array.from({ length: 42 }, (_, index) => {
+    const day = new Date(calendarStart)
+    day.setDate(index - firstWeekday + 1)
+    return day
+  })
+  const sessionsByDate = new Map<string, Session[]>()
+  for (const session of filteredSessions) {
+    const onDate = sessionsByDate.get(session.date) || []
+    onDate.push(session)
+    sessionsByDate.set(session.date, onDate)
+  }
 
   // Dismiss toast
   function dismissToast() {
@@ -296,24 +348,7 @@ export function History() {
       <div>
         <h1 class="page-title">Historik</h1>
         
-        <Card>
-          <div class="grid grid-2 gap-3">
-            <Field label="Passtyp" class="m-0">
-              <select value={filters.template} onChange={handleTemplateChange}>
-                {templateOptions.map(t => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Period" class="m-0">
-              <select value={filters.period} onChange={handlePeriodChange}>
-                {Object.entries(periodLabels).map(([key, label]) => (
-                  <option key={key} value={key}>{label}</option>
-                ))}
-              </select>
-            </Field>
-          </div>
-        </Card>
+        <Card><HistoryFilters filters={filters} templateOptions={templateOptions} onTemplateChange={handleTemplateChange} onPeriodChange={handlePeriodChange} /></Card>
         
         <EmptyState
           title="Inga pass matchar filtret"
@@ -329,30 +364,11 @@ export function History() {
     <div>
       <h1 class="page-title">Historik</h1>
 
-      {/* Filters */}
-      <Card>
-        <div class="grid grid-2 gap-3">
-          <Field label="Passtyp" class="m-0">
-            <select value={filters.template} onChange={handleTemplateChange}>
-              {templateOptions.map(t => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Period" class="m-0">
-            <select value={filters.period} onChange={handlePeriodChange}>
-              {Object.entries(periodLabels).map(([key, label]) => (
-                <option key={key} value={key}>{label}</option>
-              ))}
-            </select>
-          </Field>
-        </div>
-      </Card>
-
       {/* Session list */}
       <Card>
-        <div class="flex justify-between items-center mb-sm">
+        <div class="history-toolbar mb-sm">
           <span class="text-muted">{filteredSessions.length} pass totalt</span>
+          <HistoryFilters filters={filters} templateOptions={templateOptions} onTemplateChange={handleTemplateChange} onPeriodChange={handlePeriodChange} />
           <Button href="/log" size="sm">Logga nytt</Button>
         </div>
         
@@ -454,6 +470,40 @@ export function History() {
             </Button>
           </div>
         )}
+      </Card>
+
+      <Card class="history-calendar-card">
+        <div class="history-calendar-header">
+          <div>
+            <h2 class="card-title m-0">Månadsvy</h2>
+            <p class="text-muted text-sm m-0">Klicka på en träningsdag för att öppna passet.</p>
+          </div>
+          <div class="history-calendar-nav">
+            <Button variant="secondary" size="sm" onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1))} ariaLabel="Föregående månad">‹</Button>
+            <strong>{monthTitle(calendarMonth)}</strong>
+            <Button variant="secondary" size="sm" onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1))} ariaLabel="Nästa månad">›</Button>
+          </div>
+        </div>
+        <div class="history-calendar-weekdays">
+          {calendarWeekdays.map(day => <span key={day}>{day}</span>)}
+        </div>
+        <div class="history-calendar-grid">
+          {calendarDays.map(day => {
+            const date = localDateISO(day)
+            const daySessions = sessionsByDate.get(date) || []
+            const isCurrentMonth = day.getMonth() === calendarMonth.getMonth()
+            return (
+              <div class={`history-calendar-day${isCurrentMonth ? '' : ' outside'}${daySessions.length ? ' trained' : ''}`} key={date}>
+                <span class="history-calendar-date">{day.getDate()}</span>
+                {daySessions.map(session => (
+                  <button type="button" class="history-calendar-session" key={session.id} onClick={() => goToDetail(session.id)} title={session.templateName}>
+                    {session.templateName}
+                  </button>
+                ))}
+              </div>
+            )
+          })}
+        </div>
       </Card>
 
       {/* Delete confirmation dialog */}
