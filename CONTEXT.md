@@ -2,7 +2,7 @@
 
 Personlig träningslogg för styrketräning, ersätter ett Excel-ark. Svenskt gränssnitt, bara kilo. Två användare i praktiken: Patrik på dator, hans tjej på mobil. Offline-först, ingen backend.
 
-Live på https://orgutveckling.se/beefcake/ (GitHub Pages, bas-sökväg `/beefcake/`). Push till `master` bygger och deployar.
+Live på https://orgutveckling.se/beefcake/ (GitHub Pages, bas-sökväg `/beefcake/`). Push till `master` bygger och deployar. Server-API:t är deployat som `https://api.orgutveckling.se` och använder D1 med Cloudflare Access.
 
 **Den här filen äger domänmodellen och konventionerna.** Upprepa dem inte i andra filer, länka hit. `AGENTS.md` beskriver hur man arbetar i repot, `BACKLOG.md` vad som är kvar, `HANDOFF.md` var arbetet står just nu.
 
@@ -50,11 +50,12 @@ Modellen saknar fortfarande `Exercise.kind` för kroppsvikt, tid och distans. D�
 
 ## Backup
 
-Enda skyddet mot datatapp, eftersom allt bor i en webbläsare utan synk.
+IndexedDB är lokal cache. `autoBackup()` skriver dessutom till vald JSON-fil och försöker synka hela snapshoten till servern efter varje mutation.
 
-- `autoBackup()` skriver hela databasen till LocalStorage efter varje mutation.
-- `restoreFromLocalStorage()` anropas i `syncSeed()`, som körs i `main.tsx` **före render**. Lägg aldrig ett andra restore-anrop i en komponent, det race:ar med seedningen.
-- Rensar användaren "site data", inte bara cache, försvinner LocalStorage också. Export JSON är den riktiga backupen.
+- JSON-filens File System Access-handle och senaste skrivning ligger i IndexedDB, inte i träningsdata-LocalStorage.
+- `syncSeed()` återställer vald backupfil före seedning när den lokala databasen är tom.
+- Servern lagrar versionsnumrerade snapshots i D1 per Access-identitet. Skrivning kräver senaste revision, så en gammal klient får 409 i stället för att skriva över nyare data.
+- Export JSON är fortfarande den manuella återställningsvägen. Serverkopplingen måste vara Access-konfigurerad för att användarsynken ska fungera.
 
 ## Muskelgrupper
 
@@ -62,7 +63,7 @@ Enda skyddet mot datatapp, eftersom allt bor i en webbläsare utan synk.
 
 ## Arkitektur
 
-Vite 8 · Preact 10 · TypeScript strict · wouter · `idb` · Chart.js (lazy) · vite-plugin-pwa (Workbox). Cirka 2 000 rader källkod.
+Vite 8 · Preact 10 · TypeScript strict · wouter · `idb` · Chart.js (lazy) · vite-plugin-pwa (Workbox) · Cloudflare Worker · D1 · Access. Cirka 2 000 rader klientkod.
 
 ```
 src/main.tsx              entry, syncSeed sedan render
@@ -73,6 +74,8 @@ src/db/schema.ts          IndexedDB-schema och typer
 src/db/seedData.ts        GENERERAD, all träningshistorik
 src/lib/date.ts           all datumhantering, tidszonssäker. Använd den, aldrig new Date() rakt av
 src/services/dataService.ts   alla läsningar, skrivningar och statistik
+server/src/index.ts         Access-skyddat snapshot-API med revisionslås
+server/migrations/          D1-schema för versionsnumrerade snapshots
 src/pages/                Home, LogSession, Templates, History, SessionDetail, Stats, Settings
 ```
 

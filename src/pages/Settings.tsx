@@ -243,8 +243,12 @@ export function Settings() {
           <Button variant="secondary" onClick={handleExportCSV}>Export CSV (passlista)</Button>
         </div>
         <div class="flex gap mb">
-          <Button onClick={handleBackup}>Ladda ned full backup</Button>
+          <Button onClick={handleBackup}>Välj eller skriv backupfil</Button>
         </div>
+        <p class="mb text-muted">
+          Första gången väljer du en JSON-fil. Därefter skrivs den om automatiskt efter varje ändring,
+          så passen inte bara finns i webbläsarens lagring.
+        </p>
         <Field label="Import JSON" class="m-0">
           <input
             type="file"
@@ -257,7 +261,8 @@ export function Settings() {
 
       <Card title="Data">
         <p class="mb text-muted">
-          All data lagras lokalt i din webbläsare (IndexedDB). Inget skickas till server.
+          Passen lagras i IndexedDB och kan automatiskt säkerhetskopieras till den valda JSON-filen.
+          När serverkopplingen är aktiverad sparas också en krypterad Access-skyddad kopia på servern.
         </p>
         <Button variant="danger" onClick={handleClearAll}>Radera ALL data</Button>
       </Card>

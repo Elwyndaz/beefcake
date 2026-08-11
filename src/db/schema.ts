@@ -56,6 +56,11 @@ export interface ExerciseHistory {
   sessionId: string
 }
 
+export interface AppSetting {
+  key: string
+  value: unknown
+}
+
 // Bakåtkompatibla typer för migrering från gammal seedData-structur
 export interface LegacyTemplateExercise {
   exerciseId: string
@@ -116,10 +121,15 @@ export interface BeefcakeDB extends DBSchema {
     value: ExerciseHistory
     indexes: { 'by-exercise': string; 'by-date': string; 'by-session': string }
   }
+  settings: {
+    key: string
+    value: AppSetting
+    indexes: {}
+  }
 }
 
 const DB_NAME = 'beefcake-db'
-const DB_VERSION = 1
+const DB_VERSION = 2
 
 let dbInstance: IDBPDatabase<BeefcakeDB> | null = null
 
@@ -148,6 +158,9 @@ export async function getDB(): Promise<IDBPDatabase<BeefcakeDB>> {
         historyStore.createIndex('by-exercise', 'exerciseId')
         historyStore.createIndex('by-date', 'date')
         historyStore.createIndex('by-session', 'sessionId')
+      }
+      if (!db.objectStoreNames.contains('settings')) {
+        db.createObjectStore('settings', { keyPath: 'key' })
       }
     }
   })

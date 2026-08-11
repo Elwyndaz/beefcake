@@ -14,3 +14,12 @@ npm-debug.log*
 *.tsbuildinfo
 nul
 .playwright-shots
+.dev.vars
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+graft/
+
+# Wrangler's local state, generated bundle and generated type declarations.
+.wrangler/
+server/dist/
+server/worker-configuration.d.ts

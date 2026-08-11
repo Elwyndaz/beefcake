@@ -1,5 +1,7 @@
 import { getDB, generateId, nowISO, migrateSession, migrateTemplateExercise } from '../models'
 import type { Template, TemplateExercise, Exercise, Session, SessionExercise, ExerciseHistory, SetEntry, LegacySession, LegacyTemplateExercise } from '../models'
+import { restoreFromBackupFile, saveAutomaticBackup } from './backupService'
+import { syncSnapshot } from './cloudSyncService'
 
 // Exercise name → muscle group mapping for seed data and new exercises
 const MUSCLE_GROUP_MAP: Record<string, string> = {
@@ -463,7 +465,13 @@ export async function exportAllData(): Promise<string> {
 
 export async function importAllData(json: string): Promise<void> {
   const db = await getDB()
-  const data = JSON.parse(json)
+  const parsed: unknown = JSON.parse(json)
+  if (!parsed || typeof parsed !== 'object') throw new Error('Importen har fel format')
+  const data = parsed as Record<string, unknown>
+  const templates = readImportCollection(data.templates, 'templates')
+  const exercises = readImportCollection(data.exercises, 'exercises')
+  const sessions = readImportCollection(data.sessions, 'sessions')
+  const exerciseHistory = readImportCollection(data.exerciseHistory, 'exerciseHistory')
   const tx = db.transaction(['templates', 'exercises', 'sessions', 'exerciseHistory'], 'readwrite')
   await Promise.all([
     tx.objectStore('templates').clear(),
@@ -471,10 +479,10 @@ export async function importAllData(json: string): Promise<void> {
     tx.objectStore('sessions').clear(),
     tx.objectStore('exerciseHistory').clear()
   ])
-  for (const t of data.templates || []) await tx.objectStore('templates').put(t)
-  for (const e of data.exercises || []) await tx.objectStore('exercises').put(e)
-  for (const s of data.sessions || []) await tx.objectStore('sessions').put(s)
-  for (const h of data.exerciseHistory || []) await tx.objectStore('exerciseHistory').put(h)
+  for (const t of templates) await tx.objectStore('templates').put(t as unknown as Template)
+  for (const e of exercises) await tx.objectStore('exercises').put(e as unknown as Exercise)
+  for (const s of sessions) await tx.objectStore('sessions').put(s as unknown as Session)
+  for (const h of exerciseHistory) await tx.objectStore('exerciseHistory').put(h as unknown as ExerciseHistory)
   await tx.done
 }
 
@@ -501,9 +509,8 @@ function sessionKey(date: string, templateName: string): string {
  * ny SetEntry-baserad struktur.
  */
 export async function syncSeed(): Promise<{ sessionsAdded: number; exercisesAdded: number }> {
-  // Återställ från LocalStorage om DB är tom, INNAN seed-data laddas
-  await restoreFromLocalStorage()
-  await autoBackup()
+  // Återställ från den valda backupfilen om DB är tom, INNAN seed-data laddas
+  if (await isDBEmpty()) await restoreFromBackupFile()
   // Fyll på muskelgrupper på övningar som saknar dem (mappas från övningsnamnet)
   await backfillMuscleGroups()
 
@@ -592,6 +599,7 @@ export async function syncSeed(): Promise<{ sessionsAdded: number; exercisesAdde
   }
 
   if (!newExercises.length && !newTemplates.length && !newSessions.length) {
+    await autoBackup()
     return { sessionsAdded: 0, exercisesAdded: 0 }
   }
 
@@ -602,7 +610,20 @@ export async function syncSeed(): Promise<{ sessionsAdded: number; exercisesAdde
   for (const h of newHistory) await tx.objectStore('exerciseHistory').put(h)
   await tx.done
 
+  await autoBackup()
+
   return { sessionsAdded: newSessions.length, exercisesAdded: newExercises.length }
+}
+
+function readImportCollection(value: unknown, name: string): Record<string, unknown>[] {
+  if (value === undefined) return []
+  if (!Array.isArray(value)) throw new Error(`Importen har fel format: ${name}`)
+  for (const item of value) {
+    if (!item || typeof item !== 'object' || typeof (item as Record<string, unknown>).id !== 'string') {
+      throw new Error(`Importen har fel format: ${name}`)
+    }
+  }
+  return value as Record<string, unknown>[]
 }
 
 export async function exportSessionsCSV(): Promise<string> {
@@ -651,19 +672,14 @@ async function isDBEmpty(): Promise<boolean> {
 export async function autoBackup(): Promise<void> {
   try {
     const data = await exportAllData()
-    localStorage.setItem('beefcake-backup', data)
+    await saveAutomaticBackup(data)
+    await syncSnapshot(JSON.parse(data) as {
+      templates: Template[]
+      exercises: Exercise[]
+      sessions: Session[]
+      exerciseHistory: ExerciseHistory[]
+    })
   } catch (err) {
     console.error('Backup failed:', err)
-  }
-}
-
-export async function restoreFromLocalStorage(): Promise<void> {
-  try {
-    const backup = localStorage.getItem('beefcake-backup')
-    if (backup && await isDBEmpty()) {
-      await importAllData(backup)
-    }
-  } catch (err) {
-    console.error('Restore failed:', err)
   }
 }

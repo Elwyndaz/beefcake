@@ -5,14 +5,17 @@ import { Button } from './Button'
 export function BackupBanner() {
   const [showBanner, setShowBanner] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [lastBackup, setLastBackup] = useState<Date | null>(null)
 
   useEffect(() => {
-    setShowBanner(shouldShowBackupBanner())
+    Promise.all([shouldShowBackupBanner(), getLastBackupDate()]).then(([shouldShow, date]) => {
+      setShowBanner(shouldShow)
+      setLastBackup(date)
+    })
   }, [])
 
   if (!showBanner) return null
 
-  const lastBackup = getLastBackupDate()
   const formattedDate = lastBackup 
     ? lastBackup.toLocaleDateString('sv-SE')
     : 'aldrig'
@@ -38,7 +41,7 @@ export function BackupBanner() {
         <svg width="20" height="20" viewBox="0 0 24 24" class="text-danger">
           <path fill="currentColor" d="M12 2L1 21h20L12 2zm0 3.23L19.39 20H4.61L12 5.23zM12 12.77L14.14 17h-4.28L12 12.77z"/>
         </svg>
-        <strong>Backup saknas!</strong> Senaste backup gjordes {formattedDate}. Ladda ned nu.
+        <strong>Backup saknas!</strong> Senaste backup gjordes {formattedDate}. Välj backupfil nu.
       </span>
       <div class="flex items-center gap-sm">
         <Button 
@@ -46,7 +49,7 @@ export function BackupBanner() {
           onClick={handleDownloadBackup}
           disabled={isLoading}
         >
-          {isLoading ? 'Laddar ned...' : 'Ladda ned backup'}
+          {isLoading ? 'Sparar...' : 'Välj backupfil'}
         </Button>
         <button 
           class="banner-dismiss" 

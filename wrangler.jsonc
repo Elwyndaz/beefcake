@@ -1,0 +1,29 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "beefcake-api",
+  "main": "server/src/index.ts",
+  "compatibility_date": "2026-08-11",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "routes": [
+    { "pattern": "api.orgutveckling.se", "custom_domain": true }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "beefcake",
+      "database_id": "c42ed108-8d70-4380-8e6d-41bd812ac2b5",
+      "migrations_dir": "server/migrations"
+    }
+  ],
+  "vars": {
+    "AUTH_MODE": "access",
+    "ACCESS_TEAM_DOMAIN": "https://late-hat-efad.cloudflareaccess.com",
+    "ACCESS_AUD": "e1a36c86fefd41457d6f0b21b866efbcfa84f3a94fd478fba57a1282da1b26af",
+    "FRONTEND_ORIGINS": "https://orgutveckling.se,https://www.orgutveckling.se"
+  },
+  "observability": {
+    "enabled": true,
+    "logs": { "enabled": true, "head_sampling_rate": 1 }
+  }
+}
