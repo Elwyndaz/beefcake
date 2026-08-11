@@ -344,6 +344,8 @@ th, td {
 .rest-timer-notification { padding: 0; border: 0; background: transparent; color: #c8d5e5; cursor: pointer; text-align: left; }
 .rest-timer-notification:hover { color: #fff; }
 .rest-timer-notification-ready { color: #b8f3db; }
+.rest-timer-stop-sound { width: 100%; margin-top: var(--space-3); padding: 7px; border: 1px solid rgba(227, 232, 240, 0.25); border-radius: var(--radius-sm); background: transparent; color: var(--surface-deep-text); font: inherit; font-size: var(--text-xs); cursor: pointer; }
+.rest-timer-stop-sound:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
 .rest-timer-finished { box-shadow: 0 0 0 2px var(--accent), var(--shadow-lg); }
 
 @media (max-width: 900px) {

@@ -14,23 +14,44 @@ function formatTime(totalSeconds: number): string {
   return `${minutes}:${String(seconds).padStart(2, '0')}`
 }
 
+let activeSoundContext: AudioContext | null = null
+let activeSoundStopTimer: number | null = null
+
+function stopTimerSound(): void {
+  if (activeSoundStopTimer !== null) window.clearTimeout(activeSoundStopTimer)
+  activeSoundStopTimer = null
+  if (activeSoundContext) void activeSoundContext.close()
+  activeSoundContext = null
+}
+
 function playTimerSound(): void {
   try {
+    stopTimerSound()
     const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
     if (!AudioContextClass) return
     const context = new AudioContextClass()
-    const oscillator = context.createOscillator()
-    const gain = context.createGain()
-    oscillator.type = 'sine'
-    oscillator.frequency.value = 880
-    gain.gain.setValueAtTime(0.0001, context.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.18, context.currentTime + 0.02)
-    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.45)
-    oscillator.connect(gain)
-    gain.connect(context.destination)
-    oscillator.start()
-    oscillator.stop(context.currentTime + 0.5)
-    oscillator.addEventListener('ended', () => void context.close())
+    activeSoundContext = context
+
+    const chimeSpacing = 1.4
+    const frequencies = [659, 880]
+    for (let chime = 0; chime < 4; chime += 1) {
+      const chimeStart = context.currentTime + chime * chimeSpacing
+      frequencies.forEach((frequency, note) => {
+        const oscillator = context.createOscillator()
+        const gain = context.createGain()
+        const start = chimeStart + note * 0.14
+        oscillator.type = 'sine'
+        oscillator.frequency.value = frequency
+        gain.gain.setValueAtTime(0.0001, start)
+        gain.gain.exponentialRampToValueAtTime(0.09, start + 0.025)
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.42)
+        oscillator.connect(gain)
+        gain.connect(context.destination)
+        oscillator.start(start)
+        oscillator.stop(start + 0.48)
+      })
+    }
+    activeSoundStopTimer = window.setTimeout(stopTimerSound, 6000)
   } catch {
     // Some browsers block audio until the next user gesture.
   }
@@ -107,6 +128,7 @@ export function RestTimer() {
   }
 
   function reset() {
+    stopTimerSound()
     deadlineRef.current = null
     setRemaining(presets[selectedPreset] * 60)
     setStatus('idle')
@@ -182,6 +204,7 @@ export function RestTimer() {
       )}
       {notificationPermission === 'granted' && <span class="rest-timer-notification-ready">Notiser är aktiverade</span>}
       {notificationPermission === 'denied' && <span class="rest-timer-notification-muted">Notiser är blockerade i webbläsaren</span>}
+      {status === 'finished' && <button type="button" class="rest-timer-stop-sound" onClick={stopTimerSound}>Tysta ljudet</button>}
     </section>
   )
 }
