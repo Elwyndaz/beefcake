@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'preact/hooks'
+import { useState, useEffect } from 'preact/hooks'
 import { getAllTemplates, getAllExercises, createSession, getOrCreateExercise, getSession, createTemplate } from '../services/dataService'
 import { todayISO } from '../models'
 import { icon } from '../icons'
@@ -26,7 +26,7 @@ export function LogSession() {
   const [error, setError] = useState<string | null>(null)
   const [showSaveTemplate, setShowSaveTemplate] = useState(false)
   const [templateName, setTemplateName] = useState('')
-  const fromSessionRef = useRef<string | null>(null)
+  const [prefillSessionId, setPrefillSessionId] = useState<string | null>(null)
 
   async function checkPrefill() {
     try {
@@ -35,13 +35,13 @@ export function LogSession() {
       const urlParams = new URLSearchParams(window.location.search)
       const fromSessionId = urlParams.get('from')
       const templateName = urlParams.get('template')
+      setPrefillSessionId(fromSessionId)
       
       const [ts, es] = await Promise.all([getAllTemplates(), getAllExercises()])
       setTemplates(ts)
       setAllExercises(es)
       
       if (fromSessionId) {
-        fromSessionRef.current = fromSessionId
         try {
           const session = await getSession(fromSessionId)
           if (session) {
@@ -85,12 +85,12 @@ export function LogSession() {
   }, [])
 
   useEffect(() => {
-    if (selectedTemplateId && !fromSessionRef.current) {
+    if (selectedTemplateId && !prefillSessionId) {
       loadTemplateExercises()
-    } else if (!selectedTemplateId) {
+    } else if (!selectedTemplateId && !prefillSessionId) {
       setExercises([])
     }
-  }, [selectedTemplateId, templates])
+  }, [selectedTemplateId, templates, prefillSessionId])
 
   async function loadTemplateExercises() {
     const template = templates.find(t => t.id === selectedTemplateId)
@@ -225,7 +225,7 @@ export function LogSession() {
   function handleSelectChange(e: Event) {
     const target = e.target as HTMLSelectElement
     setSelectedTemplateId(target.value)
-    fromSessionRef.current = null
+    setPrefillSessionId(null)
   }
 
   if (loading) {
