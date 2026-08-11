@@ -51,6 +51,10 @@ async function getBackupTarget(): Promise<BackupTarget> {
   }
 }
 
+export async function hasConfiguredBackup(): Promise<boolean> {
+  return (await getBackupTarget()).handle !== null
+}
+
 async function saveBackupTarget(target: BackupTarget): Promise<void> {
   const db = await getDB()
   await db.put('settings', { key: BACKUP_SETTING_KEY, value: target })
@@ -59,6 +63,11 @@ async function saveBackupTarget(target: BackupTarget): Promise<void> {
 async function hasWritePermission(handle: BackupFileHandle): Promise<boolean> {
   if (!handle.queryPermission) return true
   return (await handle.queryPermission({ mode: 'readwrite' })) === 'granted'
+}
+
+async function hasReadPermission(handle: BackupFileHandle): Promise<boolean> {
+  if (!handle.queryPermission) return true
+  return (await handle.queryPermission({ mode: 'read' })) === 'granted'
 }
 
 async function writeBackup(handle: BackupFileHandle, json: string): Promise<void> {
@@ -133,16 +142,18 @@ export async function saveBackupToFile(): Promise<{ success: boolean; error?: st
   }
 }
 
-export async function restoreFromBackupFile(): Promise<void> {
+export async function restoreFromBackupFile(): Promise<boolean> {
   try {
     const target = await getBackupTarget()
-    if (!target.handle) return
-    if (target.handle.queryPermission && !(await hasWritePermission(target.handle))) return
+    if (!target.handle) return false
+    if (target.handle.queryPermission && !(await hasReadPermission(target.handle))) return false
     const file = await target.handle.getFile()
     const { importAllData } = await import('./dataService')
     await importAllData(await file.text())
+    return true
   } catch (err) {
     console.error('Restore failed:', err)
+    return false
   }
 }
 

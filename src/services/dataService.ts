@@ -1,6 +1,6 @@
 import { getDB, generateId, nowISO, migrateSession, migrateTemplateExercise } from '../models'
 import type { Template, TemplateExercise, Exercise, Session, SessionExercise, ExerciseHistory, SetEntry, LegacySession, LegacyTemplateExercise } from '../models'
-import { restoreFromBackupFile, saveAutomaticBackup } from './backupService'
+import { hasConfiguredBackup, restoreFromBackupFile, saveAutomaticBackup } from './backupService'
 import { syncSnapshot } from './cloudSyncService'
 
 // Exercise name → muscle group mapping for seed data and new exercises
@@ -526,7 +526,12 @@ function sessionKey(date: string, templateName: string): string {
  */
 export async function syncSeed(): Promise<{ sessionsAdded: number; exercisesAdded: number }> {
   // Återställ från den valda backupfilen om DB är tom, INNAN seed-data laddas
-  if (await isDBEmpty()) await restoreFromBackupFile()
+  if (await isDBEmpty()) {
+    const restored = await restoreFromBackupFile()
+    if (!restored && await hasConfiguredBackup()) {
+      throw new Error('Backupfilen kunde inte läsas. Ingen seeddata laddades för att skydda dina pass.')
+    }
+  }
   // Fyll på muskelgrupper på övningar som saknar dem (mappas från övningsnamnet)
   await backfillMuscleGroups()
 
