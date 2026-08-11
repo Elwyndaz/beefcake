@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'preact/hooks'
+import { useState, useEffect, useRef } from 'preact/hooks'
 import { getAllTemplates, getAllExercises, createSession, getOrCreateExercise, getSession, createTemplate } from '../services/dataService'
 import { todayISO } from '../models'
 import { icon } from '../icons'
@@ -28,6 +28,8 @@ export function LogSession() {
   const [showSaveTemplate, setShowSaveTemplate] = useState(false)
   const [templateName, setTemplateName] = useState('')
   const [prefillSessionId, setPrefillSessionId] = useState<string | null>(null)
+  const [draggedExerciseIndex, setDraggedExerciseIndex] = useState<number | null>(null)
+  const draggedExerciseIndexRef = useRef<number | null>(null)
 
   async function checkPrefill() {
     try {
@@ -36,7 +38,12 @@ export function LogSession() {
       const urlParams = new URLSearchParams(window.location.search)
       const fromSessionId = urlParams.get('from')
       const templateName = urlParams.get('template')
+      const requestedDate = urlParams.get('date')
       setPrefillSessionId(fromSessionId)
+
+      if (requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate)) {
+        setDate(requestedDate)
+      }
       
       const [ts, es] = await Promise.all([getAllTemplates(), getAllExercises()])
       setTemplates(ts)
@@ -54,7 +61,6 @@ export function LogSession() {
             }))
             setExercises(formExercises)
             setDate(todayISO())
-            window.history.replaceState({}, '', window.location.pathname)
           }
         } catch (err) {
           console.error('Failed to load session for prefill:', err)
@@ -64,7 +70,6 @@ export function LogSession() {
         const matchedTemplate = ts.find(t => t.name.toLowerCase() === templateName.toLowerCase())
         if (matchedTemplate) {
           setSelectedTemplateId(matchedTemplate.id)
-          window.history.replaceState({}, '', window.location.pathname)
         } else if (ts.length > 0) {
           // Fallback to first template if no match
           setSelectedTemplateId(ts[0].id)
@@ -72,6 +77,10 @@ export function LogSession() {
       } else if (ts.length > 0) {
         // Default to first template
         setSelectedTemplateId(ts[0].id)
+      }
+
+      if (fromSessionId || templateName || requestedDate) {
+        window.history.replaceState({}, '', window.location.pathname)
       }
     } catch (err) {
       setError('Kunde inte ladda mallar. Försök igen.')
@@ -182,6 +191,65 @@ export function LogSession() {
   function removeExercise(idx: number) {
     const newExercises = exercises.filter((_, i) => i !== idx)
     setExercises(newExercises)
+  }
+
+  function moveExercise(fromIndex: number, toIndex: number) {
+    if (fromIndex === toIndex || toIndex < 0 || toIndex >= exercises.length) return
+    setExercises(current => {
+      const reordered = [...current]
+      const [moved] = reordered.splice(fromIndex, 1)
+      reordered.splice(toIndex, 0, moved)
+      return reordered
+    })
+  }
+
+  function startExerciseDrag(event: PointerEvent, index: number) {
+    if (event.button !== 0) return
+    event.preventDefault()
+    const handle = event.currentTarget as HTMLButtonElement
+    handle.setPointerCapture(event.pointerId)
+    draggedExerciseIndexRef.current = index
+    setDraggedExerciseIndex(index)
+  }
+
+  function continueExerciseDrag(event: PointerEvent) {
+    const fromIndex = draggedExerciseIndexRef.current
+    if (fromIndex === null) return
+    const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>('[data-exercise-index]')
+    const toIndex = Number(target?.dataset.exerciseIndex)
+    if (!Number.isInteger(toIndex) || toIndex === fromIndex) return
+    moveExercise(fromIndex, toIndex)
+    draggedExerciseIndexRef.current = toIndex
+    setDraggedExerciseIndex(toIndex)
+  }
+
+  function endExerciseDrag() {
+    draggedExerciseIndexRef.current = null
+    setDraggedExerciseIndex(null)
+  }
+
+  function handleExerciseDragKey(event: KeyboardEvent, index: number) {
+    const direction = event.key === 'ArrowUp' ? -1 : event.key === 'ArrowDown' ? 1 : 0
+    if (!direction) return
+    event.preventDefault()
+    moveExercise(index, index + direction)
+  }
+
+  function dragHandle(index: number) {
+    return (
+      <button
+        type="button"
+        class="drag-handle"
+        aria-label={`Flytta övning ${index + 1}. Använd uppåt- och nedåtpil eller dra.`}
+        onPointerDown={event => startExerciseDrag(event, index)}
+        onPointerMove={continueExerciseDrag}
+        onPointerUp={endExerciseDrag}
+        onPointerCancel={endExerciseDrag}
+        onKeyDown={event => handleExerciseDragKey(event, index)}
+      >
+        <span aria-hidden="true">⋮⋮</span>
+      </button>
+    )
   }
 
   function addSetToExercise(exerciseIdx: number) {
@@ -317,6 +385,7 @@ export function LogSession() {
                 <table>
                   <thead>
                     <tr>
+                      <th aria-label="Ordning"></th>
                       <th>Övning</th>
                       <th>Set</th>
                       <th>Reps</th>
@@ -326,7 +395,12 @@ export function LogSession() {
                   </thead>
                   <tbody>
                     {exercises.map((ex, idx) => (
-                      <tr key={idx}>
+                      <tr
+                        key={idx}
+                        data-exercise-index={idx}
+                        class={draggedExerciseIndex === idx ? 'exercise-row-dragging' : ''}
+                      >
+                        <td class="drag-cell">{dragHandle(idx)}</td>
                         <td>
                           <input
                             type="text"
@@ -382,9 +456,16 @@ export function LogSession() {
               </div>
               <div class="exercise-list-cards">
                 {exercises.map((ex, idx) => (
-                  <div key={idx} class="exercise-card">
+                  <div
+                    key={idx}
+                    data-exercise-index={idx}
+                    class={`exercise-card${draggedExerciseIndex === idx ? ' exercise-row-dragging' : ''}`}
+                  >
                     <div class="exercise-card-header">
-                      <h4>Övning {idx + 1}</h4>
+                      <div class="exercise-card-title">
+                        {dragHandle(idx)}
+                        <h4>Övning {idx + 1}</h4>
+                      </div>
                       <button class="btn-remove" onClick={() => removeExercise(idx)} aria-label="Ta bort">
                         <svg width="20" height="20" viewBox="0 0 19 19">
                           <use href={icon('x-icon')} />

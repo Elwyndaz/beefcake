@@ -284,6 +284,17 @@ export function History() {
     navigate(`/history/${sessionId}`)
   }
 
+  function logSessionOnDate(date: string) {
+    navigate(`/log?date=${date}`)
+  }
+
+  function handleCalendarDayKey(event: KeyboardEvent, date: string) {
+    if (event.target !== event.currentTarget) return
+    if (event.key !== 'Enter' && event.key !== ' ') return
+    event.preventDefault()
+    logSessionOnDate(date)
+  }
+
   // Filter change handlers
   function handleTemplateChange(e: Event) {
     const target = e.target as HTMLSelectElement
@@ -385,10 +396,27 @@ export function History() {
             const daySessions = sessionsByDate.get(date) || []
             const isCurrentMonth = day.getMonth() === calendarMonth.getMonth()
             return (
-              <div class={`history-calendar-day${isCurrentMonth ? '' : ' outside'}${daySessions.length ? ' trained' : ''}`} key={date}>
+              <div
+                class={`history-calendar-day${isCurrentMonth ? '' : ' outside'}${daySessions.length ? ' trained' : ''}`}
+                key={date}
+                role="button"
+                tabIndex={0}
+                aria-label={`Logga pass ${date}`}
+                onClick={() => logSessionOnDate(date)}
+                onKeyDown={event => handleCalendarDayKey(event, date)}
+              >
                 <span class="history-calendar-date">{day.getDate()}</span>
                 {daySessions.map(session => (
-                  <button type="button" class="history-calendar-session" key={session.id} onClick={() => goToDetail(session.id)} title={session.templateName}>
+                  <button
+                    type="button"
+                    class="history-calendar-session"
+                    key={session.id}
+                    onClick={event => {
+                      event.stopPropagation()
+                      goToDetail(session.id)
+                    }}
+                    title={session.templateName}
+                  >
                     {session.templateName}
                   </button>
                 ))}
