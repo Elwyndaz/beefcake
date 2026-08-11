@@ -268,7 +268,16 @@ export function Templates() {
                 <input type="number" min="0" step="0.5" max="500" value={fe.defaultSetEntry.weight} onChange={e => handleInputChange(e, idx, 'defaultSetEntry', 'weight')} />
               </Field>
               <div class="m-0">
-                <Button variant="danger" size="sm" class="h-full" onClick={() => removeFormExercise(idx)}>Ta bort</Button>
+                <button
+                  type="button"
+                  class="btn-remove"
+                  onClick={() => removeFormExercise(idx)}
+                  aria-label={`Ta bort övning ${idx + 1}`}
+                >
+                  <svg width="20" height="20" viewBox="0 0 19 19">
+                    <use href={icon('trash-icon')} />
+                  </svg>
+                </button>
               </div>
             </div>
           ))}
@@ -320,7 +329,19 @@ export function Templates() {
                     <td>{new Date(t.updatedAt).toLocaleDateString('sv-SE')}</td>
                     <td class="text-right">
                       <div class="flex gap-sm justify-end">
-                        <Button variant="danger" size="sm" onClick={event => { event.stopPropagation(); handleDelete(t.id) }}>Radera</Button>
+                        <button
+                          type="button"
+                          class="btn-remove"
+                          onClick={event => {
+                            event.stopPropagation()
+                            handleDelete(t.id)
+                          }}
+                          aria-label={`Radera mall ${t.name}`}
+                        >
+                          <svg width="20" height="20" viewBox="0 0 19 19">
+                            <use href={icon('trash-icon')} />
+                          </svg>
+                        </button>
                       </div>
                     </td>
                   </tr>
