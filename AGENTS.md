@@ -48,6 +48,7 @@ Versalerna är ett krav: cockpiten (`cockpit.buildapp.se`) hämtar exakt `HANDOF
 - **`geist`-npm-paketet fungerar inte i Vite/Preact.** Det är byggt för Next.js och har `next` som peer-dependency. Variant-fonten ligger i `node_modules/geist/dist/fonts/geist-sans/Geist-Variable.woff2` och är vendored till `src/assets/fonts/` med `@font-face` i app.css. Återställ det inte till en Google Fonts-länk, PWA:n ska fungera offline.
 - **Button/Card/Stat/EmptyState/Field raderades en gång som "unused"** (`194249a`) och fick återskapas i design-sprinten 2026-08-09. De används av alla sidor nu. En komponent utan importer är inte automatiskt död.
 - **Ett dokument som beskriver koden hinner bli fel.** AUDIT.md, MISTRAL-WORKPLAN.md och DESIGN-AUDIT.md var ögonblicksbilder som påstod saker som inte längre stämde, och två av dem hade var sin kopia av datamodellen. Raderade 2026-08-09. Skriv inte nya. Öppna poster hör hemma i `BACKLOG.md`, allt annat i git-historiken.
+- **Wrangler kan försöka skriva logg utanför arbetsytan och ge `EPERM` i sandbox.** Sätt `WRANGLER_LOG_PATH` till en tillfällig fil i repot för kontroller, till exempel `.wrangler-verify.log`, och ta bort filen efteråt. Ett tillfälligt D1-fel `7403` har lösts genom `wrangler whoami` och omedelbar retry.
 
 ## Flera agenter i samma repo
 

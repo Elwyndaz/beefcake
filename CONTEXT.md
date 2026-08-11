@@ -1,6 +1,6 @@
 # Beefcake — kontext
 
-Personlig träningslogg för styrketräning, ersätter ett Excel-ark. Svenskt gränssnitt, bara kilo. Två användare i praktiken: Patrik på dator, hans tjej på mobil. Offline-först, ingen backend.
+Personlig träningslogg för styrketräning, ersätter ett Excel-ark. Svenskt gränssnitt, bara kilo. Två användare i praktiken: Patrik på dator, hans tjej på mobil. D1 är sanningskälla och IndexedDB är lokal cache.
 
 Live på https://orgutveckling.se/beefcake/ (GitHub Pages, bas-sökväg `/beefcake/`). Push till `master` bygger och deployar. Server-API:t är deployat som `https://api.orgutveckling.se` och använder D1 med Cloudflare Access.
 
@@ -48,14 +48,14 @@ Modellen saknar fortfarande `Exercise.kind` för kroppsvikt, tid och distans. D�
 - Ett spökpass 2025-11-19 "Bröst, axlar & biceps" finns med flit, en artefakt av `=TODAY()`-drift i arket. Städa inte bort det.
 - Seeden innehåller 33 övningar, 9 mallar och 418 pass. Mallen med namnet `undefined` filtreras bort i `syncSeed`, så åtta laddas.
 
-## Backup
+## Lagring och nödräddning
 
-IndexedDB är lokal cache. `autoBackup()` skriver dessutom till vald JSON-fil och försöker synka hela snapshoten till servern efter varje mutation.
+D1 lagrar versionsnumrerade snapshots per Access-identitet och är sanningskälla. Klienten hämtar serverns snapshot före seedning och använder IndexedDB som lokal cache. Efter varje mutation synkar `autoBackup()` snapshoten till D1.
 
-- JSON-filens File System Access-handle och senaste skrivning ligger i IndexedDB, inte i träningsdata-LocalStorage.
-- `syncSeed()` återställer vald backupfil före seedning när den lokala databasen är tom.
-- Servern lagrar versionsnumrerade snapshots i D1 per Access-identitet. Skrivning kräver senaste revision, så en gammal klient får 409 i stället för att skriva över nyare data.
-- Export JSON är fortfarande den manuella återställningsvägen. Serverkopplingen måste vara Access-konfigurerad för att användarsynken ska fungera.
+- Skrivning använder enkel `POST` med `Content-Type: text/plain` och `credentials: include`, eftersom Cloudflare Access stoppar CORS-preflight utan Access-cookie.
+- Skrivning kräver senaste revision, så en gammal klient får 409 i stället för att skriva över nyare data.
+- Synkfel visas beständigt i appen och får inte sväljas av `autoBackup()`.
+- Export och import av JSON är endast manuell nödräddning i Inställningar. Filbackup används aldrig automatiskt.
 
 ## Muskelgrupper
 
@@ -79,7 +79,7 @@ server/migrations/          D1-schema för versionsnumrerade snapshots
 src/pages/                Home, LogSession, Templates, History, SessionDetail, Stats, Settings
 ```
 
-Rutter: `/` · `/log` (stödjer `?from=<sessionId>`) · `/templates` · `/history` · `/history/:id` · `/stats` · `/settings`.
+Rutter: `/` · `/log` (stödjer `?from=<sessionId>` och `?date=<YYYY-MM-DD>`) · `/templates` · `/history` · `/history/:id` · `/stats` · `/settings`.
 
 ## Konventioner
 

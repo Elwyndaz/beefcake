@@ -1,54 +1,39 @@
 ---
 schemaVersion: 1
 status: active
-currentGoal: Slutföra säker serverlagring för träningspass
-nextAction: Koppla Access-applikation till beefcake-api och verifiera produktionssynk med ett nytt pass
+currentGoal: Slutföra produktionsverifieringen av D1-synk
+nextAction: Verifiera att senaste testpasset finns kvar efter omladdning och ny Access-inloggning, kör sedan ett autentiserat stale-revision-anrop som ska ge 409
 blockers:
-  - Access-applikationen täcker ännu inte Beefcake-API:ts, så produktionssynken är inte användarverifierad
+  - Autentiserad webbläsarsession krävs för de två återstående livekontrollerna
 reviewedAt: 2026-08-11
 ---
 
 ## Recent work
 
-- Cloudflare Worker `beefcake-api` deployad till `https://api.orgutveckling.se` som Custom Domain, med Access-validering och D1-databasen `beefcake`.
-- D1-migration `0001_snapshots.sql` applicerad remote. Snapshot-API:t kräver per-användare revision och avvisar gamla skrivningar med 409.
-- Frontendens cloud sync använder IndexedDB som offline-cache och serverrevision som versionslås. GitHub Pages-builden får API-adressen via workflow-env.
-- Lokal filbackup flyttad från träningsdata i LocalStorage till vald JSON-fil med serialiserad skrivkö.
-
-- `ExerciseKind` typ tillagd i schema.ts (`'weight' | 'bodyweight' | 'time' | 'distance'`), `Exercise.kind` som optional field
-- Volymberäkning uppdaterad i createSession, updateSession, syncSeed, getWeeklyTonnage, History.tsx och SessionDetail.tsx för att hoppa över setEntries med vikt 0
-- Snabbvals-CTA:er på förstasidan för att välja bland de 2-3 senaste passen
-- `SetEntry[]` ersätter `sets`/`reps`/`weight` genom hela kedjan: schema, models, dataService, LogSession, SessionDetail, Templates. Legacy-typer och migreringsfunktioner kvar för gammal seed-struktur.
-- Designsystem-refresh: tokens i `app.css`, Geist self-hostad, komponenterna i `src/components/` används i alla vyer.
-- Inline mallhantering i logg- och redigeringsläge: "Spara som mall" i LogSession, "Spara övningarna till mallen" + "Spara som ny mall" i SessionDetail.
-- Muskelgrupper: `MUSCLE_GROUP_MAP` (namn → grupp), backfill i `syncSeed`, nytt "Muskelgrupper"
-- Data-tappning: vald JSON-fil återställs i `syncSeed` före render i `main.tsx`, `autoBackup()` skriver filbackup och försöker server-synka efter varje mutation. Verifierat: wipe av IndexedDB → reload → alla pass tillbaka när backupfilen är tillgänglig.
-- Dokumenten städade 2026-08-09: `AUDIT.md`, `MISTRAL-WORKPLAN.md` och `DESIGN-AUDIT.md` raderade, öppna poster flyttade till `BACKLOG.md`, domänmodellen samlad i `CONTEXT.md`.
+- D1 är nu sanningskälla. Klienten hämtar snapshot före seedning och använder IndexedDB som lokal cache.
+- Snapshot-skrivning använder enkel `POST /api/snapshot` med `Content-Type: text/plain` och `credentials: include`. Det undviker Cloudflare Access 403 på CORS-preflight utan bypass eller Access-token i frontend.
+- Worker validerar samma JSON-form som tidigare. En atomisk `INSERT ... SELECT` uppdaterar endast när `expectedRevision` fortfarande matchar, annars 409.
+- Automatisk filbackup och automatisk filåterställning är borttagna. Export och import finns endast som manuell nödräddning i Inställningar. `BackupBanner` är borttagen.
+- Månadsvyn ligger överst i Historik. Klick på en dag öppnar Logga pass med valt datum.
+- Övningsrader i Logga pass kan ordnas genom dragning eller piltangenter.
+- X/Twitter-symbolen är ersatt med ett vanligt stängkryss. Raderingsåtgärder använder papperskorg, även i Mallar, där bekräftelsedialogen är kvar.
 
 ## Verification
 
-- Live-URL svarar 200, https://orgutveckling.se/beefcake/.
-- 419 pass, 1 522 historikrader, 0 dubbletter efter seed-synk. Andra körningen lade till noll.
-- Verifierat i koden 2026-08-09: `undefined`-mallen filtreras i `syncSeed` (`dataService.ts:535`), heatmap-kortet har ett tomt tillstånd (`Stats.tsx:471`), `date-fns` används av chart-adaptern och `workbox-window` är borta.
-- Bygget grönt (`npm run build` exit 0) och deployen lyckad 2026-08-09 19:45, verifierad med `gh run list`.
-- Responsivt verifierat på 390, 768, 1200 och 1600 px med skärmdumpar i `.playwright-shots/`. Den mappen är lokal och gitignorerad, dumparna finns inte i repot.
-- `npm run build` grönt efter cloud sync-integrationen.
-- `npm run server:check` grönt med D1-bindning och Access-vars.
-- Remote D1 innehåller `snapshots` och migrations-tabell. Anonymt API-anrop svarar 401 `unauthenticated`.
+- `npm run build` och `npm run server:check` är gröna.
+- Worker-version `8e006074-faf3-4d08-a643-adee1b0cd8a6` är deployad.
+- En autentiserad produktionsklient skapade en faktisk D1-snapshot för Access-identiteten. Efter sparat testpass hade raden revision 6, 419 pass, payload 530 398 byte och `created_at` 2026-08-11T20:04:59.840Z.
+- Anonyma GET och enkla POST omdirigeras till Access med korrekta CORS-headers. En preflightad skrivning stoppas av Access med 403 innan Workern.
+- GitHub Pages är deployad genom commit `659fe4e`. Livebundlen innehåller POST/text/plain, synligt molnsynkfel, dragordning, datumlänk och nya papperskorgar.
 
 ## Unresolved details
 
-- Access-applikationen måste täcka `api.orgutveckling.se` och frontend måste därefter verifieras med en riktig inloggad synk. Backend är deployad men denna sista användarverifiering är inte gjord.
-
-- `importAllData` rensar databasen innan den validerar filen.
+- Användarverifiera att testpasset finns kvar efter omladdning samt efter utloggning och ny Access-inloggning.
+- Verifiera ett autentiserat stale-revision-anrop mot live-API:t och dokumentera HTTP 409.
+- Inga automatiserade tester eller linter finns.
 - Race condition i mall-laddningen i LogSession, async-effekt utan avbrottsskydd.
-- Inga tester och ingen linter.
 - Spökpasset 2025-11-19 "Bröst, axlar & biceps" är kvar med flit.
-
-## Current checkpoint
-
-Cloudflare Access-applikationen now protects `api.orgutveckling.se`. An unauthenticated request returns 302 to the Access login. The remaining verification is one authenticated client sync, followed by the frontend deployment.
 
 ## Resume here
 
-Börja med nextAction ovan. `CONTEXT.md` har domänmodellen, `BACKLOG.md` resten av det öppna, `AGENTS.md` de hårda reglerna och minorna som redan kostat tid.
+Börja med de två återstående livekontrollerna ovan. Ändra inte synkarkitekturen och använd inte backupfil som normal återställningsväg.
