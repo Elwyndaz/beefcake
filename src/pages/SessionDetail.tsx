@@ -638,7 +638,7 @@ export function SessionDetail() {
                     <td class="remove-cell">
                       <button class="btn-remove" onClick={() => removeExercise(idx)} aria-label="Ta bort">
                         <svg width="20" height="20" viewBox="0 0 19 19">
-                          <use href={icon('x-icon')} />
+                          <use href={icon('trash-icon')} />
                         </svg>
                       </button>
                     </td>
@@ -654,7 +654,7 @@ export function SessionDetail() {
                   <h4>Övning {idx + 1}</h4>
                   <button class="btn-remove" onClick={() => removeExercise(idx)} aria-label="Ta bort">
                     <svg width="20" height="20" viewBox="0 0 19 19">
-                      <use href={icon('x-icon')} />
+                      <use href={icon('trash-icon')} />
                     </svg>
                   </button>
                 </div>

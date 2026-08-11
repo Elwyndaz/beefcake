@@ -475,7 +475,7 @@ export function History() {
                             aria-label="Radera"
                           >
                             <svg width="20" height="20" viewBox="0 0 19 19">
-                              <use href={icon('x-icon')} />
+                              <use href={icon('trash-icon')} />
                             </svg>
                           </button>
                         </td>

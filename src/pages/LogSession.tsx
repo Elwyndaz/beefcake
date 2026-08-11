@@ -445,7 +445,7 @@ export function LogSession() {
                         <td class="remove-cell">
                           <button class="btn-remove" onClick={() => removeExercise(idx)} aria-label="Ta bort">
                             <svg width="20" height="20" viewBox="0 0 19 19">
-                              <use href={icon('x-icon')} />
+                              <use href={icon('trash-icon')} />
                             </svg>
                           </button>
                         </td>
@@ -468,7 +468,7 @@ export function LogSession() {
                       </div>
                       <button class="btn-remove" onClick={() => removeExercise(idx)} aria-label="Ta bort">
                         <svg width="20" height="20" viewBox="0 0 19 19">
-                          <use href={icon('x-icon')} />
+                          <use href={icon('trash-icon')} />
                         </svg>
                       </button>
                     </div>
