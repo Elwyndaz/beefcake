@@ -44,3 +44,5 @@ Program-motor (5×5, GZCL) · flerspråkighet · sociala funktioner och delade m
 ## Captured
 
 - [ ] [P2] [Wish] Om man har startat timer ska man få en promt/ruta med är du säker på att du vill lämna sidan du har en timer på?
+
+- [ ] [P2] [Wish] göra vanlig sån firebase-inlogg
