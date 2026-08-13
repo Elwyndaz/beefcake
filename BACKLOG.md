@@ -40,3 +40,7 @@
 ## Bygg inte
 
 Program-motor (5×5, GZCL) · flerspråkighet · sociala funktioner och delade mallar · AI-förslag på vikter · egen backend enbart för synk · Excel-import i webbläsaren (borttagen i `410efd1`, `xlsx` 0.18.5 gav tom chunk under Vite 8) · trettio diagram · rest timer om du inte faktiskt vilar på klocka · superset och dropsets i gränssnittet, se bara till att modellen klarar dem.
+
+## Captured
+
+- [ ] [P2] [Wish] Om man har startat timer ska man få en promt/ruta med är du säker på att du vill lämna sidan du har en timer på?
