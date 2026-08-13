@@ -46,3 +46,5 @@ Program-motor (5×5, GZCL) · flerspråkighet · sociala funktioner och delade m
 - [ ] [P2] [Wish] Om man har startat timer ska man få en promt/ruta med är du säker på att du vill lämna sidan du har en timer på?
 
 - [ ] [P2] [Wish] göra vanlig sån firebase-inlogg
+
+- [ ] [P2] [Wish] det ska gå att ha 0 i antalet set i övningen när man är inne på logga pass, det är så jag använder den, att alla börjar på 0 så klickar jag mig upp löpande under passet. Alla pass borde börja så förutom om man är inne och redigerar ett gammalt pass
