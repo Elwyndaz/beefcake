@@ -13,6 +13,7 @@ import {
 import { icon } from '../icons'
 import { formatDateFull, formatDateShort } from '../lib/date'
 import { formatSets } from '../lib/format'
+import { setsVolume, exercisesVolume } from '../lib/volume'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
 import { EmptyState } from '../components/EmptyState'
@@ -26,11 +27,11 @@ interface FormExercise {
 }
 
 function calculateExerciseVolume(ex: FormExercise | SessionExercise): number {
-  return ex.setEntries.reduce((sum, set) => sum + (set.weight > 0 ? set.sets * set.reps * set.weight : 0), 0)
+  return setsVolume(ex.setEntries)
 }
 
 function calculateTotalVolume(exercises: (FormExercise | SessionExercise)[]): number {
-  return exercises.reduce((sum, e) => sum + calculateExerciseVolume(e), 0)
+  return exercisesVolume(exercises)
 }
 
 // Delete confirmation dialog

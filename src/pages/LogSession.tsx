@@ -14,6 +14,7 @@ import {
 import { startRestTimer, triggerHaptic } from '../services/timerService'
 import { formatDateShort } from '../lib/date'
 import { formatSet, formatSets } from '../lib/format'
+import { setsVolume } from '../lib/volume'
 import { todayISO, nowISO } from '../models'
 import { icon } from '../icons'
 import { Card } from '../components/Card'
@@ -500,12 +501,10 @@ export function LogSession() {
   }
 
   // Volym räknas på avbockade set: siffran ska visa vad du lyft, inte vad du planerat
-  const totalVolume = exercises.reduce((sum, e) => {
-    return sum + e.setEntries.reduce(
-      (setSum, s) => setSum + (s.completed && s.weight > 0 ? (s.sets || 1) * s.reps * s.weight : 0),
-      0
-    )
-  }, 0)
+  const totalVolume = exercises.reduce(
+    (sum, e) => sum + setsVolume(e.setEntries.filter(s => s.completed)),
+    0
+  )
 
   const completedSetsCount = exercises.reduce((sum, e) => {
     return sum + e.setEntries.filter(s => s.completed).length

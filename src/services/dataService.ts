@@ -12,6 +12,7 @@ import type {
   ActiveWorkout
 } from '../models'
 import { loadSnapshotFromCloud, syncSnapshot } from './cloudSyncService'
+import { setVolume, setsVolume, exercisesVolume } from '../lib/volume'
 
 // Active Workout Service (pågående pass sparat lokalt i realtid)
 export async function getActiveWorkout(): Promise<ActiveWorkout | undefined> {
@@ -209,7 +210,7 @@ export async function createSession(
   }
 
   const history: ExerciseHistory[] = exercises.map(e => {
-    const totalVolume = e.setEntries.reduce((sum, set) => sum + (set.weight > 0 ? set.sets * set.reps * set.weight : 0), 0)
+    const totalVolume = setsVolume(e.setEntries)
     return {
       id: generateId(),
       date,
@@ -256,7 +257,7 @@ export async function updateSession(id: string, updates: Partial<Session>): Prom
   const updated = { ...existing, ...updates, id }
 
   const history: ExerciseHistory[] = updated.exercises.map((e, i) => {
-    const totalVolume = e.setEntries.reduce((sum, set) => sum + (set.weight > 0 ? set.sets * set.reps * set.weight : 0), 0)
+    const totalVolume = setsVolume(e.setEntries)
     return {
       id: `${id}-${i}`,
       date: updated.date,
@@ -407,19 +408,9 @@ export async function getWeeklyTonnage(weekStartDate: string): Promise<number> {
   weekEndDate.setDate(weekEndDate.getDate() + 6)
   const weekEndISO = weekEndDate.toISOString().split('T')[0]
   
-  let totalVolume = 0
-  for (const s of sessions) {
-    if (s.date >= weekStartDate && s.date <= weekEndISO) {
-      for (const e of s.exercises) {
-        for (const set of e.setEntries) {
-          if (set.weight > 0) {
-            totalVolume += set.sets * set.reps * set.weight
-          }
-        }
-      }
-    }
-  }
-  return totalVolume
+  return sessions
+    .filter(s => s.date >= weekStartDate && s.date <= weekEndISO)
+    .reduce((sum, s) => sum + exercisesVolume(s.exercises), 0)
 }
 
 // Get current training streak (consecutive days with workouts)
@@ -639,7 +630,7 @@ export async function syncSeed(): Promise<{ sessionsAdded: number; exercisesAdde
     newSessions.push(migratedSession)
     
     for (const e of migratedSession.exercises) {
-      const totalVolume = e.setEntries.reduce((sum, set) => sum + (set.weight > 0 ? set.sets * set.reps * set.weight : 0), 0)
+      const totalVolume = setsVolume(e.setEntries)
       newHistory.push({
         id: `${s.id}-${e.order}`,
         date: s.date,
@@ -694,7 +685,7 @@ export async function exportSessionsCSV(): Promise<string> {
           set.sets,
           set.reps,
           set.weight,
-          set.sets * set.reps * set.weight
+          setVolume(set)
         ].join(','))
       }
     }

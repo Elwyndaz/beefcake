@@ -3,6 +3,7 @@ import { useLocation } from 'wouter'
 import { getAllSessions, getAllTemplates, getActiveWorkout } from '../services/dataService'
 import { checkReminder } from '../services/reminderService'
 import { formatDateWithWeekday } from '../lib/date'
+import { exercisesVolume } from '../lib/volume'
 import { icon } from '../icons'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
@@ -193,10 +194,7 @@ export function Home() {
               </thead>
               <tbody>
                 {recentSessions.map((session) => {
-                  const sessionVolume = session.exercises.reduce((sum, e) => {
-                    const exerciseVolume = e.setEntries.reduce((setSum, set) => setSum + (set.weight > 0 ? set.sets * set.reps * set.weight : 0), 0)
-                    return sum + exerciseVolume
-                  }, 0)
+                  const sessionVolume = exercisesVolume(session.exercises)
                   return (
                     <tr
                       key={session.id}
