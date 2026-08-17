@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'preact/hooks'
 import { Link } from 'wouter'
-import { getAllExercises, getVolumeOverTime, getFrequencyPerTemplate, getHeatmapData, getPRs, getCurrentStreak, getWeeklyTonnage, getEstimated1RM, getVolumeByMuscleGroup } from '../services/dataService'
+import { getAllExercises, getVolumeOverTime, getFrequencyPerTemplate, getHeatmapData, getPRs, getCurrentStreak, getWeeklyTonnage, getEstimated1RM, getVolumeByMuscleGroup, getWeeklyHardSetsPerMuscleGroup } from '../services/dataService'
+import { classifyWeeklySets, SET_LOAD_LABELS } from '../lib/hypertrophy'
+import { formatWeight } from '../lib/format'
 import { formatDateShort, localDateISO, todayISO, parseLocalDate } from '../lib/date'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
@@ -92,6 +94,7 @@ export function Stats() {
   const [muscleGroupStats, setMuscleGroupStats] = useState<{ muscleGroup: string; volume: number; sessions: number }[]>([])
   const [streak, setStreak] = useState<{ streakDays: number; lastWorkoutDate: string | null }>({ streakDays: 0, lastWorkoutDate: null })
   const [thisWeekTonnage, setThisWeekTonnage] = useState<number>(0)
+  const [weeklyHardSets, setWeeklyHardSets] = useState<{ muscleGroup: string; sets: number }[]>([])
   const [oneRM, setOneRM] = useState<{ exerciseName: string; estimated1RM: number; date: string } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -114,7 +117,7 @@ export function Stats() {
         volumeChartRef.current = null
       }
     }
-  }, [selectedExerciseId, period])
+  }, [selectedExerciseId, period, loading])
 
   useEffect(() => {
     if (frequencyData.length > 0 && frequencyCanvasRef.current) {
@@ -126,7 +129,9 @@ export function Stats() {
         frequencyChartRef.current = null
       }
     }
-  }, [frequencyData])
+    // loading måste vara med: under skelettvyn finns ingen canvas, och utan
+    // omkörning när den monteras blir kortet tomt
+  }, [frequencyData, loading])
 
   useEffect(() => {
     if (heatmapCanvasRef.current) {
@@ -138,26 +143,28 @@ export function Stats() {
         heatmapChartRef.current = null
       }
     }
-  }, [heatmapData])
+  }, [heatmapData, loading])
 
   async function loadData() {
     try {
       setLoading(true)
       setError(null)
-      const [es, freq, heat, prsData, streakData, tonnageData, muscleStats] = await Promise.all([
+      const [es, freq, heat, prsData, streakData, tonnageData, muscleStats, hardSets] = await Promise.all([
         getAllExercises(),
         getFrequencyPerTemplate(),
         getHeatmapData(30),
         getPRs(),
         getCurrentStreak(),
         getThisWeekTonnage(),
-        getVolumeByMuscleGroup()
+        getVolumeByMuscleGroup(),
+        getWeeklyHardSetsPerMuscleGroup(getMondayISO())
       ])
       setExercises(es)
       setFrequencyData(freq)
       setHeatmapData(heat)
       setPRs(prsData)
       setMuscleGroupStats(muscleStats)
+      setWeeklyHardSets(hardSets)
       setStreak(streakData)
       setThisWeekTonnage(tonnageData)
       if (es.length > 0 && !selectedExerciseId) {
@@ -514,12 +521,44 @@ export function Stats() {
                   {[...prs].sort((a, b) => a.exerciseName.localeCompare(b.exerciseName)).map((pr) => (
                     <tr key={pr.exerciseId}>
                       <td><Link href={`/exercises/${pr.exerciseId}`} class="exercise-link">{pr.exerciseName}</Link></td>
-                      <td class="tabular-nums">{pr.maxWeight} kg <span class="nowrap text-muted">({formatDateShort(pr.maxWeightDate)})</span></td>
+                      <td class="tabular-nums">{formatWeight(pr.maxWeight)} kg <span class="nowrap text-muted">({formatDateShort(pr.maxWeightDate)})</span></td>
                       <td class="tabular-nums">{pr.maxVolume.toLocaleString('sv-SE')} kg <span class="nowrap text-muted">({formatDateShort(pr.maxVolumeDate)})</span></td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+        </Card>
+
+        <Card title="Set per muskelgrupp denna vecka">
+          {weeklyHardSets.length === 0 ? (
+            <EmptyState
+              title="Inga set den här veckan"
+              message="Målbandet för hypertrofi är 10 till 20 arbetsset per muskelgrupp och vecka."
+            />
+          ) : (
+            <div class="muscle-group-list">
+              {weeklyHardSets.map(mg => {
+                const load = classifyWeeklySets(mg.sets)
+                return (
+                  <div class="muscle-group-row" key={mg.muscleGroup}>
+                    <div class="flex justify-between items-center mb-1">
+                      <span class="text-sm font-600">{mg.muscleGroup}</span>
+                      <span class="text-sm text-muted tabular-nums">
+                        {mg.sets} set · {SET_LOAD_LABELS[load]}
+                      </span>
+                    </div>
+                    <div class="muscle-group-bar">
+                      {/* Skalan går till 20 set: bandets övre kant, inte till veckans högsta värde */}
+                      <div
+                        class={`muscle-group-fill load-${load}`}
+                        style={{ width: `${Math.min(100, Math.max(4, (mg.sets / 20) * 100))}%` }}
+                      />
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           )}
         </Card>

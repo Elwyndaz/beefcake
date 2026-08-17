@@ -585,6 +585,10 @@ canvas { display: block; max-width: 100%; }
 .muscle-group-list { display: flex; flex-direction: column; gap: var(--space-4); }
 .muscle-group-bar { height: 8px; border-radius: 999px; background: var(--surface); overflow: hidden; }
 .muscle-group-fill { height: 100%; border-radius: 999px; background: var(--accent); transition: width 0.3s ease-in-out; }
+/* Veckans set per muskelgrupp mot hypertrofibandet 10-20 set */
+.muscle-group-fill.load-low { background: var(--warning); }
+.muscle-group-fill.load-optimal { background: var(--success); }
+.muscle-group-fill.load-high { background: var(--accent); }
 
 /* Rounded "card row" tables for display lists (history, session detail, PRs).
    Rows sit as pills on the card surface. */
