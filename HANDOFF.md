@@ -1,10 +1,10 @@
 ---
 schemaVersion: 1
 status: active
-currentGoal: Verifiera det nya passflödet i produktion efter deploy
+currentGoal: Verifiera det nya passflödet i produktion
 nextAction: Kör ett riktigt pass på telefonen mot live-appen och bekräfta att avbockning, flytande vilotimer och återupptagning fungerar med D1-synk påslagen
 blockers:
-  - Sju commitar ligger opushade lokalt, push och deploy är inte godkända än
+  - Inga
 reviewedAt: 2026-08-17
 ---
 
@@ -22,6 +22,7 @@ reviewedAt: 2026-08-17
 ## Verification
 
 - `npm test` grön (3 filer, 17 tester). `npm run build` grön.
+- Deployad genom commit `998d4a3`, workflow-körning 32062962373 grön med `npm test` före build. Livebundlen innehåller övningslänkarna, "Lyft volym", förifyllningens "Förra gången" och hypertrofikortet.
 - Körd i Chrome mot dev-servern med påhittad testdata i en separat origin, inte mot riktig träningsdata.
 - Verifierat i webbläsaren: prefill från förra passet, avbockning som startar timern, autosparat pass efter reload, övningssidans 1RM (105 kg för 82,5 × 8) och historiktabell, hypertrofikortets tre band, mobil 390 px utan sidled-scroll, desktop 1440 px oförändrad.
 - Två buggar hittade och åtgärdade under körningen: diagrammen i Statistik ritades aldrig när canvas monterades efter skelettvyn, och loggvyns grid tvingade fram horisontell scroll på telefon.
@@ -36,4 +37,4 @@ reviewedAt: 2026-08-17
 
 ## Resume here
 
-Sju commitar ligger lokalt på `master` utan push. Deploy sker vid push, så gaten är fortfarande stängd. Efter push: kör ett riktigt pass på telefonen och kontrollera att passet hamnar i D1.
+Allt är pushat och deployat. Kör ett riktigt pass på telefonen mot https://orgutveckling.se/beefcake/ och kontrollera att passet hamnar i D1, att avbockningen startar timern och att ett avbrutet pass går att återuppta.
