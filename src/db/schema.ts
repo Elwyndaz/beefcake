@@ -100,6 +100,35 @@ export interface LegacyExerciseHistory {
   sessionId: string
 }
 
+export type SetType = 'normal' | 'warmup' | 'drop' | 'failure'
+
+export interface ActiveSetEntry {
+  sets: number
+  reps: number
+  weight: number
+  completed?: boolean
+  type?: SetType
+  rpe?: number
+}
+
+export interface ActiveExercise {
+  exerciseId: string
+  exerciseName: string
+  setEntries: ActiveSetEntry[]
+  order: number
+  notes?: string
+}
+
+export interface ActiveWorkout {
+  id: string
+  date: string
+  templateId: string
+  templateName: string
+  exercises: ActiveExercise[]
+  startTime: string
+  updatedAt: string
+}
+
 export interface BeefcakeDB extends DBSchema {
   templates: {
     key: string
@@ -126,10 +155,15 @@ export interface BeefcakeDB extends DBSchema {
     value: AppSetting
     indexes: {}
   }
+  activeWorkout: {
+    key: string
+    value: ActiveWorkout
+    indexes: {}
+  }
 }
 
 const DB_NAME = 'beefcake-db'
-const DB_VERSION = 2
+const DB_VERSION = 3
 
 let dbInstance: IDBPDatabase<BeefcakeDB> | null = null
 
@@ -161,6 +195,9 @@ export async function getDB(): Promise<IDBPDatabase<BeefcakeDB>> {
       }
       if (!db.objectStoreNames.contains('settings')) {
         db.createObjectStore('settings', { keyPath: 'key' })
+      }
+      if (!db.objectStoreNames.contains('activeWorkout')) {
+        db.createObjectStore('activeWorkout', { keyPath: 'id' })
       }
     }
   })

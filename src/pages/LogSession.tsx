@@ -1,195 +1,339 @@
-import { useState, useEffect, useRef } from 'preact/hooks'
-import { getAllTemplates, getAllExercises, createSession, getOrCreateExercise, getSession, createTemplate } from '../services/dataService'
-import { todayISO } from '../models'
+import { useState, useEffect, useRef, useCallback } from 'preact/hooks'
+import {
+  getAllTemplates,
+  getAllExercises,
+  createSession,
+  getOrCreateExercise,
+  getSession,
+  createTemplate,
+  getActiveWorkout,
+  saveActiveWorkout,
+  clearActiveWorkout,
+  getLastPerformanceForExercise
+} from '../services/dataService'
+import { startRestTimer, triggerHaptic } from '../services/timerService'
+import { todayISO, nowISO } from '../models'
 import { icon } from '../icons'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
 import { EmptyState } from '../components/EmptyState'
 import { Field } from '../components/Field'
-import type { Template, Exercise, TemplateExercise, SetEntry } from '../models'
+import { PlateCalculatorModal } from '../components/PlateCalculator'
 import { RestTimer } from '../components/RestTimer'
+import type { Template, Exercise, TemplateExercise, SetEntry, ActiveSetEntry, SetType } from '../models'
 
-interface FormExercise {
+export interface LogFormExercise {
   exerciseId: string
   exerciseName: string
-  setEntries: SetEntry[]
+  setEntries: ActiveSetEntry[]
+  notes?: string
 }
 
 export function LogSession() {
   const [templates, setTemplates] = useState<Template[]>([])
   const [allExercises, setAllExercises] = useState<Exercise[]>([])
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('')
-  const [exercises, setExercises] = useState<FormExercise[]>([])
+  const [exercises, setExercises] = useState<LogFormExercise[]>([])
   const [date, setDate] = useState(() => todayISO())
+  const [startTime, setStartTime] = useState(() => nowISO())
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showSaveTemplate, setShowSaveTemplate] = useState(false)
   const [templateName, setTemplateName] = useState('')
-  const [prefillSessionId, setPrefillSessionId] = useState<string | null>(null)
   const [draggedExerciseIndex, setDraggedExerciseIndex] = useState<number | null>(null)
-  const draggedExerciseIndexRef = useRef<number | null>(null)
+  const [previousPerformances, setPreviousPerformances] = useState<Record<string, { date: string; setEntries: SetEntry[] }>>({})
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
+  const [plateCalcModal, setPlateCalcModal] = useState<{ isOpen: boolean; weight: number; exIdx: number; setIdx: number }>({
+    isOpen: false,
+    weight: 60,
+    exIdx: 0,
+    setIdx: 0
+  })
 
-  async function checkPrefill() {
+  const draggedExerciseIndexRef = useRef<number | null>(null)
+  const activeTemplateRequestRef = useRef<string>('')
+  const isInitialLoadRef = useRef(true)
+
+  // Fetch previous performance for exercises
+  const fetchPreviousPerformances = useCallback(async (exerciseIds: string[]) => {
+    const missingIds = exerciseIds.filter(id => id && !id.startsWith('new-') && !previousPerformances[id])
+    if (missingIds.length === 0) return
+
+    const results = await Promise.all(
+      missingIds.map(async id => {
+        const perf = await getLastPerformanceForExercise(id)
+        return { id, perf }
+      })
+    )
+
+    setPreviousPerformances(prev => {
+      const next = { ...prev }
+      for (const res of results) {
+        if (res.perf) {
+          next[res.id] = res.perf
+        }
+      }
+      return next
+    })
+  }, [previousPerformances])
+
+  // Load initial data and check for active draft
+  async function initSession() {
     try {
       setLoading(true)
       setError(null)
       const urlParams = new URLSearchParams(window.location.search)
       const fromSessionId = urlParams.get('from')
-      const templateName = urlParams.get('template')
+      const templateParam = urlParams.get('template')
       const requestedDate = urlParams.get('date')
-      setPrefillSessionId(fromSessionId)
 
       if (requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate)) {
         setDate(requestedDate)
       }
-      
-      const [ts, es] = await Promise.all([getAllTemplates(), getAllExercises()])
+
+      const [ts, es, activeDraft] = await Promise.all([
+        getAllTemplates(),
+        getAllExercises(),
+        getActiveWorkout()
+      ])
+
       setTemplates(ts)
       setAllExercises(es)
-      
+
+      // Priority 1: explicitly requested ?from=<sessionId>
       if (fromSessionId) {
         try {
           const session = await getSession(fromSessionId)
           if (session) {
             setSelectedTemplateId(session.templateId)
-            const formExercises: FormExercise[] = session.exercises.map(e => ({
+            const formExercises: LogFormExercise[] = session.exercises.map(e => ({
               exerciseId: e.exerciseId,
               exerciseName: e.exerciseName,
-              setEntries: e.setEntries
+              setEntries: e.setEntries.map(s => ({ ...s, completed: false, type: 'normal' }))
             }))
             setExercises(formExercises)
             setDate(todayISO())
+            setStartTime(nowISO())
+            void fetchPreviousPerformances(formExercises.map(e => e.exerciseId))
           }
         } catch (err) {
           console.error('Failed to load session for prefill:', err)
         }
-      } else if (templateName) {
-        // Match template by name (case-insensitive)
-        const matchedTemplate = ts.find(t => t.name.toLowerCase() === templateName.toLowerCase())
+      }
+      // Priority 2: explicitly requested ?template=<name>
+      else if (templateParam) {
+        const matchedTemplate = ts.find(t => t.name.toLowerCase() === templateParam.toLowerCase())
         if (matchedTemplate) {
           setSelectedTemplateId(matchedTemplate.id)
+          await loadTemplateIntoExercises(matchedTemplate, es)
         } else if (ts.length > 0) {
-          // Fallback to first template if no match
           setSelectedTemplateId(ts[0].id)
+          await loadTemplateIntoExercises(ts[0], es)
         }
-      } else if (ts.length > 0) {
-        // Default to first template
+      }
+      // Priority 3: active draft in IndexedDB
+      else if (activeDraft && activeDraft.exercises.length > 0) {
+        setSelectedTemplateId(activeDraft.templateId)
+        setDate(activeDraft.date || todayISO())
+        setStartTime(activeDraft.startTime || nowISO())
+        setExercises(activeDraft.exercises)
+        void fetchPreviousPerformances(activeDraft.exercises.map(e => e.exerciseId))
+      }
+      // Priority 4: Default to first template
+      else if (ts.length > 0) {
         setSelectedTemplateId(ts[0].id)
+        await loadTemplateIntoExercises(ts[0], es)
       }
 
-      if (fromSessionId || templateName || requestedDate) {
+      if (fromSessionId || templateParam || requestedDate) {
         window.history.replaceState({}, '', window.location.pathname)
       }
     } catch (err) {
-      setError('Kunde inte ladda mallar. Försök igen.')
-      console.error('Fel vid laddning:', err)
+      setError('Kunde inte ladda passdata. Försök igen.')
+      console.error('Fel vid initiering:', err)
     } finally {
       setLoading(false)
+      isInitialLoadRef.current = false
     }
   }
 
+  async function loadTemplateIntoExercises(template: Template, allExList: Exercise[]) {
+    const exMap = new Map(allExList.map(e => [e.id, e.name]))
+    const formExercises: LogFormExercise[] = template.exercises.map((te: TemplateExercise) => ({
+      exerciseId: te.exerciseId,
+      exerciseName: exMap.get(te.exerciseId) || '',
+      setEntries: Array.from({ length: te.defaultSetEntry.sets || 3 }).map(() => ({
+        sets: 1,
+        reps: te.defaultSetEntry.reps || 10,
+        weight: te.defaultSetEntry.weight || 0,
+        completed: false,
+        type: 'normal'
+      }))
+    }))
+    setExercises(formExercises)
+    void fetchPreviousPerformances(formExercises.map(e => e.exerciseId))
+  }
+
   useEffect(() => {
-    checkPrefill()
+    initSession()
   }, [])
 
+  // Auto-save to activeWorkout whenever exercises or settings change (after initial load)
   useEffect(() => {
-    if (selectedTemplateId && !prefillSessionId) {
-      loadTemplateExercises()
-    } else if (!selectedTemplateId && !prefillSessionId) {
-      setExercises([])
-    }
-  }, [selectedTemplateId, templates, prefillSessionId])
+    if (isInitialLoadRef.current || loading) return
 
-  async function loadTemplateExercises() {
+    if (exercises.length === 0) {
+      void clearActiveWorkout()
+      return
+    }
+
     const template = templates.find(t => t.id === selectedTemplateId)
-    if (template) {
-      const allExercises = await getAllExercises()
-      const exMap = new Map(allExercises.map(e => [e.id, e.name]))
-      const formExercises: FormExercise[] = template.exercises.map((te: TemplateExercise) => ({
-        exerciseId: te.exerciseId,
-        exerciseName: exMap.get(te.exerciseId) || '',
-        setEntries: [te.defaultSetEntry]
-      }))
-      setExercises(formExercises)
-    }
-  }
+    void saveActiveWorkout({
+      date,
+      templateId: selectedTemplateId,
+      templateName: template?.name || 'Fritt pass',
+      exercises: exercises.map((e, idx) => ({ ...e, order: idx })),
+      startTime
+    })
+  }, [exercises, date, selectedTemplateId, startTime, loading, templates])
 
-  async function handleSave() {
-    if (exercises.length === 0) return
-    setSaving(true)
-    try {
-      const template = templates.find(t => t.id === selectedTemplateId)
-      if (!template) throw new Error('Template not found')
+  // Template switch handler with race-condition prevention
+  async function handleSelectTemplate(newTemplateId: string) {
+    setSelectedTemplateId(newTemplateId)
+    activeTemplateRequestRef.current = newTemplateId
 
-      const validExercises = await Promise.all(
-        exercises.map(async e => {
-          let exerciseId = e.exerciseId
-          if (!exerciseId || exerciseId.startsWith('new-')) {
-            const ex = await getOrCreateExercise(e.exerciseName)
-            exerciseId = ex.id
-          }
-          return { 
-            exerciseId,
-            exerciseName: e.exerciseName,
-            setEntries: e.setEntries,
-            order: 0
-          }
-        })
-      )
-
-      await createSession(date, selectedTemplateId, template.name, validExercises)
-      setSaved(true)
+    const template = templates.find(t => t.id === newTemplateId)
+    if (!template) {
       setExercises([])
-      setTimeout(() => setSaved(false), 2000)
-    } catch (err) {
-      console.error(err)
-      setError('Kunde inte spara pass')
-    } finally {
-      setSaving(false)
+      return
     }
+
+    const allEx = allExercises.length > 0 ? allExercises : await getAllExercises()
+    if (activeTemplateRequestRef.current !== newTemplateId) return
+
+    await loadTemplateIntoExercises(template, allEx)
   }
 
-  async function handleSaveAsTemplate() {
-    if (exercises.length === 0 || !templateName.trim()) return
-    try {
-      const templateExercises = await Promise.all(
-        exercises.map(async e => {
-          let exerciseId = e.exerciseId
-          if (!exerciseId || exerciseId.startsWith('new-')) {
-            const ex = await getOrCreateExercise(e.exerciseName)
-            exerciseId = ex.id
-          }
-          return {
-            exerciseId,
-            defaultSetEntry: e.setEntries[0] || { sets: 3, reps: 10, weight: 0 }
-          }
-        })
-      )
-      const newTemplate = await createTemplate(templateName.trim(), templateExercises)
-      setTemplates(prev => [...prev, newTemplate].sort((a, b) => a.name.localeCompare(b.name)))
-      setSelectedTemplateId(newTemplate.id)
-      setShowSaveTemplate(false)
-      setTemplateName('')
-    } catch (err) {
-      console.error('Kunde inte spara mall:', err)
-      setError('Kunde inte spara mall')
-    }
-  }
+  // Toggle set completion and trigger rest timer + haptics
+  function toggleSetCompleted(exerciseIdx: number, setIdx: number) {
+    const ex = exercises[exerciseIdx]
+    const currentSet = ex.setEntries[setIdx]
+    const nextCompleted = !currentSet.completed
 
-  function updateExercise(idx: number, field: keyof FormExercise, value: string | number | SetEntry[]) {
+    const newSetEntries = [...ex.setEntries]
+    newSetEntries[setIdx] = {
+      ...currentSet,
+      completed: nextCompleted
+    }
+
     const newExercises = [...exercises]
-    newExercises[idx] = { ...newExercises[idx], [field]: value }
+    newExercises[exerciseIdx] = { ...ex, setEntries: newSetEntries }
     setExercises(newExercises)
+
+    if (nextCompleted) {
+      triggerHaptic(50)
+      startRestTimer()
+    }
+  }
+
+  // Cycle set type: normal -> warmup -> drop -> failure -> normal
+  function cycleSetType(exerciseIdx: number, setIdx: number) {
+    const ex = exercises[exerciseIdx]
+    const currentSet = ex.setEntries[setIdx]
+    const typeOrder: SetType[] = ['normal', 'warmup', 'drop', 'failure']
+    const nextIndex = (typeOrder.indexOf(currentSet.type || 'normal') + 1) % typeOrder.length
+    const nextType = typeOrder[nextIndex]
+
+    const newSetEntries = [...ex.setEntries]
+    newSetEntries[setIdx] = { ...currentSet, type: nextType }
+
+    const newExercises = [...exercises]
+    newExercises[exerciseIdx] = { ...ex, setEntries: newSetEntries }
+    setExercises(newExercises)
+    triggerHaptic(20)
+  }
+
+  function adjustSetValues(exerciseIdx: number, setIdx: number, deltaWeight: number, deltaReps: number) {
+    const ex = exercises[exerciseIdx]
+    const set = ex.setEntries[setIdx]
+    const newWeight = Math.max(0, Math.round((set.weight + deltaWeight) * 10) / 10)
+    const newReps = Math.max(1, set.reps + deltaReps)
+
+    const newSetEntries = [...ex.setEntries]
+    newSetEntries[setIdx] = { ...set, weight: newWeight, reps: newReps }
+
+    const newExercises = [...exercises]
+    newExercises[exerciseIdx] = { ...ex, setEntries: newSetEntries }
+    setExercises(newExercises)
+    triggerHaptic(20)
+  }
+
+  function updateExerciseName(idx: number, name: string) {
+    const matchedEx = allExercises.find(e => e.name.toLowerCase() === name.trim().toLowerCase())
+    const exerciseId = matchedEx ? matchedEx.id : `new-${Date.now()}`
+
+    const newExercises = [...exercises]
+    newExercises[idx] = {
+      ...newExercises[idx],
+      exerciseId,
+      exerciseName: name
+    }
+    setExercises(newExercises)
+
+    if (matchedEx) {
+      void fetchPreviousPerformances([matchedEx.id])
+    }
   }
 
   function addExercise() {
-    setExercises([...exercises, { exerciseId: `new-${Date.now()}`, exerciseName: '', setEntries: [{ sets: 3, reps: 10, weight: 0 }] }])
+    setExercises(prev => [
+      ...prev,
+      {
+        exerciseId: `new-${Date.now()}`,
+        exerciseName: '',
+        setEntries: [
+          { sets: 1, reps: 10, weight: 0, completed: false, type: 'normal' },
+          { sets: 1, reps: 10, weight: 0, completed: false, type: 'normal' },
+          { sets: 1, reps: 10, weight: 0, completed: false, type: 'normal' }
+        ]
+      }
+    ])
   }
 
   function removeExercise(idx: number) {
-    const newExercises = exercises.filter((_, i) => i !== idx)
+    setExercises(prev => prev.filter((_, i) => i !== idx))
+  }
+
+  function addSet(exerciseIdx: number) {
+    const ex = exercises[exerciseIdx]
+    const lastSet = ex.setEntries[ex.setEntries.length - 1]
+    const newSet: ActiveSetEntry = {
+      sets: 1,
+      reps: lastSet?.reps || 10,
+      weight: lastSet?.weight || 0,
+      completed: false,
+      type: 'normal'
+    }
+
+    const newExercises = [...exercises]
+    newExercises[exerciseIdx] = {
+      ...ex,
+      setEntries: [...ex.setEntries, newSet]
+    }
+    setExercises(newExercises)
+  }
+
+  function removeSet(exerciseIdx: number, setIdx: number) {
+    const ex = exercises[exerciseIdx]
+    if (ex.setEntries.length <= 1) return
+
+    const newExercises = [...exercises]
+    newExercises[exerciseIdx] = {
+      ...ex,
+      setEntries: ex.setEntries.filter((_, i) => i !== setIdx)
+    }
     setExercises(newExercises)
   }
 
@@ -228,78 +372,127 @@ export function LogSession() {
     setDraggedExerciseIndex(null)
   }
 
-  function handleExerciseDragKey(event: KeyboardEvent, index: number) {
-    const direction = event.key === 'ArrowUp' ? -1 : event.key === 'ArrowDown' ? 1 : 0
-    if (!direction) return
-    event.preventDefault()
-    moveExercise(index, index + direction)
-  }
+  async function handleFinishSession() {
+    if (exercises.length === 0) return
+    setSaving(true)
+    try {
+      const template = templates.find(t => t.id === selectedTemplateId)
+      const templateTitle = template?.name || 'Fritt pass'
 
-  function dragHandle(index: number) {
-    return (
-      <button
-        type="button"
-        class="drag-handle"
-        aria-label={`Flytta övning ${index + 1}. Använd uppåt- och nedåtpil eller dra.`}
-        onPointerDown={event => startExerciseDrag(event, index)}
-        onPointerMove={continueExerciseDrag}
-        onPointerUp={endExerciseDrag}
-        onPointerCancel={endExerciseDrag}
-        onKeyDown={event => handleExerciseDragKey(event, index)}
-      >
-        <span aria-hidden="true">⋮⋮</span>
-      </button>
-    )
-  }
+      const validExercises = await Promise.all(
+        exercises.map(async (e, order) => {
+          let exerciseId = e.exerciseId
+          if (!exerciseId || exerciseId.startsWith('new-')) {
+            const ex = await getOrCreateExercise(e.exerciseName)
+            exerciseId = ex.id
+          }
 
-  function addSetToExercise(exerciseIdx: number) {
-    const newExercises = [...exercises]
-    newExercises[exerciseIdx] = {
-      ...newExercises[exerciseIdx],
-      setEntries: [...newExercises[exerciseIdx].setEntries, { sets: 1, reps: 10, weight: 0 }]
+          // Konvertera ActiveSetEntry[] till SetEntry[] för historiklagring
+          const setEntries: SetEntry[] = e.setEntries.map(s => ({
+            sets: s.sets || 1,
+            reps: s.reps || 10,
+            weight: s.weight || 0
+          }))
+
+          return {
+            exerciseId,
+            exerciseName: e.exerciseName,
+            setEntries,
+            order
+          }
+        })
+      )
+
+      await createSession(date, selectedTemplateId || 'custom', templateTitle, validExercises)
+      setSaved(true)
+      setExercises([])
+      await clearActiveWorkout()
+      triggerHaptic([60, 40, 100])
+      setTimeout(() => {
+        setSaved(false)
+        window.location.href = `${import.meta.env.BASE_URL}history`
+      }, 1200)
+    } catch (err) {
+      console.error('Kunde inte spara pass:', err)
+      setError('Kunde inte spara pass')
+    } finally {
+      setSaving(false)
     }
-    setExercises(newExercises)
   }
 
-  function removeSetFromExercise(exerciseIdx: number, setIdx: number) {
-    const newExercises = [...exercises]
-    if (newExercises[exerciseIdx].setEntries.length > 1) {
-      newExercises[exerciseIdx] = {
-        ...newExercises[exerciseIdx],
-        setEntries: newExercises[exerciseIdx].setEntries.filter((_, i) => i !== setIdx)
-      }
+  async function handleCancelSession() {
+    await clearActiveWorkout()
+    setCancelDialogOpen(false)
+    setExercises([])
+    window.location.href = `${import.meta.env.BASE_URL}`
+  }
+
+  async function handleSaveAsTemplate() {
+    if (exercises.length === 0 || !templateName.trim()) return
+    try {
+      const templateExercises = await Promise.all(
+        exercises.map(async e => {
+          let exerciseId = e.exerciseId
+          if (!exerciseId || exerciseId.startsWith('new-')) {
+            const ex = await getOrCreateExercise(e.exerciseName)
+            exerciseId = ex.id
+          }
+          return {
+            exerciseId,
+            defaultSetEntry: {
+              sets: e.setEntries.length,
+              reps: e.setEntries[0]?.reps || 10,
+              weight: e.setEntries[0]?.weight || 0
+            }
+          }
+        })
+      )
+      const newTemplate = await createTemplate(templateName.trim(), templateExercises)
+      setTemplates(prev => [...prev, newTemplate].sort((a, b) => a.name.localeCompare(b.name)))
+      setSelectedTemplateId(newTemplate.id)
+      setShowSaveTemplate(false)
+      setTemplateName('')
+    } catch (err) {
+      console.error('Kunde inte spara mall:', err)
+      setError('Kunde inte spara mall')
+    }
+  }
+
+  function openPlateCalculator(weight: number, exIdx: number, setIdx: number) {
+    setPlateCalcModal({
+      isOpen: true,
+      weight,
+      exIdx,
+      setIdx
+    })
+  }
+
+  function applyPlateCalculatorWeight(newWeight: number) {
+    const { exIdx, setIdx } = plateCalcModal
+    if (exercises[exIdx] && exercises[exIdx].setEntries[setIdx]) {
+      const ex = exercises[exIdx]
+      const newSetEntries = [...ex.setEntries]
+      newSetEntries[setIdx] = { ...newSetEntries[setIdx], weight: newWeight }
+      const newExercises = [...exercises]
+      newExercises[exIdx] = { ...ex, setEntries: newSetEntries }
       setExercises(newExercises)
     }
   }
 
-  function handleInputChange(e: Event, idx: number, field: keyof FormExercise, setIdx?: number, nestedField?: keyof SetEntry) {
-    const target = e.target as HTMLInputElement
-    const value = target.type === 'number' ? (parseFloat(target.value) || 0) : target.value
-    
-    if (field === 'setEntries' && setIdx !== undefined && nestedField) {
-      const exercise = exercises[idx]
-      const newSetEntries = [...exercise.setEntries]
-      newSetEntries[setIdx] = { ...newSetEntries[setIdx], [nestedField]: value }
-      updateExercise(idx, 'setEntries', newSetEntries)
-    } else {
-      updateExercise(idx, field, value)
-    }
-  }
+  // Calculate live total volume
+  const totalVolume = exercises.reduce((sum, e) => {
+    return sum + e.setEntries.reduce((setSum, s) => setSum + (s.weight > 0 ? (s.sets || 1) * s.reps * s.weight : 0), 0)
+  }, 0)
 
-  function handleDateChange(e: Event) {
-    const target = e.target as HTMLInputElement
-    setDate(target.value)
-  }
+  const completedSetsCount = exercises.reduce((sum, e) => {
+    return sum + e.setEntries.filter(s => s.completed).length
+  }, 0)
 
-  function handleSelectChange(e: Event) {
-    const target = e.target as HTMLSelectElement
-    setSelectedTemplateId(target.value)
-    setPrefillSessionId(null)
-  }
+  const totalSetsCount = exercises.reduce((sum, e) => sum + e.setEntries.length, 0)
 
   if (loading) {
     return (
-      <div>
+      <div class="log-session-container">
         <h1 class="page-title">Logga pass</h1>
         <Card class="skeleton skeleton-card mb"></Card>
         <Card class="skeleton skeleton-card mb"></Card>
@@ -310,239 +503,345 @@ export function LogSession() {
   if (error) {
     return (
       <EmptyState
-        title="Fel vid laddning"
+        title="Något gick fel"
         message={error}
-        action={<Button onClick={checkPrefill}>Försök igen</Button>}
+        action={<Button onClick={initSession}>Försök igen</Button>}
       />
     )
   }
 
   return (
     <div class="log-session-layout">
-      <aside class="log-session-timer"><RestTimer /></aside>
-      <div>
-        <h1 class="page-title">Logga pass</h1>
+      {/* Global Datalist för övningsförslag (renderas en gång för giltig HTML) */}
+      <datalist id="exercise-suggestions">
+        {allExercises.map(e => (
+          <option key={e.id} value={e.name} />
+        ))}
+      </datalist>
 
-      <Card>
-        <div class="grid grid-2 mb">
-          <Field label="Datum" class="m-0">
-            <input type="date" value={date} onChange={handleDateChange} />
-          </Field>
-          <Field label="Mall" class="m-0">
-            <select value={selectedTemplateId} onChange={handleSelectChange}>
-              {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </select>
-          </Field>
-        </div>
-      </Card>
+      {/* Sidopanel med vilotimer på desktop */}
+      <aside class="log-session-timer">
+        <RestTimer />
+      </aside>
 
-      <Card title="Övningar">
-        <div class="flex justify-between items-center mb-sm gap-sm">
-          <p class="m-0 text-muted text-sm">Övningarna du fyller i här kan sparas som en mall.</p>
-          <Button variant="secondary" size="sm" onClick={() => setShowSaveTemplate(v => !v)}>
-            Spara som mall
-          </Button>
-        </div>
-        {showSaveTemplate && (
-          <div class="card mb">
-            <form
-              class="flex gap-sm items-end"
-              onSubmit={e => {
-                e.preventDefault()
-                handleSaveAsTemplate()
-              }}
-            >
-              <Field label="Mallnamn" class="m-0 grow">
-                <input
-                  type="text"
-                  value={templateName}
-                  onInput={(e: Event) => setTemplateName((e.target as HTMLInputElement).value)}
-                  placeholder="t.ex. Bröst, axlar & triceps – lång"
-                  autoFocus
-                />
-              </Field>
-              <Button type="submit" disabled={!templateName.trim() || exercises.length === 0}>
-                Spara mall
-              </Button>
-            </form>
+      <div class="log-session-main">
+        <div class="flex justify-between items-center mb">
+          <div>
+            <h1 class="page-title m-0">Aktivt träningspass</h1>
+            <span class="text-xs text-muted">
+              {completedSetsCount} av {totalSetsCount} set klara • Volym: {totalVolume.toLocaleString('sv-SE')} kg
+            </span>
           </div>
-        )}
-        {exercises.length === 0 ? (
-          <EmptyState
-            title="Lägg till övningar"
-            message="Välj en mall ovan eller lägg till övningar manuellt."
-            action={<Button onClick={addExercise}>Lägg till övning</Button>}
-          />
-        ) : (
-          <>
-            <datalist id="exercise-suggestions">
-              {allExercises.map(e => (
-                <option key={e.id} value={e.name} />
-              ))}
-            </datalist>
-            <div class="exercise-list">
-              <div class="exercise-list-table">
-                <table>
-                  <thead>
-                    <tr>
-                      <th aria-label="Ordning"></th>
-                      <th>Övning</th>
-                      <th>Set</th>
-                      <th>Reps</th>
-                      <th>Vikt (kg)</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {exercises.map((ex, idx) => (
-                      <tr
-                        key={idx}
-                        data-exercise-index={idx}
-                        class={draggedExerciseIndex === idx ? 'exercise-row-dragging' : ''}
-                      >
-                        <td class="drag-cell">{dragHandle(idx)}</td>
-                        <td>
-                          <input
-                            type="text"
-                            value={ex.exerciseName}
-                            onChange={e => handleInputChange(e, idx, 'exerciseName')}
-                            placeholder="Skriv övningsnamn..."
-                            list="exercise-suggestions"
-                            class="table-input"
-                          />
-                        </td>
-                        <td>
-                          <input 
-                            type="number" 
-                            min="1" 
-                            max="20" 
-                            value={ex.setEntries[0]?.sets || 0} 
-                            onChange={e => handleInputChange(e, idx, 'setEntries', 0, 'sets')} 
-                            class="table-input" 
-                          />
-                        </td>
-                        <td>
-                          <input 
-                            type="number" 
-                            min="1" 
-                            max="50" 
-                            value={ex.setEntries[0]?.reps || 0} 
-                            onChange={e => handleInputChange(e, idx, 'setEntries', 0, 'reps')} 
-                            class="table-input" 
-                          />
-                        </td>
-                        <td>
-                          <input 
-                            type="number" 
-                            min="0" 
-                            step="0.5" 
-                            max="500" 
-                            value={ex.setEntries[0]?.weight || 0} 
-                            onChange={e => handleInputChange(e, idx, 'setEntries', 0, 'weight')} 
-                            class="table-input" 
-                          />
-                        </td>
-                        <td class="remove-cell">
-                          <button class="btn-remove" onClick={() => removeExercise(idx)} aria-label="Ta bort">
-                            <svg width="20" height="20" viewBox="0 0 19 19">
-                              <use href={icon('trash-icon')} />
-                            </svg>
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div class="exercise-list-cards">
-                {exercises.map((ex, idx) => (
-                  <div
-                    key={idx}
-                    data-exercise-index={idx}
-                    class={`exercise-card${draggedExerciseIndex === idx ? ' exercise-row-dragging' : ''}`}
+          <div class="flex gap-sm">
+            <Button variant="secondary" size="sm" onClick={() => setCancelDialogOpen(true)}>
+              Avbryt
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleFinishSession}
+              disabled={saving || exercises.length === 0}
+            >
+              {saving ? 'Sparar...' : 'Slutför pass'}
+            </Button>
+          </div>
+        </div>
+
+        {/* Passinställningar & mallval */}
+        <Card class="mb">
+          <div class="grid grid-2 gap-3">
+            <Field label="Datum" class="m-0">
+              <input type="date" value={date} onChange={(e: Event) => setDate((e.target as HTMLInputElement).value)} />
+            </Field>
+            <Field label="Passtyp / Mall" class="m-0">
+              <select value={selectedTemplateId} onChange={(e: Event) => handleSelectTemplate((e.target as HTMLSelectElement).value)}>
+                <option value="">Fritt pass (egen uppsättning)</option>
+                {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            </Field>
+          </div>
+        </Card>
+
+        {/* Övningslista */}
+        <div class="exercise-section mb">
+          <div class="flex justify-between items-center mb-sm">
+            <h2 class="m-0 text-lg">Övningar</h2>
+            <Button variant="secondary" size="sm" onClick={() => setShowSaveTemplate(v => !v)}>
+              {showSaveTemplate ? 'Dölj mallsparning' : 'Spara som ny mall'}
+            </Button>
+          </div>
+
+          {showSaveTemplate && (
+            <Card class="mb">
+              <form
+                class="flex gap-sm items-end"
+                onSubmit={e => {
+                  e.preventDefault()
+                  handleSaveAsTemplate()
+                }}
+              >
+                <Field label="Mallnamn" class="m-0 grow">
+                  <input
+                    type="text"
+                    value={templateName}
+                    onInput={(e: Event) => setTemplateName((e.target as HTMLInputElement).value)}
+                    placeholder="T.ex. Bröst & Axlar tung"
+                    autoFocus
+                  />
+                </Field>
+                <Button type="submit" disabled={!templateName.trim() || exercises.length === 0}>
+                  Spara mall
+                </Button>
+              </form>
+            </Card>
+          )}
+
+          {exercises.length === 0 ? (
+            <Card>
+              <EmptyState
+                title="Inga övningar tillagda"
+                message="Välj en mall ovan eller lägg till din första övning."
+                action={<Button onClick={addExercise}>+ Lägg till övning</Button>}
+              />
+            </Card>
+          ) : (
+            <div class="exercise-cards-list">
+              {exercises.map((ex, exIdx) => {
+                const prev = previousPerformances[ex.exerciseId]
+                return (
+                  <Card
+                    key={ex.exerciseId || exIdx}
+                    class={`exercise-live-card mb ${draggedExerciseIndex === exIdx ? 'exercise-row-dragging' : ''}`}
+                    data-exercise-index={exIdx}
                   >
-                    <div class="exercise-card-header">
-                      <div class="exercise-card-title">
-                        {dragHandle(idx)}
-                        <h4>Övning {idx + 1}</h4>
+                    <div class="exercise-live-header flex justify-between items-center mb-sm">
+                      <div class="flex items-center gap-2 grow">
+                        <button
+                          type="button"
+                          class="drag-handle"
+                          aria-label="Flytta övning"
+                          onPointerDown={e => startExerciseDrag(e, exIdx)}
+                          onPointerMove={continueExerciseDrag}
+                          onPointerUp={endExerciseDrag}
+                          onPointerCancel={endExerciseDrag}
+                        >
+                          <span aria-hidden="true">⋮⋮</span>
+                        </button>
+                        <input
+                          type="text"
+                          value={ex.exerciseName}
+                          onChange={(e: Event) => updateExerciseName(exIdx, (e.target as HTMLInputElement).value)}
+                          placeholder="Övningsnamn..."
+                          list="exercise-suggestions"
+                          class="exercise-title-input"
+                        />
                       </div>
-                      <button class="btn-remove" onClick={() => removeExercise(idx)} aria-label="Ta bort">
+                      <button
+                        type="button"
+                        class="btn-remove"
+                        onClick={() => removeExercise(exIdx)}
+                        aria-label="Ta bort övning"
+                      >
                         <svg width="20" height="20" viewBox="0 0 19 19">
                           <use href={icon('trash-icon')} />
                         </svg>
                       </button>
                     </div>
-                    <div class="exercise-card-fields">
-                      <div class="input-group">
-                        <label>Övning</label>
-                        <input
-                          type="text"
-                          value={ex.exerciseName}
-                          onChange={e => handleInputChange(e, idx, 'exerciseName')}
-                          placeholder="Skriv övningsnamn..."
-                          list="exercise-suggestions"
-                        />
+
+                    {prev && prev.setEntries.length > 0 && (
+                      <div class="exercise-prev-banner mb-sm">
+                        <span class="text-xs text-muted">
+                          Förra gången ({prev.date}):{' '}
+                          <strong>
+                            {prev.setEntries.map(s => `${s.weight} kg × ${s.reps}`).join(', ')}
+                          </strong>
+                        </span>
                       </div>
-                      {ex.setEntries.map((set, setIdx) => (
-                        <div key={setIdx} class="input-group grid-3">
-                          <div>
-                            <label>Set {setIdx + 1}</label>
-                            <input 
-                              type="number" 
-                              min="1" 
-                              max="20" 
-                              value={set.sets} 
-                              onChange={e => handleInputChange(e, idx, 'setEntries', setIdx, 'sets')} 
-                            />
-                          </div>
-                          <div>
-                            <label>Reps</label>
-                            <input 
-                              type="number" 
-                              min="1" 
-                              max="50" 
-                              value={set.reps} 
-                              onChange={e => handleInputChange(e, idx, 'setEntries', setIdx, 'reps')} 
-                            />
-                          </div>
-                          <div>
-                            <label>Vikt (kg)</label>
-                            <input 
-                              type="number" 
-                              min="0" 
-                              step="0.5" 
-                              max="500" 
-                              value={set.weight} 
-                              onChange={e => handleInputChange(e, idx, 'setEntries', setIdx, 'weight')} 
-                            />
-                          </div>
-                          {ex.setEntries.length > 1 && (
-                            <div class="m-0">
-                              <Button variant="danger" size="sm" class="h-full" onClick={() => removeSetFromExercise(idx, setIdx)}>Ta bort</Button>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                      <Button variant="secondary" size="sm" class="mt-1" onClick={() => addSetToExercise(idx)}>+ Lägg till set</Button>
+                    )}
+
+                    <div class="set-rows-table-wrap">
+                      <table class="set-rows-table">
+                        <thead>
+                          <tr>
+                            <th class="col-type">Typ</th>
+                            <th class="col-prev">Föregående</th>
+                            <th class="col-kg">Kg</th>
+                            <th class="col-reps">Reps</th>
+                            <th class="col-plate"></th>
+                            <th class="col-check">Klar</th>
+                            <th class="col-del"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {ex.setEntries.map((set, setIdx) => {
+                            const prevSet = prev?.setEntries[setIdx]
+                            const prevText = prevSet ? `${prevSet.weight} kg × ${prevSet.reps}` : '—'
+                            const isCompleted = Boolean(set.completed)
+                            const setType = set.type || 'normal'
+
+                            const badgeLabel =
+                              setType === 'warmup' ? 'W' :
+                              setType === 'drop' ? 'D' :
+                              setType === 'failure' ? 'F' :
+                              `${setIdx + 1}`
+
+                            return (
+                              <tr
+                                key={setIdx}
+                                class={`set-row ${isCompleted ? 'set-row-completed' : ''} set-type-${setType}`}
+                              >
+                                <td class="col-type">
+                                  <button
+                                    type="button"
+                                    class={`set-type-badge badge-${setType}`}
+                                    onClick={() => cycleSetType(exIdx, setIdx)}
+                                    title="Klicka för att byta settyp (Normal, Warmup, Drop, Failure)"
+                                  >
+                                    {badgeLabel}
+                                  </button>
+                                </td>
+                                <td class="col-prev text-xs text-muted tabular-nums">
+                                  {prevText}
+                                </td>
+                                <td class="col-kg">
+                                  <div class="input-with-steppers">
+                                    <input
+                                      type="number"
+                                      step="0.5"
+                                      min="0"
+                                      max="500"
+                                      value={set.weight}
+                                      onChange={(e: Event) => {
+                                        const val = parseFloat((e.target as HTMLInputElement).value) || 0
+                                        const newSetEntries = [...ex.setEntries]
+                                        newSetEntries[setIdx] = { ...set, weight: val }
+                                        const newExs = [...exercises]
+                                        newExs[exIdx] = { ...ex, setEntries: newSetEntries }
+                                        setExercises(newExs)
+                                      }}
+                                      class="set-input"
+                                    />
+                                    <div class="stepper-buttons">
+                                      <button type="button" onClick={() => adjustSetValues(exIdx, setIdx, 2.5, 0)}>+2,5</button>
+                                      <button type="button" onClick={() => adjustSetValues(exIdx, setIdx, -2.5, 0)}>-2,5</button>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td class="col-reps">
+                                  <div class="input-with-steppers">
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      max="100"
+                                      value={set.reps}
+                                      onChange={(e: Event) => {
+                                        const val = parseInt((e.target as HTMLInputElement).value, 10) || 1
+                                        const newSetEntries = [...ex.setEntries]
+                                        newSetEntries[setIdx] = { ...set, reps: val }
+                                        const newExs = [...exercises]
+                                        newExs[exIdx] = { ...ex, setEntries: newSetEntries }
+                                        setExercises(newExs)
+                                      }}
+                                      class="set-input"
+                                    />
+                                    <div class="stepper-buttons">
+                                      <button type="button" onClick={() => adjustSetValues(exIdx, setIdx, 0, 1)}>+1</button>
+                                      <button type="button" onClick={() => adjustSetValues(exIdx, setIdx, 0, -1)}>-1</button>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td class="col-plate">
+                                  <button
+                                    type="button"
+                                    class="btn-calc"
+                                    onClick={() => openPlateCalculator(set.weight, exIdx, setIdx)}
+                                    title="Öppna plattkalkylator"
+                                    aria-label="Plattkalkylator"
+                                  >
+                                    🎛️
+                                  </button>
+                                </td>
+                                <td class="col-check">
+                                  <button
+                                    type="button"
+                                    class={`btn-check-set ${isCompleted ? 'checked' : ''}`}
+                                    onClick={() => toggleSetCompleted(exIdx, setIdx)}
+                                    aria-label={isCompleted ? 'Markera som ej klar' : 'Markera som klar'}
+                                  >
+                                    {isCompleted ? '✓' : ''}
+                                  </button>
+                                </td>
+                                <td class="col-del">
+                                  {ex.setEntries.length > 1 && (
+                                    <button
+                                      type="button"
+                                      class="btn-remove-sm"
+                                      onClick={() => removeSet(exIdx, setIdx)}
+                                      aria-label="Ta bort set"
+                                    >
+                                      ×
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
                     </div>
-                  </div>
-                ))}
-              </div>
-              <Button variant="secondary" class="mt" onClick={addExercise}>+ Lägg till övning</Button>
+
+                    <div class="flex justify-between items-center mt-sm">
+                      <Button variant="secondary" size="sm" onClick={() => addSet(exIdx)}>
+                        + Lägg till set
+                      </Button>
+                    </div>
+                  </Card>
+                )
+              })}
+
+              <Button variant="secondary" class="btn-block mt" onClick={addExercise}>
+                + Lägg till övning
+              </Button>
             </div>
-          </>
+          )}
+        </div>
+
+        {/* Avsluta eller spara knappar */}
+        <div class="flex gap mt mb-lg">
+          <Button
+            variant="primary"
+            size="lg"
+            class="grow"
+            onClick={handleFinishSession}
+            disabled={saving || exercises.length === 0}
+          >
+            {saving ? 'Sparar pass...' : 'Slutför och spara pass'}
+          </Button>
+        </div>
+
+        {saved && <div class="toast">Passet har sparats framgångsrikt!</div>}
+
+        {/* Avbryt pass dialog */}
+        {cancelDialogOpen && (
+          <div class="dialog-overlay" onClick={() => setCancelDialogOpen(false)}>
+            <div class="dialog" onClick={e => e.stopPropagation()}>
+              <h3 class="m-0 mb-sm">Avbryt träningspass?</h3>
+              <p>Om du avbryter rensas ditt påbörjade pass och ändringarna försvinner.</p>
+              <div class="flex gap mt justify-end">
+                <Button variant="secondary" onClick={() => setCancelDialogOpen(false)}>Fortsätt träna</Button>
+                <Button variant="danger" onClick={handleCancelSession}>Avbryt pass</Button>
+              </div>
+            </div>
+          </div>
         )}
-      </Card>
 
-      <div class="flex gap">
-        <Button class="flex-1" onClick={handleSave} disabled={saving || exercises.length === 0}>
-          {saving ? 'Sparar...' : 'Spara pass'}
-        </Button>
-      </div>
-
-      {saved && (
-        <div class="toast">Pass sparat!</div>
-      )}
+        {/* Plattkalkylator modal */}
+        <PlateCalculatorModal
+          isOpen={plateCalcModal.isOpen}
+          initialWeight={plateCalcModal.weight}
+          onClose={() => setPlateCalcModal(prev => ({ ...prev, isOpen: false }))}
+          onApplyWeight={applyPlateCalculatorWeight}
+        />
       </div>
     </div>
   )

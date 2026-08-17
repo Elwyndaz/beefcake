@@ -884,6 +884,328 @@ canvas { display: block; max-width: 100%; }
   margin-bottom: var(--space-2);
 }
 
+/* ===================================================================
+   LIVE WORKOUT & SET ROW STYLES (AAA Experience)
+   =================================================================== */
+
+.active-workout-card {
+  border-left: 4px solid var(--accent);
+  background: var(--surface-raised);
+}
+
+.exercise-live-card {
+  border: 1px solid var(--border);
+  transition: border-color var(--motion-normal);
+}
+
+.exercise-title-input {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  border: none;
+  background: transparent;
+  padding: var(--space-1) var(--space-2);
+  width: 100%;
+  color: var(--text);
+}
+.exercise-title-input:focus {
+  background: var(--surface-hover);
+  border-radius: var(--radius-sm);
+  outline: none;
+}
+
+.exercise-prev-banner {
+  background: var(--surface-hover);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  display: inline-block;
+}
+
+.set-rows-table-wrap {
+  overflow-x: auto;
+  margin-bottom: var(--space-3);
+}
+
+.set-rows-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.set-rows-table th {
+  text-align: left;
+  padding: var(--space-2);
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border);
+}
+
+.set-rows-table td {
+  padding: var(--space-2);
+  vertical-align: middle;
+}
+
+.set-row {
+  transition: background-color var(--motion-fast);
+  border-bottom: 1px solid var(--border);
+}
+
+.set-row:hover {
+  background-color: var(--surface-hover);
+}
+
+.set-row-completed {
+  background-color: rgba(16, 185, 129, 0.08);
+}
+.set-row-completed .set-input {
+  background-color: rgba(16, 185, 129, 0.12);
+  color: var(--text);
+}
+
+/* Set Type Badges */
+.set-type-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  font-size: var(--text-xs);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  transition: transform var(--motion-fast);
+}
+.set-type-badge:hover {
+  transform: scale(1.08);
+}
+.badge-warmup {
+  background: #fef3c7;
+  color: #92400e;
+  border-color: #fde68a;
+}
+.badge-drop {
+  background: #ede9fe;
+  color: #5b21b6;
+  border-color: #ddd6fe;
+}
+.badge-failure {
+  background: #fee2e2;
+  color: #991b1b;
+  border-color: #fecaca;
+}
+
+/* Inputs with Steppers */
+.input-with-steppers {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.set-input {
+  width: 72px;
+  height: 38px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  font-weight: 600;
+  padding: 0 var(--space-1);
+}
+
+.stepper-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stepper-buttons button {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 5px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--surface-hover);
+  color: var(--text-muted);
+  cursor: pointer;
+  line-height: 1;
+}
+.stepper-buttons button:hover {
+  background: var(--surface-raised);
+  color: var(--text);
+}
+
+/* Check Set Button */
+.btn-check-set {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--border);
+  background: var(--surface);
+  color: #ffffff;
+  font-size: 1.25rem;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--motion-fast);
+}
+.btn-check-set:hover {
+  border-color: var(--success);
+}
+.btn-check-set.checked {
+  background: var(--success);
+  border-color: var(--success);
+  transform: scale(1.05);
+}
+
+.btn-calc {
+  background: transparent;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+}
+.btn-calc:hover {
+  background: var(--surface-hover);
+}
+
+.btn-remove-sm {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.3rem;
+  cursor: pointer;
+  padding: 0 4px;
+}
+.btn-remove-sm:hover {
+  color: var(--danger);
+}
+
+/* ===================================================================
+   PLATE CALCULATOR MODAL STYLES
+   =================================================================== */
+
+.plate-calc-dialog {
+  max-width: 500px;
+  width: 100%;
+}
+
+.plate-calc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-4);
+  background: var(--surface-hover);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius);
+}
+
+.plate-calc-weight-display {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-1);
+}
+.plate-calc-weight-display .weight-number {
+  font-size: var(--text-3xl);
+  font-weight: 900;
+  font-family: var(--font-mono);
+  color: var(--text);
+  line-height: 1;
+}
+.plate-calc-weight-display .weight-unit {
+  font-size: var(--text-base);
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+.plate-calc-visual-wrap {
+  background: #0f172a;
+  border-radius: var(--radius);
+  padding: var(--space-5) var(--space-4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 140px;
+}
+
+.plate-calc-visual {
+  display: flex;
+  align-items: center;
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+}
+
+.barbell-shaft {
+  flex: 1;
+  height: 12px;
+  background: #94a3b8;
+  border-radius: 0 6px 6px 0;
+}
+
+.barbell-collar {
+  width: 14px;
+  height: 38px;
+  background: #64748b;
+  border-radius: 3px;
+  margin-right: 4px;
+}
+
+.plates-stack {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-direction: row-reverse;
+}
+
+.visual-plate {
+  width: 22px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 900;
+  font-family: var(--font-mono);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.barbell-sleeve {
+  width: 28px;
+  height: 18px;
+  background: #cbd5e1;
+  border-radius: 4px 0 0 4px;
+}
+
+.plate-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.plate-badge {
+  background: var(--surface-hover);
+  padding: var(--space-1) var(--space-3);
+  border-radius: 20px;
+  font-size: var(--text-xs);
+  border: 1px solid var(--border);
+}
+
+
 /* Responsive Breakpoints */
 @media (max-width: 600px) {
   .header { padding: var(--space-4); }

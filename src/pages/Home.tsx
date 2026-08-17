@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'preact/hooks'
 import { useLocation } from 'wouter'
-import { getAllSessions, getAllTemplates } from '../services/dataService'
+import { getAllSessions, getAllTemplates, getActiveWorkout } from '../services/dataService'
 import { checkReminder } from '../services/reminderService'
 import { formatDateWithWeekday } from '../lib/date'
 import { icon } from '../icons'
@@ -8,7 +8,7 @@ import { Card } from '../components/Card'
 import { Button } from '../components/Button'
 import { Stat } from '../components/Stat'
 import { EmptyState } from '../components/EmptyState'
-import type { Session } from '../models'
+import type { Session, ActiveWorkout } from '../models'
 
 export function Home() {
   const [, navigate] = useLocation()
@@ -17,6 +17,7 @@ export function Home() {
   const [templateCount, setTemplateCount] = useState(0)
   const [totalSessions, setTotalSessions] = useState(0)
   const [lastWorkout, setLastWorkout] = useState<string | null>(null)
+  const [activeWorkout, setActiveWorkout] = useState<ActiveWorkout | null>(null)
   const [showReminder, setShowReminder] = useState<{ show: boolean; daysSince: number } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -42,13 +43,19 @@ export function Home() {
     try {
       setLoading(true)
       setError(null)
-      const [sessions, allTemplates] = await Promise.all([
+      const [sessions, allTemplates, active] = await Promise.all([
         getAllSessions(),
-        getAllTemplates()
+        getAllTemplates(),
+        getActiveWorkout()
       ])
       setRecentSessions(sessions.slice(0, 5))
       setTemplateCount(allTemplates.length)
       setTotalSessions(sessions.length)
+      if (active && active.exercises.length > 0) {
+        setActiveWorkout(active)
+      } else {
+        setActiveWorkout(null)
+      }
       if (sessions.length > 0) {
         setLastWorkout(sessions[0].date)
         // Extrahera unika template-namn från senaste sessioner
@@ -110,6 +117,27 @@ export function Home() {
         </div>
       )}
       <h1 class="page-title">Översikt</h1>
+
+      {activeWorkout && (
+        <Card class="mb active-workout-card">
+          <div class="flex justify-between items-center flex-wrap gap-sm">
+            <div>
+              <span class="badge badge-primary mb-1">⚡ Pågående pass</span>
+              <h3 class="m-0">{activeWorkout.templateName}</h3>
+              <p class="text-xs text-muted m-0 mt-1">
+                {activeWorkout.exercises.length} övningar påbörjade • Startat {activeWorkout.date}
+              </p>
+            </div>
+            <Button
+              variant="primary"
+              size="lg"
+              onClick={() => navigate('/log')}
+            >
+              Återuppta pass
+            </Button>
+          </div>
+        </Card>
+      )}
 
       <Card>
         <h2 class="m-0 mb-sm">Nästa pass</h2>

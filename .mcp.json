@@ -2,7 +2,22 @@
   "mcpServers": {
     "graft": {
       "command": "npx",
-      "args": ["-y", "@nanonets/graft", "mcp", "C:\\dev\\beefcake"]
+      "args": [
+        "-y",
+        "@nanonets/graft",
+        "mcp",
+        "C:\\dev\\beefcake"
+      ]
+    },
+    "repowise": {
+      "command": "repowise",
+      "args": [
+        "mcp",
+        "C:/dev/beefcake",
+        "--transport",
+        "stdio"
+      ],
+      "description": "repowise: codebase intelligence \u2014 docs, graph, git signals, dead code, decisions"
     }
   }
 }

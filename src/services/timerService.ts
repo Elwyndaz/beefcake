@@ -44,3 +44,18 @@ export async function requestRestTimerNotifications(): Promise<NotificationPermi
   if (!('Notification' in window)) return 'unsupported'
   return Notification.requestPermission()
 }
+
+export function startRestTimer(seconds?: number): void {
+  window.dispatchEvent(new CustomEvent('beefcake-start-timer', { detail: { seconds } }))
+}
+
+export function triggerHaptic(pattern: number | number[] = 40): void {
+  if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+    try {
+      navigator.vibrate(pattern)
+    } catch {
+      // Ignore vibration errors if blocked by browser
+    }
+  }
+}
+

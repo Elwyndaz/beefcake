@@ -95,6 +95,26 @@ export function RestTimer() {
     return () => window.clearInterval(interval)
   }, [status])
 
+  useEffect(() => {
+    const handleStart = (event: Event) => {
+      const customEvent = event as CustomEvent<{ seconds?: number }>
+      const seconds = customEvent.detail?.seconds ?? (presets[selectedPreset] * 60)
+      setRemaining(seconds)
+      deadlineRef.current = Date.now() + seconds * 1000
+      setStatus('running')
+    }
+
+    window.addEventListener('beefcake-start-timer', handleStart)
+    return () => window.removeEventListener('beefcake-start-timer', handleStart)
+  }, [presets, selectedPreset])
+
+  function adjustTime(deltaSeconds: number) {
+    if (deadlineRef.current) {
+      deadlineRef.current += deltaSeconds * 1000
+    }
+    setRemaining(prev => Math.max(0, prev + deltaSeconds))
+  }
+
   function choosePreset(index: number) {
     setSelectedPreset(index)
     if (status !== 'running') {
@@ -154,6 +174,12 @@ export function RestTimer() {
 
       <div class="rest-timer-display" aria-live="polite">
         <span>{formatTime(remaining)}</span>
+        {isActive && (
+          <div class="rest-timer-adjust-group flex gap-sm justify-center mt-1">
+            <button type="button" class="btn btn-sm btn-secondary" onClick={() => adjustTime(-15)} aria-label="Minska 15 sekunder">-15s</button>
+            <button type="button" class="btn btn-sm btn-secondary" onClick={() => adjustTime(30)} aria-label="Öka 30 sekunder">+30s</button>
+          </div>
+        )}
       </div>
 
       <div class="rest-timer-presets" role="group" aria-label="Snabbval för vilotid">
