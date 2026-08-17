@@ -126,7 +126,7 @@ export function Home() {
               <span class="badge badge-primary mb-1">⚡ Pågående pass</span>
               <h3 class="m-0">{activeWorkout.templateName}</h3>
               <p class="text-xs text-muted m-0 mt-1">
-                {activeWorkout.exercises.length} övningar påbörjade • Startat {activeWorkout.date}
+                {activeWorkout.exercises.length} övningar påbörjade • Startat {formatDateWithWeekday(activeWorkout.date)}
               </p>
             </div>
             <Button
@@ -140,6 +140,8 @@ export function Home() {
         </Card>
       )}
 
+      {/* Utan mallar har kortet inget innehåll: tomma kortet ersätts av CTA:n i "Senaste pass". */}
+      {recentTemplates.length > 0 && (
       <Card>
         <h2 class="m-0 mb-sm">Nästa pass</h2>
         {recentTemplates.slice(0, 3).map((templateName) => (
@@ -153,6 +155,7 @@ export function Home() {
           </Button>
         ))}
       </Card>
+      )}
 
       <div class="grid grid-3 mb">
         <Card padding="sm">

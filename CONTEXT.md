@@ -21,21 +21,26 @@ Ordet **mall** används både om övningsprogram och passtyp i gränssnittet. De
 
 ## Datamodell
 
-Fyra object stores i IndexedDB `beefcake-db`. Typerna bor i `src/db/schema.ts` och återexporteras via `src/models/index.ts`.
+Fem object stores i IndexedDB `beefcake-db`. Typerna bor i `src/db/schema.ts` och återexporteras via `src/models/index.ts`.
 
 ```ts
 SetEntry         { sets, reps, weight }
-Exercise         { id, name, muscleGroup?, equipment?, createdAt }
+ExerciseKind     'weight' | 'bodyweight' | 'time' | 'distance'
+Exercise         { id, name, kind?, muscleGroup?, equipment?, createdAt }
 TemplateExercise { exerciseId, defaultSetEntry: SetEntry, order }
 Template         { id, name, exercises: TemplateExercise[], updatedAt }
 SessionExercise  { exerciseId, exerciseName, setEntries: SetEntry[], order }
 Session          { id, date (YYYY-MM-DD), templateId, templateName, exercises: SessionExercise[], createdAt }
 ExerciseHistory  { id, date, exerciseId, exerciseName, setEntries: SetEntry[], volume, sessionId }
+ActiveSetEntry   SetEntry plus { completed?, type?: 'normal'|'warmup'|'drop'|'failure', rpe? }
+ActiveWorkout    { id, date, templateId, templateName, exercises: ActiveExercise[], startTime, updatedAt }
 ```
 
 `setEntries` är en lista, så olika vikt eller reps per set fungerar. `Legacy*`-typerna och `migrate*`-funktionerna i `src/models/` konverterar gammal seed-struktur och får inte tas bort så länge `seedData.ts` har den gamla formen.
 
-Modellen saknar fortfarande `Exercise.kind` för kroppsvikt, tid och distans. Därför har 95 konditionspass volym 0 och kroppsviktsövningar räknas fel. Bygg inget som gör det svårare att lägga till.
+`activeWorkout` håller **ett** påbörjat pass, sparat vid varje ändring i loggvyn. Det är utkastet, inte ett pass: det blir en `Session` först när passet slutförs, och rensas då.
+
+Volym räknas alltid genom `src/lib/volume.ts`. Vikt 0 betyder kroppsvikt eller kondition och ger volym 0. Skriv aldrig `sets * reps * weight` på nytt ställe.
 
 **Skriv aldrig till `sessions` direkt.** `createSession`, `updateSession` och `deleteSession` håller ihop passet och dess historikrader i en transaktion. Skriver du ett pass utan att skriva om historiken blir graferna tyst fel.
 
@@ -69,17 +74,23 @@ Vite 8 · Preact 10 · TypeScript strict · wouter · `idb` · Chart.js (lazy) �
 src/main.tsx              entry, syncSeed sedan render
 src/app.tsx               Router, navigering, rutter
 src/app.css               all styling, tokens överst
-src/components/           Button, Card, Stat, EmptyState, Field, PasswordGate
+src/components/           Button, Card, Stat, EmptyState, Field, PasswordGate, RestTimer, PlateCalculator, CloudSyncStatus
 src/db/schema.ts          IndexedDB-schema och typer
 src/db/seedData.ts        GENERERAD, all träningshistorik
 src/lib/date.ts           all datumhantering, tidszonssäker. Använd den, aldrig new Date() rakt av
+src/lib/format.ts         vikt och set som text, svensk notation
+src/lib/volume.ts         volymformeln, enda stället
+src/lib/hypertrophy.ts    set per vecka mot bandet 10-20
 src/services/dataService.ts   alla läsningar, skrivningar och statistik
+src/services/timerService.ts  vilotimerns presets, notiser och start-event
 server/src/index.ts         Access-skyddat snapshot-API med revisionslås
 server/migrations/          D1-schema för versionsnumrerade snapshots
-src/pages/                Home, LogSession, Templates, History, SessionDetail, Stats, Settings
+src/pages/                Home, LogSession, Templates, History, SessionDetail, ExerciseDetail, Stats, Settings
 ```
 
-Rutter: `/` · `/log` (stödjer `?from=<sessionId>` och `?date=<YYYY-MM-DD>`) · `/templates` · `/history` · `/history/:id` · `/stats` · `/settings`.
+Rutter: `/` · `/log` (stödjer `?from=<sessionId>`, `?template=<namn>` och `?date=<YYYY-MM-DD>`) · `/templates` · `/history` · `/history/:id` · `/exercises/:id` · `/stats` · `/settings`.
+
+Loggvyn startar timern genom att skicka `beefcake-start-timer` på `window`; `RestTimer` lyssnar. Det håller avbockning och timer i olika komponenter utan delad state.
 
 ## Konventioner
 
@@ -91,6 +102,7 @@ Rutter: `/` · `/log` (stödjer `?from=<sessionId>` och `?date=<YYYY-MM-DD>`) ·
 - Typografi: Geist, self-hostad. Rubriker 800 med `-0.02em`, brödtext `line-height: 1.7`, `tabular-nums` på allt numeriskt.
 - `alert()`, `confirm()` och `prompt()` är förbjudna. De blockerar appen och gör automatiserad testning omöjlig.
 - Minsta ändring som helt löser uppgiften. Inga refaktoreringar på vägen.
+- `npm test` (Vitest) täcker de rena beräkningarna i `src/lib/`. Den kör före `npm run build` i deploy-workflowen, så ett rött test stoppar deployen.
 
 ## Säkerhet, känt och accepterat
 

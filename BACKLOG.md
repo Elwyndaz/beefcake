@@ -6,10 +6,10 @@
 
 - [x] `[P0]` Koppla Cloudflare Access-applikation till `api.orgutveckling.se` och verifiera en riktig synk från produktionsklienten
 - [x] `[P0]` `Exercise.kind` för kroppsvikt, tid och distans. 95 konditionspass har volym 0 och kroppsviktsövningar räknas fel
-- [ ] `[P1]` Autosave av påbörjat pass, utkast i IndexedDB som går att återuppta
+- [x] `[P1]` Autosave av påbörjat pass, utkast i IndexedDB som går att återuppta
 - [x] `[P1]` `importAllData` validerar toppnivån före rensning. En trasig JSON tömmer inte längre databasen
-- [ ] `[P1]` Övningssida med progression, estimerat 1RM och arbetsvikt över tid per övning
-- [ ] `[P2]` Vitest på dataService och statistikberäkningarna, plus ESLint, båda i CI
+- [x] `[P1]` Övningssida med progression, estimerat 1RM och arbetsvikt över tid per övning
+- [ ] `[P2]` ESLint i CI. Vitest finns och kör före build, linter saknas fortfarande
 - [ ] `[P2]` Race condition i mall-laddningen i LogSession, async-effekt utan avbrottsskydd
 - [ ] `[P2]` `<datalist id="template-exercise-suggestions">` renderas en gång per övningsrad i Templates.tsx. Samma id upprepas, ogiltig HTML. Rendera den en gång utanför loopen
 - [ ] `[P2]` Bestäm vokabulär: *pass* är något du gjorde, *program* är mallen. Byt genomgående
@@ -21,6 +21,12 @@
 
 ## Byggt
 
+- Aktivt pass: autosparat utkast i `activeWorkout`, återupptas från Hem eller loggvyn, avbockning per set som startar vilotimern
+- Set-typer (uppvärmning, drop, failure), snabbsteg ±2,5 kg och ±1 rep, plattkalkylator per set
+- Förifyllning från förra passets faktiska vikter och reps, med föregående set synligt per rad
+- Övningssida `/exercises/:id` med 1RM- och volymkurva, rekord och alla tidigare genomföranden
+- Set per muskelgrupp och vecka mot hypertrofibandet 10 till 20 set
+- Vitest på volym-, format- och hypertrofiberäkningarna, kör före build i CI
 - Datamodell med `SetEntry[]`, olika vikt och reps per set, migrering av all befintlig data
 - `ExerciseKind` typ och volymberäkning som hoppar över vikt 0 för konditionspass
 - Snabbvals-CTA:er på förstasidan för de 2-3 senaste passen
