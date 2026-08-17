@@ -547,7 +547,7 @@ export function LogSession() {
       </aside>
 
       <div class="log-session-main">
-        <div class="flex justify-between items-center mb">
+        <div class="flex justify-between items-center mb log-session-header">
           <div>
             <h1 class="page-title m-0">Aktivt träningspass</h1>
             <span class="text-xs text-muted">

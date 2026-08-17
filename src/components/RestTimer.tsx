@@ -163,7 +163,10 @@ export function RestTimer() {
   const statusLabel = status === 'finished' ? 'Klar' : status === 'paused' ? 'Pausad' : status === 'running' ? 'Pågår' : 'Redo'
 
   return (
-    <section class={`rest-timer ${status === 'finished' ? 'rest-timer-finished' : ''}`} aria-label="Vilotimer">
+    <section
+      class={`rest-timer ${isActive || status === 'finished' ? 'rest-timer-active' : ''} ${status === 'finished' ? 'rest-timer-finished' : ''}`}
+      aria-label="Vilotimer"
+    >
       <div class="rest-timer-header">
         <div>
           <span class="rest-timer-kicker">Mellan set</span>

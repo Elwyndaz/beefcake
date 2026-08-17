@@ -318,7 +318,9 @@ th, td {
   align-items: start;
 }
 
-.log-session-timer { min-width: 0; }
+/* min-width: 0 bryter grid-items automatiska min-content-bredd. Utan den
+   trycker settabellen ut hela sidan och mobilen får horisontell scroll. */
+.log-session-timer, .log-session-main { min-width: 0; }
 
 .rest-timer {
   position: sticky;
@@ -359,10 +361,35 @@ th, td {
 .rest-timer-finished { box-shadow: 0 0 0 2px var(--accent), var(--shadow-lg); }
 
 @media (max-width: 900px) {
-  .log-session-layout { grid-template-columns: 1fr; }
-  .log-session-timer { order: -1; }
+  .log-session-layout { grid-template-columns: minmax(0, 1fr); }
+  /* Seten först på telefon: timern får inte äta upp första skärmen. */
+  .log-session-timer { order: 1; }
   .rest-timer { position: relative; top: auto; }
   .rest-timer-display { padding-block: var(--space-4); }
+
+  /* Vilar du faktiskt lägger sig timern som en kompakt rad ovanför
+     bottennavigeringen, så att nedräkningen syns medan du scrollar bland seten. */
+  .rest-timer-active {
+    position: fixed;
+    left: var(--space-3);
+    right: var(--space-3);
+    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    z-index: 190;
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3);
+  }
+  .rest-timer-active .rest-timer-header,
+  .rest-timer-active .rest-timer-presets,
+  .rest-timer-active .rest-timer-edit,
+  .rest-timer-active .rest-timer-notification,
+  .rest-timer-active .rest-timer-notification-ready,
+  .rest-timer-active .rest-timer-notification-muted { display: none; }
+  .rest-timer-active .rest-timer-display { padding-block: 0; font-size: 1.75rem; }
+  .rest-timer-active .rest-timer-display > span { font-size: inherit; }
+  .rest-timer-active .rest-timer-adjust-group { margin-top: var(--space-1); }
+  .rest-timer-active .rest-timer-actions { margin-left: auto; margin-top: 0; }
 }
 
 /* ===================================================================
@@ -953,6 +980,24 @@ canvas { display: block; max-width: 100%; }
 .set-rows-table td {
   padding: var(--space-2);
   vertical-align: middle;
+}
+
+/* På telefon får raden inte kräva sidled-scroll: "Klar" är knappen du trycker
+   mest på under ett pass. Föregående-kolumnen tas bort, den står redan i
+   bannern ovanför övningen. */
+@media (max-width: 600px) {
+  /* Rubriken ska inte brytas i två rader runt knapparna på telefon. */
+  .log-session-header { flex-wrap: wrap; gap: var(--space-3); }
+  .log-session-header > div:first-child { flex: 1 1 100%; }
+  .set-rows-table th, .set-rows-table td { padding: var(--space-1); }
+  .set-rows-table .col-prev { display: none; }
+  .set-rows-table .set-input { width: 52px; }
+  .set-rows-table .set-type-badge { width: 28px; height: 28px; }
+  /* Kortets 24 px sidopadding är dyr på 390 px skärm och driver settabellen i scroll. */
+  .card.exercise-live-card { padding-left: var(--space-3); padding-right: var(--space-3); }
+  .set-rows-table .stepper-buttons button { padding: 2px 3px; }
+  /* Bocken behåller 44 px träffyta, resten får krympa. */
+  .set-rows-table .btn-check-set { width: 44px; height: 44px; }
 }
 
 .set-row {
