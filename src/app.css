@@ -611,6 +611,10 @@ canvas { display: block; max-width: 100%; }
 .badge-warning { background: var(--warning); color: var(--surface-raised); }
 .badge-danger { background: var(--danger); color: var(--surface-raised); }
 
+/* Inline text link, used for exercise names that open the exercise page */
+.exercise-link { color: var(--text); text-decoration: none; border-bottom: 1px dotted var(--border-strong, var(--border)); }
+.exercise-link:hover { color: var(--accent); border-bottom-color: var(--accent); }
+
 /* Grid */
 .grid { display: grid; gap: var(--space-4); }
 .grid-2 { grid-template-columns: repeat(2, 1fr); }

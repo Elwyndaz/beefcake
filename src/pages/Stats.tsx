@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'preact/hooks'
+import { Link } from 'wouter'
 import { getAllExercises, getVolumeOverTime, getFrequencyPerTemplate, getHeatmapData, getPRs, getCurrentStreak, getWeeklyTonnage, getEstimated1RM, getVolumeByMuscleGroup } from '../services/dataService'
 import { formatDateShort, localDateISO, todayISO, parseLocalDate } from '../lib/date'
 import { Card } from '../components/Card'
@@ -454,6 +455,11 @@ export function Stats() {
               </select>
             </Field>
           </div>
+          {selectedExerciseId && (
+            <p class="text-sm mb-sm m-0">
+              <Link href={`/exercises/${selectedExerciseId}`} class="exercise-link">Öppna övningssidan</Link>
+            </p>
+          )}
           <div class="h-300">
             <canvas ref={volumeCanvasRef} id="volume-chart"></canvas>
           </div>
@@ -507,7 +513,7 @@ export function Stats() {
                 <tbody>
                   {[...prs].sort((a, b) => a.exerciseName.localeCompare(b.exerciseName)).map((pr) => (
                     <tr key={pr.exerciseId}>
-                      <td>{pr.exerciseName}</td>
+                      <td><Link href={`/exercises/${pr.exerciseId}`} class="exercise-link">{pr.exerciseName}</Link></td>
                       <td class="tabular-nums">{pr.maxWeight} kg <span class="nowrap text-muted">({formatDateShort(pr.maxWeightDate)})</span></td>
                       <td class="tabular-nums">{pr.maxVolume.toLocaleString('sv-SE')} kg <span class="nowrap text-muted">({formatDateShort(pr.maxVolumeDate)})</span></td>
                     </tr>

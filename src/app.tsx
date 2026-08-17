@@ -11,6 +11,7 @@ import { Templates } from './pages/Templates'
 import { Settings } from './pages/Settings'
 import { History } from './pages/History'
 import { SessionDetail } from './pages/SessionDetail'
+import { ExerciseDetail } from './pages/ExerciseDetail'
 import { icon } from './icons'
 import './app.css'
 
@@ -30,7 +31,7 @@ const navItems = [
 
 function NavLink({ href, label, icon: iconId, showLabel = true }: { href: string; label: string; icon: string; showLabel?: boolean }) {
   const [location] = useLocation()
-  const isActive = location === href
+  const isActive = location === href || (href !== '/' && location.startsWith(href))
   return (
     <Link href={href} class={isActive ? 'nav-link active' : 'nav-link'}>
       <svg class="nav-icon" width="24" height="24" viewBox="0 0 24 24">
@@ -80,7 +81,6 @@ function RailNav() {
 }
 
 function BottomNav() {
-  // Mobile bottom nav: Hem, Logga pass, Historik, Statistik (indices 0, 1, 3, 4)
   const mobileNavItems = [navItems[0], navItems[1], navItems[3], navItems[4]]
   return (
     <nav class="bottom-nav">
@@ -92,7 +92,6 @@ function BottomNav() {
 }
 
 function HeaderNav() {
-  // Mobile header: Templates (index 2) and Settings (index 5)
   return (
     <div class="header-nav-right flex gap-sm">
       <Link href="/templates" class="header-settings" aria-label="Mallar">
@@ -127,6 +126,7 @@ function AppContent() {
             <Route path="/templates" component={Templates} />
             <Route path="/history" component={History} />
             <Route path="/history/:id" component={SessionDetail} />
+            <Route path="/exercises/:id" component={ExerciseDetail} />
             <Route path="/stats" component={() => (
               <Suspense fallback={<Card class="skeleton skeleton-card"></Card>}>
                 <Stats />

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'preact/hooks'
-import { useLocation } from 'wouter'
+import { useLocation, Link } from 'wouter'
 import { 
   getSession, 
   getAllExercises, 
@@ -484,7 +484,11 @@ export function SessionDetail() {
                 <tbody>
                   {session.exercises.map((ex, idx) => (
                     <tr key={idx}>
-                      <td>{ex.exerciseName}</td>
+                      <td>
+                        {ex.exerciseId
+                          ? <Link href={`/exercises/${ex.exerciseId}`} class="exercise-link">{ex.exerciseName}</Link>
+                          : ex.exerciseName}
+                      </td>
                       <td class="tabular-nums">
                         {ex.setEntries.length > 1 ? `${ex.setEntries[0]?.sets}+` : ex.setEntries[0]?.sets}
                       </td>
