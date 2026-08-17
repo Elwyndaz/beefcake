@@ -7,6 +7,7 @@ import {
   getAllSessions
 } from '../services/dataService'
 import { formatDateShort, formatDateWithWeekday } from '../lib/date'
+import { formatSets, formatWeight } from '../lib/format'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
 import { Stat } from '../components/Stat'
@@ -254,7 +255,7 @@ export function ExerciseDetail() {
         <Card padding="sm">
           <Stat
             label="Tyngsta lyft"
-            value={maxWeightEver > 0 ? `${maxWeightEver} kg` : '—'}
+            value={maxWeightEver > 0 ? `${formatWeight(maxWeightEver)} kg` : '—'}
           />
         </Card>
         <Card padding="sm">
@@ -302,9 +303,7 @@ export function ExerciseDetail() {
                       <span class="badge badge-primary">{session?.templateName || 'Pass'}</span>
                     </td>
                     <td class="tabular-nums">
-                      {item.setEntries
-                        .map(s => (s.weight > 0 ? `${s.weight} kg × ${s.reps}` : `${s.reps} reps`))
-                        .join(', ')}
+                      {formatSets(item.setEntries)}
                     </td>
                     <td class="volume-hero tabular-nums">
                       {item.volume.toLocaleString('sv-SE')} kg

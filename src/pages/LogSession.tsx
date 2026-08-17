@@ -12,6 +12,8 @@ import {
   getLastPerformanceForExercise
 } from '../services/dataService'
 import { startRestTimer, triggerHaptic } from '../services/timerService'
+import { formatDateShort } from '../lib/date'
+import { formatSet, formatSets } from '../lib/format'
 import { todayISO, nowISO } from '../models'
 import { icon } from '../icons'
 import { Card } from '../components/Card'
@@ -161,19 +163,37 @@ export function LogSession() {
 
   async function loadTemplateIntoExercises(template: Template, allExList: Exercise[]) {
     const exMap = new Map(allExList.map(e => [e.id, e.name]))
-    const formExercises: LogFormExercise[] = template.exercises.map((te: TemplateExercise) => ({
-      exerciseId: te.exerciseId,
-      exerciseName: exMap.get(te.exerciseId) || '',
-      setEntries: Array.from({ length: te.defaultSetEntry.sets || 3 }).map(() => ({
-        sets: 1,
-        reps: te.defaultSetEntry.reps || 10,
-        weight: te.defaultSetEntry.weight || 0,
-        completed: false,
-        type: 'normal'
-      }))
-    }))
+    // Ladda förra gången först: den vikten är utgångsläget vid stången, inte mallens startvärde
+    const lastPerformances = await Promise.all(
+      template.exercises.map((te: TemplateExercise) => getLastPerformanceForExercise(te.exerciseId))
+    )
+    const formExercises: LogFormExercise[] = template.exercises.map((te: TemplateExercise, exIdx: number) => {
+      const last = lastPerformances[exIdx]
+      return {
+        exerciseId: te.exerciseId,
+        exerciseName: exMap.get(te.exerciseId) || '',
+        setEntries: Array.from({ length: te.defaultSetEntry.sets || 3 }).map((_, setIdx) => {
+          // Fler set än förra gången: upprepa sista setet i stället för att falla tillbaka på mallen
+          const ref = last?.setEntries[setIdx] ?? last?.setEntries[last.setEntries.length - 1]
+          return {
+            sets: 1,
+            reps: ref?.reps ?? te.defaultSetEntry.reps ?? 10,
+            weight: ref?.weight ?? te.defaultSetEntry.weight ?? 0,
+            completed: false,
+            type: 'normal' as const
+          }
+        })
+      }
+    })
     setExercises(formExercises)
-    void fetchPreviousPerformances(formExercises.map(e => e.exerciseId))
+    setPreviousPerformances(prev => {
+      const next = { ...prev }
+      template.exercises.forEach((te: TemplateExercise, idx: number) => {
+        const perf = lastPerformances[idx]
+        if (perf) next[te.exerciseId] = perf
+      })
+      return next
+    })
   }
 
   useEffect(() => {
@@ -479,9 +499,12 @@ export function LogSession() {
     }
   }
 
-  // Calculate live total volume
+  // Volym räknas på avbockade set: siffran ska visa vad du lyft, inte vad du planerat
   const totalVolume = exercises.reduce((sum, e) => {
-    return sum + e.setEntries.reduce((setSum, s) => setSum + (s.weight > 0 ? (s.sets || 1) * s.reps * s.weight : 0), 0)
+    return sum + e.setEntries.reduce(
+      (setSum, s) => setSum + (s.completed && s.weight > 0 ? (s.sets || 1) * s.reps * s.weight : 0),
+      0
+    )
   }, 0)
 
   const completedSetsCount = exercises.reduce((sum, e) => {
@@ -529,7 +552,7 @@ export function LogSession() {
           <div>
             <h1 class="page-title m-0">Aktivt träningspass</h1>
             <span class="text-xs text-muted">
-              {completedSetsCount} av {totalSetsCount} set klara • Volym: {totalVolume.toLocaleString('sv-SE')} kg
+              {completedSetsCount} av {totalSetsCount} set klara • Lyft volym: {totalVolume.toLocaleString('sv-SE')} kg
             </span>
           </div>
           <div class="flex gap-sm">
@@ -651,9 +674,9 @@ export function LogSession() {
                     {prev && prev.setEntries.length > 0 && (
                       <div class="exercise-prev-banner mb-sm">
                         <span class="text-xs text-muted">
-                          Förra gången ({prev.date}):{' '}
+                          Förra gången ({formatDateShort(prev.date)}):{' '}
                           <strong>
-                            {prev.setEntries.map(s => `${s.weight} kg × ${s.reps}`).join(', ')}
+                            {formatSets(prev.setEntries)}
                           </strong>
                         </span>
                       </div>
@@ -675,7 +698,7 @@ export function LogSession() {
                         <tbody>
                           {ex.setEntries.map((set, setIdx) => {
                             const prevSet = prev?.setEntries[setIdx]
-                            const prevText = prevSet ? `${prevSet.weight} kg × ${prevSet.reps}` : '—'
+                            const prevText = prevSet ? formatSet(prevSet) : '—'
                             const isCompleted = Boolean(set.completed)
                             const setType = set.type || 'normal'
 

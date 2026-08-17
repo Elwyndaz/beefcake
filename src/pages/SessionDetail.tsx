@@ -12,6 +12,7 @@ import {
 } from '../services/dataService'
 import { icon } from '../icons'
 import { formatDateFull, formatDateShort } from '../lib/date'
+import { formatSets } from '../lib/format'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
 import { EmptyState } from '../components/EmptyState'
@@ -476,8 +477,7 @@ export function SessionDetail() {
                   <tr>
                     <th>Övning</th>
                     <th>Set</th>
-                    <th>Reps</th>
-                    <th>Vikt (kg)</th>
+                    <th>Set &amp; reps</th>
                     <th>Volym</th>
                   </tr>
                 </thead>
@@ -490,21 +490,16 @@ export function SessionDetail() {
                           : ex.exerciseName}
                       </td>
                       <td class="tabular-nums">
-                        {ex.setEntries.length > 1 ? `${ex.setEntries[0]?.sets}+` : ex.setEntries[0]?.sets}
+                        {ex.setEntries.reduce((n, s) => n + (s.sets || 1), 0)}
                       </td>
-                      <td class="tabular-nums">
-                        {ex.setEntries.length > 1 ? `${ex.setEntries[0]?.reps}+` : ex.setEntries[0]?.reps}
-                      </td>
-                      <td class="tabular-nums">
-                        {ex.setEntries.length > 1 ? `${ex.setEntries[0]?.weight}+` : ex.setEntries[0]?.weight}
-                      </td>
+                      <td class="tabular-nums">{formatSets(ex.setEntries)}</td>
                       <td class="volume-hero">{calculateExerciseVolume(ex).toLocaleString('sv-SE')} kg</td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
                   <tr>
-                    <td colSpan={4} class="text-right font-semibold">Total:</td>
+                    <td colSpan={3} class="text-right font-semibold">Total:</td>
                     <td class="tabular-nums font-semibold">{calculateTotalVolume(session.exercises).toLocaleString('sv-SE')} kg</td>
                   </tr>
                 </tfoot>
