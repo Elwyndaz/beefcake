@@ -32,18 +32,18 @@ function playTimerSound(): void {
     const context = new AudioContextClass()
     activeSoundContext = context
 
-    const chimeSpacing = 1.4
-    const frequencies = [659, 880]
-    for (let chime = 0; chime < 4; chime += 1) {
+    const chimeSpacing = 1.5
+    const frequencies = [440, 659, 880]
+    for (let chime = 0; chime < 12; chime += 1) {
       const chimeStart = context.currentTime + chime * chimeSpacing
       frequencies.forEach((frequency, note) => {
         const oscillator = context.createOscillator()
         const gain = context.createGain()
         const start = chimeStart + note * 0.14
-        oscillator.type = 'sine'
+        oscillator.type = 'triangle'
         oscillator.frequency.value = frequency
         gain.gain.setValueAtTime(0.0001, start)
-        gain.gain.exponentialRampToValueAtTime(0.09, start + 0.025)
+        gain.gain.exponentialRampToValueAtTime(0.16, start + 0.025)
         gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.42)
         oscillator.connect(gain)
         gain.connect(context.destination)
@@ -51,7 +51,8 @@ function playTimerSound(): void {
         oscillator.stop(start + 0.48)
       })
     }
-    activeSoundStopTimer = window.setTimeout(stopTimerSound, 6000)
+    // Signalen ska höras genom en hörlur mitt i ett set, inte bara i tystnad.
+    activeSoundStopTimer = window.setTimeout(stopTimerSound, 19_000)
   } catch {
     // Some browsers block audio until the next user gesture.
   }

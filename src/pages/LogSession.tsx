@@ -554,17 +554,10 @@ export function LogSession() {
               {completedSetsCount} av {totalSetsCount} set klara • Lyft volym: {totalVolume.toLocaleString('sv-SE')} kg
             </span>
           </div>
+          {/* Slutför sitter bara längst ned: två knappar för samma sak förvirrade. */}
           <div class="flex gap-sm">
             <Button variant="secondary" size="sm" onClick={() => setCancelDialogOpen(true)}>
-              Avbryt
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={handleFinishSession}
-              disabled={saving || exercises.length === 0}
-            >
-              {saving ? 'Sparar...' : 'Slutför pass'}
+              Avbryt pass
             </Button>
           </div>
         </div>
@@ -780,7 +773,9 @@ export function LogSession() {
                                     title="Öppna plattkalkylator"
                                     aria-label="Plattkalkylator"
                                   >
-                                    🎛️
+                                    <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+                                      <use href={icon('barbell-icon')} />
+                                    </svg>
                                   </button>
                                 </td>
                                 <td class="col-check">

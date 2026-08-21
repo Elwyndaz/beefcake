@@ -322,6 +322,11 @@ th, td {
    trycker settabellen ut hela sidan och mobilen får horisontell scroll. */
 .log-session-timer, .log-session-main { min-width: 0; }
 
+/* align-items: start på griden krymper kolumnen till timerns egen höjd, och
+   då har position: sticky ingen sträcka att glida längs. Stretch ger den
+   hela radens höjd så timern följer med när du scrollar bland seten. */
+.log-session-timer { align-self: stretch; }
+
 .rest-timer {
   position: sticky;
   top: var(--space-5);
@@ -1136,6 +1141,7 @@ canvas { display: block; max-width: 100%; }
 .btn-calc {
   background: transparent;
   border: none;
+  color: var(--text-muted);
   font-size: 1.2rem;
   cursor: pointer;
   padding: var(--space-1);
@@ -1148,7 +1154,9 @@ canvas { display: block; max-width: 100%; }
 }
 .btn-calc:hover {
   background: var(--surface-hover);
+  color: var(--primary);
 }
+.btn-calc svg { fill: currentColor; display: block; }
 
 .btn-remove-sm {
   background: transparent;
