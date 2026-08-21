@@ -4,6 +4,7 @@ import { Router, Link, Switch, Route, useLocation } from 'wouter'
 import { lazy, Suspense } from 'preact/compat'
 import { PasswordGate } from './components/PasswordGate'
 import { CloudSyncStatus } from './components/CloudSyncStatus'
+import { BeefcakeBadge } from './components/BeefcakeBadge'
 import { Card } from './components/Card'
 import { Home } from './pages/Home'
 import { LogSession } from './pages/LogSession'
@@ -47,6 +48,7 @@ function SidebarNav() {
     <aside class="sidebar">
       <div class="sidebar-header">
         <span class="sidebar-wordmark">Beefcake</span>
+        <BeefcakeBadge compact />
       </div>
       <nav class="sidebar-nav">
         {navItems.slice(0, 5).map(item => (
@@ -64,9 +66,7 @@ function RailNav() {
   return (
     <aside class="rail">
       <div class="rail-header">
-        <svg class="rail-wordmark" width="24" height="24" viewBox="0 0 24 24">
-          <use href={icon('home-icon')} />
-        </svg>
+        <BeefcakeBadge compact />
       </div>
       <nav class="rail-nav">
         {navItems.slice(0, 5).map(item => (
@@ -104,6 +104,7 @@ function HeaderNav() {
           <use href={icon('settings-icon')} />
         </svg>
       </Link>
+      <BeefcakeBadge compact />
     </div>
   )
 }
