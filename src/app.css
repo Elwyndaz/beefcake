@@ -225,6 +225,11 @@ th, td {
   border: 1px solid var(--danger);
   border-radius: var(--radius-md);
   color: var(--danger);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
 }
 
 .sync-error a { color: inherit; font-weight: 700; }

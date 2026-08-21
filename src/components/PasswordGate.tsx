@@ -15,22 +15,34 @@ interface Props {
   children: ComponentChildren
 }
 
+// Låset sitter i localStorage, inte sessionStorage: grinden ska hålla borta
+// nyfikna på en delad länk, inte tvinga fram lösenordet i varje ny flik.
+function isUnlocked(): boolean {
+  try {
+    return localStorage.getItem(AUTH_KEY) === '1' || sessionStorage.getItem(AUTH_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
 export function PasswordGate({ children }: Props) {
-  const [unlocked, setUnlocked] = useState(() => !!sessionStorage.getItem(AUTH_KEY))
+  const [unlocked, setUnlocked] = useState(isUnlocked)
   const [input, setInput] = useState('')
   const [error, setError] = useState(false)
 
   useEffect(() => {
-    if (sessionStorage.getItem(AUTH_KEY)) {
-      setUnlocked(true)
-    }
+    if (isUnlocked()) setUnlocked(true)
   }, [])
 
   async function handleSubmit(e: Event) {
     e.preventDefault()
     const hash = await hashPassword(input)
     if (hash === AUTH_HASH) {
-      sessionStorage.setItem(AUTH_KEY, '1')
+      try {
+        localStorage.setItem(AUTH_KEY, '1')
+      } catch {
+        sessionStorage.setItem(AUTH_KEY, '1')
+      }
       setUnlocked(true)
     } else {
       setError(true)
