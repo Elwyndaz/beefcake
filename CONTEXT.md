@@ -62,6 +62,12 @@ D1 lagrar versionsnumrerade snapshots per Access-identitet och är sanningskäll
 - Synkfel visas beständigt i appen och får inte sväljas av `autoBackup()`.
 - Export och import av JSON är endast manuell nödräddning i Inställningar. Filbackup används aldrig automatiskt.
 
+## Beefcake-nivån
+
+Cartman i headern speglar träningskedjan. `src/lib/streak.ts` äger regeln: ett glapp på över **tre dagar** bryter kedjan och sätter nivå 1, annars stegas nivån upp med kedjans längd (1-3 pass ger 2, 4-9 ger 3, 10 eller fler ger 4). Takten motsvarar "varannan dag", ungefär fyra pass i veckan.
+
+Avatarerna i `src/assets/beefcake/` och ikonerna `favicon.ico`, `apple-touch-icon.png` och `pwa-*.png` i `public/` är **genererade**, aldrig handredigerade. Originalen ligger i `assets-source/` och byggs om med `python scripts/generate-beefcake-assets.py`. Favicon är huvudet ur `beefcake3.jpg`.
+
 ## Muskelgrupper
 
 `MUSCLE_GROUP_MAP` i `dataService.ts` mappar övningsnamn till muskelgrupp. `backfillMuscleGroups()` körs i `syncSeed` och fyller på det som saknas. Övningar utan mappning visas som "Övrigt" i statistiken. Gruppen härleds ur namnet, den väljs aldrig av användaren vid loggning.
@@ -74,13 +80,15 @@ Vite 8 · Preact 10 · TypeScript strict · wouter · `idb` · Chart.js (lazy) �
 src/main.tsx              entry, syncSeed sedan render
 src/app.tsx               Router, navigering, rutter
 src/app.css               all styling, tokens överst
-src/components/           Button, Card, Stat, EmptyState, Field, PasswordGate, RestTimer, PlateCalculator, CloudSyncStatus
+src/components/           Button, Card, Stat, EmptyState, Field, PasswordGate, RestTimer, PlateCalculator, CloudSyncStatus, BeefcakeBadge
 src/db/schema.ts          IndexedDB-schema och typer
 src/db/seedData.ts        GENERERAD, all träningshistorik
 src/lib/date.ts           all datumhantering, tidszonssäker. Använd den, aldrig new Date() rakt av
 src/lib/format.ts         vikt och set som text, svensk notation
 src/lib/volume.ts         volymformeln, enda stället
 src/lib/hypertrophy.ts    set per vecka mot bandet 10-20
+src/lib/streak.ts         beefcake-nivån ur passdatumen
+src/assets/beefcake/      GENERERADE avatarer, se assets-source/ och scripts/
 src/services/dataService.ts   alla läsningar, skrivningar och statistik
 src/services/timerService.ts  vilotimerns presets, notiser och start-event
 server/src/index.ts         Access-skyddat snapshot-API med revisionslås
@@ -106,4 +114,4 @@ Loggvyn startar timern genom att skicka `beefcake-start-timer` på `window`; `Re
 
 ## Säkerhet, känt och accepterat
 
-Lösenordsgrinden är enbart klientsida: `AUTH_HASH` ligger i bundlen, SHA-256 utan salt. Den hindrar en nyfiken förbipasserande, inget mer. Riktigt skydd kräver en server framför appen, till exempel Cloudflare Access, vilket ligger i `BACKLOG.md`. Återanvänd inte lösenordet någon annanstans. IndexedDB är okrypterat, och GitHub Pages kan inte sätta CSP-headers.
+Lösenordsgrinden är enbart klientsida: `AUTH_HASH` ligger i bundlen, SHA-256 utan salt. Upplåsningen sparas i `localStorage`, inte `sessionStorage`, så grinden inte kräver lösenordet i varje ny flik. Den hindrar en nyfiken förbipasserande, inget mer. Riktigt skydd kräver en server framför appen, till exempel Cloudflare Access, vilket ligger i `BACKLOG.md`. Återanvänd inte lösenordet någon annanstans. IndexedDB är okrypterat, och GitHub Pages kan inte sätta CSP-headers.

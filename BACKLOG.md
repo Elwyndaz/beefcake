@@ -21,6 +21,11 @@
 
 ## Byggt
 
+- Beefcake-märket i headern: fyra Cartman-nivåer efter träningskedjan, tre dagars glapp bryter den
+- Favicon, apple-touch-icon och PWA-ikoner genererade ur beefcake3
+- Frekvens per pass med periodfilter (totalt, månad, kvartal, 12 mån, kalenderår)
+- Volym över tid och PR sorterade efter mest tränade övningar senaste kvartalet
+- Dagens datum och markerad dagruta i kalendervyn
 - Aktivt pass: autosparat utkast i `activeWorkout`, återupptas från Hem eller loggvyn, avbockning per set som startar vilotimern
 - Set-typer (uppvärmning, drop, failure), snabbsteg ±2,5 kg och ±1 rep, plattkalkylator per set
 - Förifyllning från förra passets faktiska vikter och reps, med föregående set synligt per rad
@@ -51,6 +56,6 @@ Program-motor (5×5, GZCL) · flerspråkighet · sociala funktioner och delade m
 
 - [ ] [P2] [Wish] Om man har startat timer ska man få en promt/ruta med är du säker på att du vill lämna sidan du har en timer på?
 
-- [ ] [P2] [Wish] göra vanlig sån firebase-inlogg
+- [ ] [P3] [Wish] göra vanlig sån firebase-inlogg. Delvis löst: lösenordsgrinden ligger i localStorage och synkbannern loggar in mot Access med ett klick. Kvarstår bara om riktig identitet behövs
 
 - [ ] [P2] [Wish] det ska gå att ha 0 i antalet set i övningen när man är inne på logga pass, det är så jag använder den, att alla börjar på 0 så klickar jag mig upp löpande under passet. Alla pass borde börja så förutom om man är inne och redigerar ett gammalt pass
