@@ -26,3 +26,6 @@ server/worker-configuration.d.ts
 
 # repowise local index - regenerable, not committed (run `repowise update`).
 .repowise/
+
+# Playwright MCP session-artefakter, regenereras vid varje körning.
+.playwright-mcp

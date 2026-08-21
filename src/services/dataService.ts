@@ -327,6 +327,9 @@ export async function getFrequencyPerTemplate(fromISO?: string, toISO?: string):
   for (const s of sessions) {
     if (fromISO && s.date < fromISO) continue
     if (toISO && s.date > toISO) continue
+    // Passen från den trasiga mallen "undefined" i seeden ska inte få en egen
+    // stapel, se CONTEXT.md om mallen som filtreras bort i syncSeed.
+    if (!s.templateName || s.templateName === 'undefined') continue
     map.set(s.templateName, (map.get(s.templateName) || 0) + 1)
   }
   return Array.from(map.entries())

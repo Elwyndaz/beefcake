@@ -131,7 +131,8 @@ const periodLabels: Record<Period, string> = {
 export function Stats() {
   const [exercises, setExercises] = useState<Exercise[]>([])
   const [selectedExerciseId, setSelectedExerciseId] = useState<string>('')
-  const [period, setPeriod] = useState<Period>('month')
+  // Kvartal som förval: månad gav en tom graf så fort man vilat en vecka.
+  const [period, setPeriod] = useState<Period>('quarter')
   const volumeChartRef = useRef<Chart | null>(null)
   const frequencyChartRef = useRef<Chart | null>(null)
   const heatmapChartRef = useRef<Chart | null>(null)
