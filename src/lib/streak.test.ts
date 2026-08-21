@@ -1,5 +1,25 @@
 import { describe, expect, it } from 'vitest'
-import { beefcakeStreak } from './streak'
+import { beefcakeStatusText, beefcakeStreak } from './streak'
+
+describe('beefcakeStatusText', () => {
+  it('sätter nivåns namn på egen rad före förklaringen', () => {
+    const text = beefcakeStatusText(beefcakeStreak(['2026-08-19', '2026-08-21'], '2026-08-21'))
+    expect(text.split('\n')).toEqual(['På gång', '2 pass i rad utan mer än 3 dagars uppehåll.'])
+  })
+
+  it('bruten kedja förklarar hur länge det var sedan', () => {
+    const text = beefcakeStatusText(beefcakeStreak(['2026-08-01'], '2026-08-21'))
+    expect(text.split('\n')).toEqual([
+      'Weight Gain 4000',
+      '20 dagar sedan senaste passet. Kedjan bruten, träna inom 3 dagar nästa gång.'
+    ])
+  })
+
+  it('utan pass står det att man inte börjat', () => {
+    const text = beefcakeStatusText(beefcakeStreak([], '2026-08-21'))
+    expect(text.split('\n')).toEqual(['Weight Gain 4000', 'Inga pass loggade än. Dags att börja.'])
+  })
+})
 
 describe('beefcakeStreak', () => {
   it('utan pass står Cartman kvar på nivå 1', () => {

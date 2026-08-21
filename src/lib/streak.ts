@@ -62,10 +62,18 @@ export const BEEFCAKE_LABELS: Record<BeefcakeLevel, string> = {
   4: 'BEEFCAAAAKE!'
 }
 
-export function beefcakeTooltip({ level, streak, daysSinceLast }: BeefcakeStreak): string {
-  if (daysSinceLast === null) return 'Inga pass loggade än. Dags att börja.'
-  if (level === 1) {
-    return `${daysSinceLast} dagar sedan senaste passet. Kedjan bruten, träna inom ${MAX_GAP_DAYS} dagar nästa gång.`
+/**
+ * Statusraden bredvid Cartman. Första raden är nivåns namn, andra raden
+ * förklaringen. Radbrytningen är en del av formatet: texten renderas med
+ * `white-space: pre-line`, så slå aldrig ihop raderna till en enda mening.
+ */
+export function beefcakeStatusText(streak: BeefcakeStreak): string {
+  const label = BEEFCAKE_LABELS[streak.level]
+  if (streak.daysSinceLast === null) {
+    return `${label}\nInga pass loggade än. Dags att börja.`
   }
-  return `${streak} pass i rad utan mer än ${MAX_GAP_DAYS} dagars uppehåll. ${BEEFCAKE_LABELS[level]}`
+  if (streak.level === 1) {
+    return `${label}\n${streak.daysSinceLast} dagar sedan senaste passet. Kedjan bruten, träna inom ${MAX_GAP_DAYS} dagar nästa gång.`
+  }
+  return `${label}\n${streak.streak} pass i rad utan mer än ${MAX_GAP_DAYS} dagars uppehåll.`
 }

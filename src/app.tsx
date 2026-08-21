@@ -48,7 +48,6 @@ function SidebarNav() {
     <aside class="sidebar">
       <div class="sidebar-header">
         <span class="sidebar-wordmark">Beefcake</span>
-        <BeefcakeBadge compact />
       </div>
       <nav class="sidebar-nav">
         {navItems.slice(0, 5).map(item => (
@@ -66,7 +65,9 @@ function RailNav() {
   return (
     <aside class="rail">
       <div class="rail-header">
-        <BeefcakeBadge compact />
+        <svg class="rail-wordmark" width="24" height="24" viewBox="0 0 24 24">
+          <use href={icon('home-icon')} />
+        </svg>
       </div>
       <nav class="rail-nav">
         {navItems.slice(0, 5).map(item => (
@@ -104,7 +105,6 @@ function HeaderNav() {
           <use href={icon('settings-icon')} />
         </svg>
       </Link>
-      <BeefcakeBadge compact />
     </div>
   )
 }
@@ -121,6 +121,7 @@ function AppContent() {
         </header>
         <main class="main">
           <CloudSyncStatus />
+          <BeefcakeBadge />
           <Switch>
             <Route path="/" component={Home} />
             <Route path="/log" component={LogSession} />

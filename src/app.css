@@ -479,7 +479,7 @@ th, td {
   flex-direction: column;
   z-index: 200;
 }
-.sidebar-header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-5); border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+.sidebar-header { padding: var(--space-6) var(--space-5); border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
 .sidebar-wordmark { font-weight: var(--heading-weight); font-size: var(--text-lg); letter-spacing: var(--tracking-tight); color: var(--surface-deep-text); }
 .sidebar-nav { flex: 1; padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-1); }
 .sidebar-nav .nav-link { color: var(--surface-deep-muted); }
@@ -508,20 +508,48 @@ th, td {
 .rail-wordmark { fill: var(--primary); }
 
 /* Beefcake-märket: Cartman blir mer muskulös ju längre träningskedjan är.
-   Sitter längst till höger i headern, i sidopanelen och i skenan. */
-.beefcake-badge { display: flex; align-items: center; gap: var(--space-2); flex-shrink: 0; }
-.beefcake-badge img {
-  width: 40px; height: 40px; border-radius: 50%;
-  object-fit: cover; background: #fff;
-  border: 2px solid var(--border);
-  box-shadow: var(--shadow-sm);
+   Ligger centrerad överst i innehållsflödet på varje sida och scrollar med. */
+.beefcake-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-5);
+  width: fit-content;
+  margin: 0 auto var(--space-6);
+  padding: var(--space-3) var(--space-5);
 }
-.beefcake-badge.level-3 img { border-color: var(--accent); }
-.beefcake-badge.level-4 img { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255, 71, 87, 0.25), var(--shadow-sm); }
-.beefcake-badge-text { display: flex; flex-direction: column; line-height: 1.2; }
-.beefcake-badge-text strong { font-size: var(--text-sm); }
-.beefcake-badge-text span { font-size: var(--text-xs); color: var(--text-muted); }
-.rail-header .beefcake-badge { justify-content: center; }
+.beefcake-banner img {
+  width: 120px; height: 120px; border-radius: 50%;
+  object-fit: cover; background: #fff;
+  border: 3px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
+}
+.beefcake-banner.level-3 img { border-color: var(--accent); }
+.beefcake-banner.level-4 img { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(255, 71, 87, 0.25), var(--shadow-sm); }
+
+/* pre-line renderar radbrytningen från beefcakeStatusText. Byt inte till
+   normal: då blir nivåns namn och förklaringen en enda klump. */
+.beefcake-banner-text {
+  margin: 0;
+  max-width: 34ch;
+  white-space: pre-line;
+  line-height: 1.5;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+.beefcake-banner-text::first-line {
+  font-size: var(--text-lg);
+  font-weight: var(--heading-weight);
+  color: var(--text);
+}
+
+@media (max-width: 600px) {
+  /* 120 px bild plus 34ch text får inte plats bredvid varandra på telefon. */
+  .beefcake-banner { gap: var(--space-4); width: auto; padding: var(--space-2) 0; }
+  .beefcake-banner img { width: 88px; height: 88px; }
+  .beefcake-banner-text { max-width: none; font-size: var(--text-xs); }
+}
 .rail-nav { flex: 1; padding: var(--space-4) 0; display: flex; flex-direction: column; gap: var(--space-1); align-items: center; }
 .rail-nav .nav-link { position: relative; }
 .rail-nav .nav-link:hover .nav-text { display: block; }
