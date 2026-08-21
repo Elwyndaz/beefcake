@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'preact/hooks'
 import { Link } from 'wouter'
-import { getAllExercises, getVolumeOverTime, getFrequencyPerTemplate, getHeatmapData, getPRs, getCurrentStreak, getWeeklyTonnage, getEstimated1RM, getVolumeByMuscleGroup, getWeeklyHardSetsPerMuscleGroup } from '../services/dataService'
+import { getAllExercises, getVolumeOverTime, getFrequencyPerTemplate, getHeatmapData, getPRs, getCurrentStreak, getWeeklyTonnage, getEstimated1RM, getVolumeByMuscleGroup, getWeeklyHardSetsPerMuscleGroup, getExerciseTrainingCounts, getSessionYears } from '../services/dataService'
 import { classifyWeeklySets, SET_LOAD_LABELS } from '../lib/hypertrophy'
 import { formatWeight } from '../lib/format'
 import { formatDateShort, localDateISO, todayISO, parseLocalDate } from '../lib/date'
@@ -74,6 +74,53 @@ interface PR {
 
 type Period = 'week' | 'month' | 'quarter' | 'year'
 
+/** Frekvensfiltret: 'all', de rullande perioderna, eller ett kalenderår som sträng. */
+type FrequencyRange = 'all' | 'month' | 'quarter' | 'year12' | string
+
+const frequencyRangeLabels: [FrequencyRange, string][] = [
+  ['all', 'Totalt'],
+  ['month', 'Senaste månaden'],
+  ['quarter', 'Senaste kvartalet'],
+  ['year12', 'Senaste 12 månaderna']
+]
+
+/** Rullande perioder bakåt från idag. Kalenderår hanteras separat. */
+function frequencyRangeBounds(range: FrequencyRange, today: string): { from?: string; to?: string } {
+  const now = parseLocalDate(today)
+  const back = (months: number) => {
+    const d = new Date(now)
+    d.setMonth(d.getMonth() - months)
+    return localDateISO(d)
+  }
+  switch (range) {
+    case 'all': return {}
+    case 'month': return { from: back(1) }
+    case 'quarter': return { from: back(3) }
+    case 'year12': return { from: back(12) }
+    default: return { from: `${range}-01-01`, to: `${range}-12-31` }
+  }
+}
+
+interface RecentUseItem {
+  id?: string
+  name?: string
+  exerciseId?: string
+  exerciseName?: string
+}
+
+/**
+ * Mest tränade övningar först, resten i bokstavsordning. Utan den här
+ * sorteringen låg armhävningar alltid överst bara för att A kommer först.
+ * Fungerar både på Exercise (id/name) och PR (exerciseId/exerciseName).
+ */
+function sortByRecentUse<T extends RecentUseItem>(items: T[], counts: Map<string, number>): T[] {
+  const idOf = (item: T) => item.exerciseId ?? item.id ?? ''
+  const nameOf = (item: T) => item.exerciseName ?? item.name ?? ''
+  return [...items].sort((a, b) =>
+    (counts.get(idOf(b)) ?? 0) - (counts.get(idOf(a)) ?? 0) || nameOf(a).localeCompare(nameOf(b))
+  )
+}
+
 const periodLabels: Record<Period, string> = {
   week: 'Vecka',
   month: 'Månad',
@@ -89,6 +136,11 @@ export function Stats() {
   const frequencyChartRef = useRef<Chart | null>(null)
   const heatmapChartRef = useRef<Chart | null>(null)
   const [frequencyData, setFrequencyData] = useState<{ templateName: string; count: number }[]>([])
+  const [frequencyRange, setFrequencyRange] = useState<FrequencyRange>('all')
+  const [sessionYears, setSessionYears] = useState<number[]>([])
+  // exerciseId -> antal pass senaste kvartalet. Styr sorteringen i övningsvalet
+  // och i PR-listan så det du faktiskt tränar ligger överst.
+  const [recentCounts, setRecentCounts] = useState<Map<string, number>>(new Map())
   const [heatmapData, setHeatmapData] = useState<{ date: string; count: number }[]>([])
   const [prs, setPRs] = useState<PR[]>([])
   const [muscleGroupStats, setMuscleGroupStats] = useState<{ muscleGroup: string; volume: number; sessions: number }[]>([])
@@ -149,27 +201,31 @@ export function Stats() {
     try {
       setLoading(true)
       setError(null)
-      const [es, freq, heat, prsData, streakData, tonnageData, muscleStats, hardSets] = await Promise.all([
+      const quarterStart = frequencyRangeBounds('quarter', todayISO()).from!
+      const [es, heat, prsData, streakData, tonnageData, muscleStats, hardSets, counts, years] = await Promise.all([
         getAllExercises(),
-        getFrequencyPerTemplate(),
         getHeatmapData(30),
         getPRs(),
         getCurrentStreak(),
         getThisWeekTonnage(),
         getVolumeByMuscleGroup(),
-        getWeeklyHardSetsPerMuscleGroup(getMondayISO())
+        getWeeklyHardSetsPerMuscleGroup(getMondayISO()),
+        getExerciseTrainingCounts(quarterStart),
+        getSessionYears()
       ])
-      setExercises(es)
-      setFrequencyData(freq)
+      const sorted = sortByRecentUse(es, counts)
+      setExercises(sorted)
+      setRecentCounts(counts)
+      setSessionYears(years)
       setHeatmapData(heat)
       setPRs(prsData)
       setMuscleGroupStats(muscleStats)
       setWeeklyHardSets(hardSets)
       setStreak(streakData)
       setThisWeekTonnage(tonnageData)
-      if (es.length > 0 && !selectedExerciseId) {
-        setSelectedExerciseId(es[0].id)
-        const firstExercise1RM = await getEstimated1RM(es[0].id)
+      if (sorted.length > 0 && !selectedExerciseId) {
+        setSelectedExerciseId(sorted[0].id)
+        const firstExercise1RM = await getEstimated1RM(sorted[0].id)
         if (firstExercise1RM) {
           setOneRM(firstExercise1RM)
         }
@@ -181,6 +237,11 @@ export function Stats() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    const { from, to } = frequencyRangeBounds(frequencyRange, todayISO())
+    getFrequencyPerTemplate(from, to).then(setFrequencyData).catch(() => setFrequencyData([]))
+  }, [frequencyRange])
 
   // Helper to get start of current week (Monday)
   function getMondayISO(): string {
@@ -447,90 +508,6 @@ export function Stats() {
       </div>
 
       <div class="grid grid-2 mb">
-        <Card title="Volym över tid">
-          <div class="grid grid-2 gap-sm mb-sm">
-            <Field label="Övning" class="m-0">
-              <select value={selectedExerciseId} onChange={handleSelectChange}>
-                {exercises.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
-              </select>
-            </Field>
-            <Field label="Period" class="m-0">
-              <select value={period} onChange={handlePeriodChange}>
-                {Object.entries(periodLabels).map(([key, label]) => (
-                  <option key={key} value={key}>{label}</option>
-                ))}
-              </select>
-            </Field>
-          </div>
-          {selectedExerciseId && (
-            <p class="text-sm mb-sm m-0">
-              <Link href={`/exercises/${selectedExerciseId}`} class="exercise-link">Öppna övningssidan</Link>
-            </p>
-          )}
-          <div class="h-300">
-            <canvas ref={volumeCanvasRef} id="volume-chart"></canvas>
-          </div>
-        </Card>
-
-        <Card title="Frekvens per pass">
-          <div class="h-300">
-            <canvas ref={frequencyCanvasRef} id="frequency-chart"></canvas>
-          </div>
-        </Card>
-      </div>
-
-      <div class="grid grid-2 mb">
-        <Card title="Aktivitet (senaste 30 dagar)">
-          {heatmapData.length === 0 && exercises.length === 0 ? (
-            <EmptyState
-              title="Inga pass registrerade ännu"
-              message="Logga ett pass för att se din aktivitet här."
-              action={<Button href="/log">Logga pass</Button>}
-            />
-          ) : allValuesZero() ? (
-            <EmptyState
-              title="Ingen aktivitet"
-              message="Inga pass de senaste 30 dagarna. Dags att träna?"
-              action={<Button href="/log">Logga pass</Button>}
-            />
-          ) : (
-            <div class="h-200">
-              <canvas ref={heatmapCanvasRef} id="heatmap-chart"></canvas>
-            </div>
-          )}
-        </Card>
-
-        <Card title="Personliga rekord (PR)">
-          {prs.length === 0 ? (
-            <EmptyState
-              title="Inga personliga rekord ännu"
-              message="Logga pass för att se dina PR."
-              action={<Button href="/log">Logga pass</Button>}
-            />
-          ) : (
-            <div class="table-wrap max-h-300 overflow-y-auto table-rows">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Övning</th>
-                    <th>Max vikt</th>
-                    <th>Max volym</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[...prs].sort((a, b) => a.exerciseName.localeCompare(b.exerciseName)).map((pr) => (
-                    <tr key={pr.exerciseId}>
-                      <td><Link href={`/exercises/${pr.exerciseId}`} class="exercise-link">{pr.exerciseName}</Link></td>
-                      <td class="tabular-nums">{formatWeight(pr.maxWeight)} kg <span class="nowrap text-muted">({formatDateShort(pr.maxWeightDate)})</span></td>
-                      <td class="tabular-nums">{pr.maxVolume.toLocaleString('sv-SE')} kg <span class="nowrap text-muted">({formatDateShort(pr.maxVolumeDate)})</span></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Card>
-
         <Card title="Set per muskelgrupp denna vecka">
           {weeklyHardSets.length === 0 ? (
             <EmptyState
@@ -562,7 +539,103 @@ export function Stats() {
             </div>
           )}
         </Card>
+        <Card title="Volym över tid">
+          <div class="grid grid-2 gap-sm mb-sm">
+            <Field label="Övning" class="m-0">
+              <select value={selectedExerciseId} onChange={handleSelectChange}>
+                {exercises.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+              </select>
+            </Field>
+            <Field label="Period" class="m-0">
+              <select value={period} onChange={handlePeriodChange}>
+                {Object.entries(periodLabels).map(([key, label]) => (
+                  <option key={key} value={key}>{label}</option>
+                ))}
+              </select>
+            </Field>
+          </div>
+          {selectedExerciseId && (
+            <p class="text-sm mb-sm m-0">
+              <Link href={`/exercises/${selectedExerciseId}`} class="exercise-link">Öppna övningssidan</Link>
+            </p>
+          )}
+          <div class="h-300">
+            <canvas ref={volumeCanvasRef} id="volume-chart"></canvas>
+          </div>
+        </Card>
+      </div>
 
+      <div class="grid grid-2 mb">
+        <Card title="Frekvens per pass">
+          <Field label="Period" class="mb-sm">
+            <select value={frequencyRange} onChange={(e: Event) => setFrequencyRange((e.target as HTMLSelectElement).value)}>
+              {frequencyRangeLabels.map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+              {sessionYears.map(year => (
+                <option key={year} value={String(year)}>{year}</option>
+              ))}
+            </select>
+          </Field>
+          {frequencyData.length === 0 && (
+            <p class="text-sm text-muted">Inga pass i den valda perioden.</p>
+          )}
+          <div class="h-300">
+            <canvas ref={frequencyCanvasRef} id="frequency-chart"></canvas>
+          </div>
+        </Card>
+        <Card title="Aktivitet (senaste 30 dagar)">
+          {heatmapData.length === 0 && exercises.length === 0 ? (
+            <EmptyState
+              title="Inga pass registrerade ännu"
+              message="Logga ett pass för att se din aktivitet här."
+              action={<Button href="/log">Logga pass</Button>}
+            />
+          ) : allValuesZero() ? (
+            <EmptyState
+              title="Ingen aktivitet"
+              message="Inga pass de senaste 30 dagarna. Dags att träna?"
+              action={<Button href="/log">Logga pass</Button>}
+            />
+          ) : (
+            <div class="h-200">
+              <canvas ref={heatmapCanvasRef} id="heatmap-chart"></canvas>
+            </div>
+          )}
+        </Card>
+      </div>
+
+      <div class="grid grid-2 mb">
+        <Card title="Personliga rekord (PR)">
+          {prs.length === 0 ? (
+            <EmptyState
+              title="Inga personliga rekord ännu"
+              message="Logga pass för att se dina PR."
+              action={<Button href="/log">Logga pass</Button>}
+            />
+          ) : (
+            <div class="table-wrap max-h-300 overflow-y-auto table-rows">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Övning</th>
+                    <th>Max vikt</th>
+                    <th>Max volym</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortByRecentUse(prs, recentCounts).map((pr) => (
+                    <tr key={pr.exerciseId}>
+                      <td><Link href={`/exercises/${pr.exerciseId}`} class="exercise-link">{pr.exerciseName}</Link></td>
+                      <td class="tabular-nums">{formatWeight(pr.maxWeight)} kg <span class="nowrap text-muted">({formatDateShort(pr.maxWeightDate)})</span></td>
+                      <td class="tabular-nums">{pr.maxVolume.toLocaleString('sv-SE')} kg <span class="nowrap text-muted">({formatDateShort(pr.maxVolumeDate)})</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
         <Card title="Muskelgrupper">
           {muscleGroupStats.length === 0 ? (
             <EmptyState

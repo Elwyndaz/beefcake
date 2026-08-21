@@ -316,14 +316,46 @@ export async function getLastPerformanceForExercise(exerciseId: string): Promise
   }
 }
 
-export async function getFrequencyPerTemplate(): Promise<{ templateName: string; count: number }[]> {
+/**
+ * Antal pass per mall. Utan datumgränser räknas hela historiken.
+ * `fromISO` och `toISO` är inklusive, formatet är `YYYY-MM-DD`.
+ */
+export async function getFrequencyPerTemplate(fromISO?: string, toISO?: string): Promise<{ templateName: string; count: number }[]> {
   const db = await getDB()
   const sessions = await db.getAll('sessions')
   const map = new Map<string, number>()
   for (const s of sessions) {
+    if (fromISO && s.date < fromISO) continue
+    if (toISO && s.date > toISO) continue
     map.set(s.templateName, (map.get(s.templateName) || 0) + 1)
   }
-  return Array.from(map.entries()).map(([templateName, count]) => ({ templateName, count }))
+  return Array.from(map.entries())
+    .map(([templateName, count]) => ({ templateName, count }))
+    .sort((a, b) => b.count - a.count)
+}
+
+/** Kalenderår som har minst ett pass, nyast först. Matar årsfiltret i Statistik. */
+export async function getSessionYears(): Promise<number[]> {
+  const db = await getDB()
+  const sessions = await db.getAll('sessions')
+  const years = new Set(sessions.map(s => Number(s.date.slice(0, 4))))
+  return Array.from(years).sort((a, b) => b - a)
+}
+
+/**
+ * Hur många gånger varje övning körts sedan `fromISO`, som `exerciseId -> antal`.
+ * Används för att sortera de övningar du faktiskt tränar överst, istället för
+ * bokstavsordning där armhävningar alltid hamnade först.
+ */
+export async function getExerciseTrainingCounts(fromISO: string): Promise<Map<string, number>> {
+  const db = await getDB()
+  const history = await db.getAll('exerciseHistory')
+  const counts = new Map<string, number>()
+  for (const h of history) {
+    if (h.date < fromISO) continue
+    counts.set(h.exerciseId, (counts.get(h.exerciseId) || 0) + 1)
+  }
+  return counts
 }
 
 export async function getHeatmapData(days: number = 30): Promise<{ date: string; count: number }[]> {

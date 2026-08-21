@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'preact/hooks'
 import { useLocation } from 'wouter'
 import { getAllSessions, getAllTemplates, deleteSession } from '../services/dataService'
 import { icon } from '../icons'
-import { formatDateShort, formatDateWithWeekday, getMonthKey, monthNames, todayISO, parseLocalDate, localDateISO } from '../lib/date'
+import { formatDateShort, formatDateWithWeekday, formatDateFull, getMonthKey, monthNames, todayISO, parseLocalDate, localDateISO } from '../lib/date'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
 import { EmptyState } from '../components/EmptyState'
@@ -308,6 +308,10 @@ export function History() {
 
   // Template options
   const templateOptions = ['Alla', ...templates.map(t => t.name).sort((a, b) => a.localeCompare(b))]
+  const today = todayISO()
+  const showsCurrentMonth =
+    calendarMonth.getFullYear() === parseLocalDate(today).getFullYear() &&
+    calendarMonth.getMonth() === parseLocalDate(today).getMonth()
   const calendarStart = monthStart(calendarMonth)
   const firstWeekday = (calendarStart.getDay() + 6) % 7
   const calendarDays = Array.from({ length: 42 }, (_, index) => {
@@ -378,6 +382,15 @@ export function History() {
           <div>
             <h2 class="card-title m-0">Månadsvy</h2>
             <p class="text-muted text-sm m-0">Klicka på en träningsdag för att öppna passet.</p>
+            <div class="history-calendar-today">
+              <span class="history-calendar-today-kicker">Idag</span>
+              <strong>{formatDateFull(today)}</strong>
+              {!showsCurrentMonth && (
+                <button type="button" class="history-calendar-today-jump" onClick={() => setCalendarMonth(monthStart(parseLocalDate(today)))}>
+                  Gå till denna månad
+                </button>
+              )}
+            </div>
           </div>
           <div class="history-calendar-nav">
             <Button variant="secondary" size="sm" onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1))} ariaLabel="Föregående månad">‹</Button>
@@ -395,7 +408,7 @@ export function History() {
             const isCurrentMonth = day.getMonth() === calendarMonth.getMonth()
             return (
               <div
-                class={`history-calendar-day${isCurrentMonth ? '' : ' outside'}${daySessions.length ? ' trained' : ''}`}
+                class={`history-calendar-day${isCurrentMonth ? '' : ' outside'}${daySessions.length ? ' trained' : ''}${date === today ? ' today' : ''}`}
                 key={date}
                 role="button"
                 tabIndex={0}
