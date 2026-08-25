@@ -7,7 +7,9 @@
 - [x] `[P0]` Koppla Cloudflare Access-applikation till `api.orgutveckling.se` och verifiera en riktig synk från produktionsklienten
 - [x] `[P0]` `Exercise.kind` för kroppsvikt, tid och distans. 95 konditionspass har volym 0 och kroppsviktsövningar räknas fel
 - [x] `[P1]` Autosave av påbörjat pass, utkast i IndexedDB som går att återuppta
-- [x] `[P1]` `importAllData` validerar toppnivån före rensning. En trasig JSON tömmer inte längre databasen
+- [x] `[P1]` `importAllData` kräver alla fyra samlingar samt unika, icke-tomma ID:n före rensning. En trasig eller ofullständig JSON tömmer inte längre databasen
+- [ ] `[P1]` Deterministiskt tvåklientsintegrationstest för D1 och IndexedDB: serverradering mot stale cache, revisionskonflikt och fail-closed återhämtning
+- [ ] `[P2]` Validera SnapshotPayload-fält och korsreferenser i Worker-API:t. Servern kräver nu samlingar och unika ID:n men verifierar inte hela domänmodellen
 - [x] `[P1]` Övningssida med progression, estimerat 1RM och arbetsvikt över tid per övning
 - [ ] `[P2]` ESLint i CI. Vitest finns och kör före build, linter saknas fortfarande
 - [ ] `[P2]` Race condition i mall-laddningen i LogSession, async-effekt utan avbrottsskydd

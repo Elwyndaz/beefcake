@@ -12,6 +12,7 @@ import type {
   ActiveWorkout
 } from '../models'
 import { loadSnapshotFromCloud, syncSnapshot } from './cloudSyncService'
+import { parseImportData } from '../lib/importValidation'
 import { setVolume, setsVolume, exercisesVolume } from '../lib/volume'
 
 // Active Workout Service (pågående pass sparat lokalt i realtid)
@@ -538,24 +539,20 @@ export async function getWeeklyHardSetsPerMuscleGroup(weekStartDate: string): Pr
 // Export/Import
 export async function exportAllData(): Promise<string> {
   const db = await getDB()
+  const tx = db.transaction(['templates', 'exercises', 'sessions', 'exerciseHistory'], 'readonly')
   const [templates, exercises, sessions, history] = await Promise.all([
-    db.getAll('templates'),
-    db.getAll('exercises'),
-    db.getAll('sessions'),
-    db.getAll('exerciseHistory')
+    tx.objectStore('templates').getAll(),
+    tx.objectStore('exercises').getAll(),
+    tx.objectStore('sessions').getAll(),
+    tx.objectStore('exerciseHistory').getAll()
   ])
+  await tx.done
   return JSON.stringify({ templates, exercises, sessions, exerciseHistory: history }, null, 2)
 }
 
 export async function importAllData(json: string): Promise<void> {
   const db = await getDB()
-  const parsed: unknown = JSON.parse(json)
-  if (!parsed || typeof parsed !== 'object') throw new Error('Importen har fel format')
-  const data = parsed as Record<string, unknown>
-  const templates = readImportCollection(data.templates, 'templates')
-  const exercises = readImportCollection(data.exercises, 'exercises')
-  const sessions = readImportCollection(data.sessions, 'sessions')
-  const exerciseHistory = readImportCollection(data.exerciseHistory, 'exerciseHistory')
+  const { templates, exercises, sessions, exerciseHistory } = parseImportData(json)
   const tx = db.transaction(['templates', 'exercises', 'sessions', 'exerciseHistory'], 'readwrite')
   await Promise.all([
     tx.objectStore('templates').clear(),
@@ -571,8 +568,8 @@ export async function importAllData(json: string): Promise<void> {
   await syncCloudData()
 }
 
-/** Lägg till eller uppdatera från en servermerge utan att rensa lokal data. */
-export async function mergeDataIntoLocal(data: {
+/** Ersätt den lokala cachen med D1:s auktoritativa snapshot. */
+async function replaceDataInLocal(data: {
   templates: Template[]
   exercises: Exercise[]
   sessions: Session[]
@@ -580,6 +577,12 @@ export async function mergeDataIntoLocal(data: {
 }): Promise<void> {
   const db = await getDB()
   const tx = db.transaction(['templates', 'exercises', 'sessions', 'exerciseHistory'], 'readwrite')
+  await Promise.all([
+    tx.objectStore('templates').clear(),
+    tx.objectStore('exercises').clear(),
+    tx.objectStore('sessions').clear(),
+    tx.objectStore('exerciseHistory').clear()
+  ])
   for (const t of data.templates) await tx.objectStore('templates').put(t)
   for (const e of data.exercises) await tx.objectStore('exercises').put(e)
   for (const s of data.sessions) await tx.objectStore('sessions').put(s)
@@ -596,13 +599,15 @@ function sessionKey(date: string, templateName: string): string {
 }
 
 export async function syncSeed(): Promise<{ sessionsAdded: number; exercisesAdded: number }> {
-  const cloudData = await loadSnapshotFromCloud(JSON.parse(await exportAllData()) as {
-    templates: Template[]
-    exercises: Exercise[]
-    sessions: Session[]
-    exerciseHistory: ExerciseHistory[]
-  })
-  await mergeDataIntoLocal(cloudData)
+  await loadSnapshotFromCloud(
+    JSON.parse(await exportAllData()) as {
+      templates: Template[]
+      exercises: Exercise[]
+      sessions: Session[]
+      exerciseHistory: ExerciseHistory[]
+    },
+    replaceDataInLocal
+  )
   await backfillMuscleGroups()
 
   const db = await getDB()
@@ -693,17 +698,6 @@ export async function syncSeed(): Promise<{ sessionsAdded: number; exercisesAdde
   await syncCloudData()
 
   return { sessionsAdded: newSessions.length, exercisesAdded: newExercises.length }
-}
-
-function readImportCollection(value: unknown, name: string): Record<string, unknown>[] {
-  if (value === undefined) return []
-  if (!Array.isArray(value)) throw new Error(`Importen har fel format: ${name}`)
-  for (const item of value) {
-    if (!item || typeof item !== 'object' || typeof (item as Record<string, unknown>).id !== 'string') {
-      throw new Error(`Importen har fel format: ${name}`)
-    }
-  }
-  return value as Record<string, unknown>[]
 }
 
 export async function exportSessionsCSV(): Promise<string> {

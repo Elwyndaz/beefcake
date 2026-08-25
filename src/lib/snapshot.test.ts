@@ -1,0 +1,43 @@
+import { describe, expect, it } from 'vitest'
+import { selectAuthoritativeSnapshot, type SnapshotData } from './snapshot'
+
+function snapshot(sessionName: string, extraSessionId?: string): SnapshotData {
+  return {
+    templates: [],
+    exercises: [],
+    sessions: [
+      {
+        id: 'shared-session',
+        date: '2026-08-25',
+        templateId: 'template-1',
+        templateName: sessionName,
+        exercises: [],
+        createdAt: '2026-08-25T08:00:00.000Z'
+      },
+      ...(extraSessionId ? [{
+        id: extraSessionId,
+        date: '2026-08-24',
+        templateId: 'template-1',
+        templateName: 'Lokalt borttaget pass',
+        exercises: [],
+        createdAt: '2026-08-24T08:00:00.000Z'
+      }] : [])
+    ],
+    exerciseHistory: []
+  }
+}
+
+describe('selectAuthoritativeSnapshot', () => {
+  it('väljer D1 exakt och återupplivar inte lokalt kvarvarande raderingar', () => {
+    const local = snapshot('Gammal lokal version', 'deleted-on-server')
+    const server = snapshot('Aktuell serverversion')
+
+    expect(selectAuthoritativeSnapshot(local, server)).toEqual(server)
+  })
+
+  it('behåller lokal data när D1 ännu saknar snapshot', () => {
+    const local = snapshot('Första lokala versionen')
+
+    expect(selectAuthoritativeSnapshot(local, null)).toBe(local)
+  })
+})

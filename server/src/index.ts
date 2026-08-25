@@ -1,13 +1,5 @@
 import { authenticate, ApiError } from './auth'
 
-interface Env {
-  DB: D1Database
-  AUTH_MODE: string
-  ACCESS_TEAM_DOMAIN?: string
-  ACCESS_AUD?: string
-  FRONTEND_ORIGINS: string
-}
-
 interface SnapshotPayload {
   templates: unknown[]
   exercises: unknown[]
@@ -114,8 +106,16 @@ function isSnapshotPayload(value: unknown): value is SnapshotPayload {
 }
 
 function isEntityCollection(value: unknown): value is Record<string, unknown>[] {
-  return Array.isArray(value)
-    && value.every(item => isRecord(item) && typeof item.id === 'string' && item.id.length > 0)
+  if (!Array.isArray(value)) return false
+
+  const ids = new Set<string>()
+  for (const item of value) {
+    if (!isRecord(item) || typeof item.id !== 'string' || item.id.length === 0 || ids.has(item.id)) {
+      return false
+    }
+    ids.add(item.id)
+  }
+  return true
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

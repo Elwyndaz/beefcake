@@ -1,12 +1,10 @@
 import { getDB } from '../models'
-import type { Exercise, ExerciseHistory, Session, Template } from '../models'
+import {
+  selectAuthoritativeSnapshot,
+  type SnapshotData
+} from '../lib/snapshot'
 
-export interface SnapshotData {
-  templates: Template[]
-  exercises: Exercise[]
-  sessions: Session[]
-  exerciseHistory: ExerciseHistory[]
-}
+export type { SnapshotData } from '../lib/snapshot'
 
 interface ServerSnapshot {
   revision: number
@@ -63,41 +61,25 @@ async function getServerSnapshot(): Promise<ServerSnapshot> {
   return response.json() as Promise<ServerSnapshot>
 }
 
-function mergeSnapshots(local: SnapshotData, remote: SnapshotData): SnapshotData {
-  return {
-    templates: mergeById(remote.templates, local.templates),
-    exercises: mergeById(remote.exercises, local.exercises),
-    sessions: mergeById(remote.sessions, local.sessions),
-    exerciseHistory: mergeById(remote.exerciseHistory, local.exerciseHistory)
-  }
-}
-
-function mergeById<T extends { id: string }>(primary: T[], secondary: T[]): T[] {
-  const result = [...primary]
-  const ids = new Set(primary.map(item => item.id))
-  for (const item of secondary) {
-    if (!ids.has(item.id)) {
-      result.push(item)
-      ids.add(item.id)
-    }
-  }
-  return result
-}
-
 export async function syncSnapshot(snapshot: SnapshotData): Promise<void> {
   const next = syncQueue.then(() => syncSnapshotNow(snapshot))
   syncQueue = next.catch(() => undefined)
   return next
 }
 
-export async function loadSnapshotFromCloud(local: SnapshotData): Promise<SnapshotData> {
+export async function loadSnapshotFromCloud(
+  local: SnapshotData,
+  replaceLocalSnapshot: (snapshot: SnapshotData) => Promise<void>
+): Promise<SnapshotData> {
   if (!isCloudSyncConfigured()) return local
 
   try {
     const server = await getServerSnapshot()
+    const snapshot = selectAuthoritativeSnapshot(local, server.data)
+    await replaceLocalSnapshot(snapshot)
     await setKnownRevision(server.revision)
     setSyncError(null)
-    return server.data ? mergeSnapshots(server.data, local) : local
+    return snapshot
   } catch (error) {
     const message = syncErrorMessage(error, 'D1 kunde inte läsas.')
     setSyncError(message)
@@ -111,18 +93,13 @@ async function syncSnapshotNow(snapshot: SnapshotData): Promise<void> {
   try {
     const knownRevision = await getKnownRevision()
     const server = await getServerSnapshot()
-    let data = snapshot
+    const data = snapshot
     let expectedRevision = knownRevision
 
     if (server.revision === 0 && server.data === null) {
       expectedRevision = 0
     } else if (knownRevision === 0 && server.data) {
-      // Första anslutningen: slå ihop lokal data och serverdata så inget av dem
-      // försvinner. Därefter kräver alla skrivningar rätt revision.
-      data = mergeSnapshots(snapshot, server.data)
-      const { mergeDataIntoLocal } = await import('./dataService')
-      await mergeDataIntoLocal(data)
-      expectedRevision = server.revision
+      throw new Error('Serverdata finns men den lokala revisionen saknas. Ladda om sidan innan du sparar.')
     } else if (server.revision !== knownRevision) {
       throw new Error(`Serverkonflikt: lokal revision ${knownRevision}, serverrevision ${server.revision}.`)
     }
