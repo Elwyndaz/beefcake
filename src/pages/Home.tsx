@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'preact/hooks'
 import { useLocation } from 'wouter'
 import { getAllSessions, getAllTemplates, getActiveWorkout } from '../services/dataService'
-import { checkReminder } from '../services/reminderService'
 import { formatDateWithWeekday } from '../lib/date'
 import { exercisesVolume } from '../lib/volume'
-import { icon } from '../icons'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
 import { Stat } from '../components/Stat'
@@ -19,26 +17,12 @@ export function Home() {
   const [totalSessions, setTotalSessions] = useState(0)
   const [lastWorkout, setLastWorkout] = useState<string | null>(null)
   const [activeWorkout, setActiveWorkout] = useState<ActiveWorkout | null>(null)
-  const [showReminder, setShowReminder] = useState<{ show: boolean; daysSince: number } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     loadData()
-    checkReminder().then(res => {
-      if (res?.show) {
-        const dismissed = sessionStorage.getItem('beefcake-reminder-dismissed')
-        if (!dismissed) {
-          setShowReminder({ show: true, daysSince: res.daysSince })
-        }
-      }
-    })
   }, [])
-
-  function dismissReminder() {
-    sessionStorage.setItem('beefcake-reminder-dismissed', '1')
-    setShowReminder(null)
-  }
 
   async function loadData() {
     try {
@@ -80,7 +64,6 @@ export function Home() {
   if (loading) {
     return (
       <div>
-        <h1 class="page-title">Översikt</h1>
         <Card class="skeleton skeleton-card mb"></Card>
         <div class="grid grid-3 mb">
           <Card class="skeleton skeleton-card"></Card>
@@ -104,21 +87,8 @@ export function Home() {
 
   return (
     <div>
-      {showReminder && (
-        <div class="reminder-banner">
-          <span class="flex items-center gap-2 flex-1">
-            <svg width="20" height="20" viewBox="0 0 24 24" class="text-danger">
-              <path fill="currentColor" d="M12 2L1 21h20L12 2zm0 3.23L19.39 20H4.61L12 5.23zM12 12.77L14.14 17h-4.28L12 12.77z"/>
-            </svg>
-            <span>Du har inte tränat på {showReminder.daysSince} dagar. Din jävla latmask.</span>
-          </span>
-          <button class="banner-dismiss" onClick={dismissReminder} aria-label="Stäng">
-            <svg width="16" height="16" viewBox="0 0 19 19"><use href={icon('x-icon')} /></svg>
-          </button>
-        </div>
-      )}
-      <h1 class="page-title">Översikt</h1>
-
+      {/* Ingen rubrik "Översikt": headern säger redan Beefcake, och Cartman står ovanför.
+          Påminnelsen om latmasken ligger i Cartmans andra rad (src/lib/streak.ts). */}
       {activeWorkout && (
         <Card class="mb active-workout-card">
           <div class="flex justify-between items-center flex-wrap gap-sm">

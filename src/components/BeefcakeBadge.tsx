@@ -11,12 +11,11 @@ import level4 from '../assets/beefcake/4.jpg'
 const AVATARS = { 1: level1, 2: level2, 3: level3, 4: level4 } as const
 
 /**
- * Cartman överst i innehållsflödet, mer muskulös ju längre träningskedjan är.
- *
- * Läses om vid varje sidbyte: det är billigt mot IndexedDB och fångar att du
- * just slutfört ett pass utan att någon behöver skicka en händelse.
+ * Träningskedjan, läst om vid varje sidbyte: det är billigt mot IndexedDB och
+ * fångar att du just slutfört ett pass utan att någon behöver skicka en händelse.
+ * Anropas en gång i app-skalet och delas till märket och avatarerna.
  */
-export function BeefcakeBadge() {
+export function useBeefcakeStreak(): BeefcakeStreak {
   const [location] = useLocation()
   const [streak, setStreak] = useState<BeefcakeStreak>({ level: 1, streak: 0, daysSinceLast: null })
 
@@ -32,6 +31,11 @@ export function BeefcakeBadge() {
     }
   }, [location])
 
+  return streak
+}
+
+/** Cartman i full storlek med statustexten. Bara på Hem: belöningen hör hemma där, inte ovanför första setet. */
+export function BeefcakeBadge({ streak }: { streak: BeefcakeStreak }) {
   return (
     <div class={`beefcake-banner level-${streak.level}`}>
       <img
@@ -42,5 +46,19 @@ export function BeefcakeBadge() {
       />
       <p class="beefcake-banner-text">{beefcakeStatusText(streak)}</p>
     </div>
+  )
+}
+
+/** 40 px avatar i headern, sidebaren och railen på övriga sidor. Ramfärgen följer nivån via level-klassen. */
+export function BeefcakeAvatar({ streak }: { streak: BeefcakeStreak }) {
+  return (
+    <img
+      class={`beefcake-avatar level-${streak.level}`}
+      src={AVATARS[streak.level]}
+      alt={`Beefcake-nivå ${streak.level}: ${BEEFCAKE_LABELS[streak.level]}`}
+      title={beefcakeStatusText(streak).replace('\n', ' ')}
+      width="40"
+      height="40"
+    />
   )
 }

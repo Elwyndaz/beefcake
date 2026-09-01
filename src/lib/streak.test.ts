@@ -11,7 +11,7 @@ describe('beefcakeStatusText', () => {
     const text = beefcakeStatusText(beefcakeStreak(['2026-08-01'], '2026-08-21'))
     expect(text.split('\n')).toEqual([
       'Weight Gain 4000',
-      '20 dagar sedan senaste passet. Kedjan bruten, träna inom 3 dagar nästa gång.'
+      '20 dagar sedan senaste passet, din jävla latmask. Kedjan bruten, träna inom 3 dagar nästa gång.'
     ])
   })
 

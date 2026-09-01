@@ -73,7 +73,8 @@ export function beefcakeStatusText(streak: BeefcakeStreak): string {
     return `${label}\nInga pass loggade än. Dags att börja.`
   }
   if (streak.level === 1) {
-    return `${label}\n${streak.daysSinceLast} dagar sedan senaste passet. Kedjan bruten, träna inom ${MAX_GAP_DAYS} dagar nästa gång.`
+    // Påminnelsen bor här, inte i en egen banner på Hem: en text, inte två som sa samma sak
+    return `${label}\n${streak.daysSinceLast} dagar sedan senaste passet, din jävla latmask. Kedjan bruten, träna inom ${MAX_GAP_DAYS} dagar nästa gång.`
   }
   return `${label}\n${streak.streak} pass i rad utan mer än ${MAX_GAP_DAYS} dagars uppehåll.`
 }

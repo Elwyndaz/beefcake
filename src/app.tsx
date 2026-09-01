@@ -4,7 +4,7 @@ import { Router, Link, Switch, Route, useLocation } from 'wouter'
 import { lazy, Suspense } from 'preact/compat'
 import { PasswordGate } from './components/PasswordGate'
 import { CloudSyncStatus } from './components/CloudSyncStatus'
-import { BeefcakeBadge } from './components/BeefcakeBadge'
+import { BeefcakeBadge, BeefcakeAvatar, useBeefcakeStreak } from './components/BeefcakeBadge'
 import { Card } from './components/Card'
 import { Home } from './pages/Home'
 import { LogSession } from './pages/LogSession'
@@ -14,6 +14,7 @@ import { History } from './pages/History'
 import { SessionDetail } from './pages/SessionDetail'
 import { ExerciseDetail } from './pages/ExerciseDetail'
 import { icon } from './icons'
+import type { BeefcakeStreak } from './lib/streak'
 import './app.css'
 
 const Stats = lazy(async () => {
@@ -43,10 +44,11 @@ function NavLink({ href, label, icon: iconId, showLabel = true }: { href: string
   )
 }
 
-function SidebarNav() {
+function SidebarNav({ avatar }: { avatar: BeefcakeStreak | null }) {
   return (
     <aside class="sidebar">
       <div class="sidebar-header">
+        {avatar && <BeefcakeAvatar streak={avatar} />}
         <span class="sidebar-wordmark">Beefcake</span>
       </div>
       <nav class="sidebar-nav">
@@ -61,13 +63,15 @@ function SidebarNav() {
   )
 }
 
-function RailNav() {
+function RailNav({ avatar }: { avatar: BeefcakeStreak | null }) {
   return (
     <aside class="rail">
       <div class="rail-header">
-        <svg class="rail-wordmark" width="24" height="24" viewBox="0 0 24 24">
-          <use href={icon('home-icon')} />
-        </svg>
+        {avatar ? <BeefcakeAvatar streak={avatar} /> : (
+          <svg class="rail-wordmark" width="24" height="24" viewBox="0 0 24 24">
+            <use href={icon('home-icon')} />
+          </svg>
+        )}
       </div>
       <nav class="rail-nav">
         {navItems.slice(0, 5).map(item => (
@@ -109,20 +113,27 @@ function HeaderNav() {
   )
 }
 
-function AppContent() {
+function Shell() {
+  const [location] = useLocation()
+  const streak = useBeefcakeStreak()
+  // Hem har märket i full storlek, alla andra sidor får 40 px avatar i navigeringen
+  const isHome = location === '/'
+  const avatar = isHome ? null : streak
   return (
-    <Router base="/beefcake">
-      <div class="app">
-        <SidebarNav />
-        <RailNav />
-        <header class="header">
+    <div class="app">
+      <SidebarNav avatar={avatar} />
+      <RailNav avatar={avatar} />
+      <header class="header">
+        <div class="header-brand">
+          {avatar && <BeefcakeAvatar streak={avatar} />}
           <h1>Beefcake</h1>
-          <HeaderNav />
-        </header>
-        <main class="main">
-          <CloudSyncStatus />
-          <BeefcakeBadge />
-          <Switch>
+        </div>
+        <HeaderNav />
+      </header>
+      <main class="main">
+        <CloudSyncStatus />
+        {isHome && <BeefcakeBadge streak={streak} />}
+        <Switch>
             <Route path="/" component={Home} />
             <Route path="/log" component={LogSession} />
             <Route path="/templates" component={Templates} />
@@ -134,11 +145,18 @@ function AppContent() {
                 <Stats />
               </Suspense>
             )} />
-            <Route path="/settings" component={Settings} />
-          </Switch>
-        </main>
-        <BottomNav />
-      </div>
+          <Route path="/settings" component={Settings} />
+        </Switch>
+      </main>
+      <BottomNav />
+    </div>
+  )
+}
+
+function AppContent() {
+  return (
+    <Router base="/beefcake">
+      <Shell />
     </Router>
   )
 }
