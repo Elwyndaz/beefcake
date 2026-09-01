@@ -619,6 +619,13 @@ export async function syncSeed(): Promise<{ sessionsAdded: number; exercisesAdde
     db.getAll('sessions')
   ])
 
+  // Seeden är en engångsimport i en tom databas. Den var additiv vid varje uppstart,
+  // och då kom varje raderat seedpass tillbaka nästa gång appen laddades.
+  if (existingExercises.length || existingTemplates.length || existingSessions.length) {
+    await syncCloudData()
+    return { sessionsAdded: 0, exercisesAdded: 0 }
+  }
+
   const exerciseIdByName = new Map(existingExercises.map(e => [exerciseKey(e.name), e.id]))
   const templateIdByName = new Map(existingTemplates.map(t => [exerciseKey(t.name), t.id]))
   const haveSession = new Set(existingSessions.map(s => sessionKey(s.date, s.templateName)))
