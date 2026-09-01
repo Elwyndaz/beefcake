@@ -2,7 +2,7 @@
 schemaVersion: 1
 status: active
 currentGoal: Genomlysningens fem sista poster i chunkläge (A loggvyn och Hem, B statistik och Hem, C kroppsvikt), sedan Patriks ja eller nej på helheten
-nextAction: Skärmbilder efter-2, rapportens "## Efter 2", dagsnoten, sedan Patriks ja eller nej på hela passet.
+nextAction: Patriks ja eller nej på andra passets tre chunkar. Sedan prova loggvyn och kroppsviktsinmatningen på telefonen.
 blockers:
   - Inga
 reviewedAt: 2026-09-01
@@ -10,7 +10,7 @@ reviewedAt: 2026-09-01
 
 ## Recent work
 
-Andra passet 2026-09-01, chunkläge. **Chunk A klar** (`0f17c24`): Föregående-kolumnen kompakt på telefon (kg 56 px, 1 px cellpadding, mätt 336 av 340 px), "Nästa pass" på Hem pekar ut det program som väntat längst med dagar sedan under varje knapp. **Chunk B klar** (`09f2d15`): pass per vecka som HTML-staplar i Statistik, kortet "Denna vecka" på Hem med text och muskelgruppschips. **Chunk C klar:** kroppsvikt som egen store, valfri samling i snapshoten, inmatning i Inställningar, kurva i Statistik, Workern deployad med den delade valideringen.
+Andra passet 2026-09-01, chunkläge. **Chunk A klar** (`0f17c24`): Föregående-kolumnen kompakt på telefon (kg 56 px, 1 px cellpadding, mätt 336 av 340 px), "Nästa pass" på Hem pekar ut det program som väntat längst med dagar sedan under varje knapp. **Chunk B klar** (`09f2d15`): pass per vecka som HTML-staplar i Statistik, kortet "Denna vecka" på Hem med text och muskelgruppschips. **Chunk C klar** (`4408e64`): kroppsvikt som egen store, valfri samling i snapshoten, inmatning i Inställningar, kurva i Statistik, Workern deployad som `16aa6c7d` med den delade valideringen. Alla tre pushade, Pages grön.
 
 Genomlysningens byggpass 2026-09-01 i chunkläge, 14 commits efter `4f36f07` (`68303eb` till `034b331`, inklusive den här docs-rättningen), alla pushade och byggda av Pages.
 
@@ -22,18 +22,19 @@ Genomlysningens byggpass 2026-09-01 i chunkläge, 14 commits efter `4f36f07` (`6
 
 ## Verification
 
-- `npm test` 55 tester gröna (plates, exerciseMetrics, warmup nya), `npm run lint` och `npm run build` gröna.
-- Chromium på 390×844 och 1440×900, ljust och mörkt: noll konsolfel, `scrollWidth - clientWidth = 0` på alla vyer, alla tryckytor i loggvyn minst 44 px utom settypsbrickan (32), första setraden på y=402 på telefon, PR-märke vid 999 kg, tre uppvärmningsset. Kontrast räknad ur tokens: 24 par, alla minst 4,5:1. Skärmbilderna "efter" ligger i vaulten under `Beefcake Designgenomlysning/efter/`.
-- Cartman nivå 2 till 4 fortfarande bara enhetstestade. PR-märket och plattraden är testade i Chromium, inte på en telefon.
+- Andra passet: `npm test` 60 tester gröna (formatSetCompact, kroppsvikt i validering och Worker nya), `npm run lint`, `npm run build` och `server:check` gröna. Chromium 390×844 och 1440×900, ljust och mörkt: noll konsolfel, noll sidled-scroll, settabellen 336 av 340 px, tryckytor i loggvyn och Inställningar minst 44 px utom settypsbrickan. Kroppsviktsflödet (två värden, ladda om, kurva, export, töm, import) kört grönt. Skärmbilder i vaulten under `Beefcake Designgenomlysning/efter-2/`. Inga nya färger, kontrasten oförändrad (24 par, minst 4,5:1).
+- Första passet: 55 tester, samma Chromium-metod, skärmbilder under `efter/`.
+- Cartman nivå 2 till 4 fortfarande bara enhetstestade. PR-märket, plattraden och kroppsviktsinmatningen är testade i Chromium, inte på en telefon.
 
 ## Unresolved details
 
-- Hela passet är byggt i chunkläge utan förhandsgodkännande; varje steg är en `git revert` bort. Beslut tagna åt Patrik står i dagsnoten och i rapportens "## Efter".
-- Öppna genomlysningsposter: förra gången som placeholder per rad, "Nästa pass" som pekar ut ett pass, pass per vecka som stapel, veckosammanfattning på Hem, kroppsvikt.
-- Ingen autentiserad POST mot Worker-valideringen mot produktions-D1 sedan `f3f1bb10`.
+- Båda passen är byggda i chunkläge utan förhandsgodkännande; varje commit är en `git revert` bort. Beslut tagna åt Patrik står i dagsnoten och i rapportens "## Efter" och "## Efter 2".
+- Alla genomlysningsposter är byggda. Kvar i backloggen: Web Push, Cloudflare Pages med Access, tvåanvändarstöd.
+- En äldre klient som skriver en snapshot utan `bodyWeight` nollar kroppsvikten i D1 (snapshoten ersätter hela tillståndet). Accepterat med två telefoner som laddar om bundeln.
+- Ingen autentiserad POST mot Worker-valideringen mot produktions-D1 sedan `f3f1bb10`; `16aa6c7d` är bara testad via tvåklientstestet.
 - Access-sessionen för `beefcake` är 1 månad sedan 2026-08-21.
 - Spökpasset 2025-11-19 "Bröst, axlar & biceps" är kvar med flit.
 
 ## Resume here
 
-Prova loggvyn på telefonen i gymmet innan något mer byggs på den. Vid "ändringen syns inte": rensa `workbox-precache-v2-.../beefcake/` eller hårduppdatera. De fem öppna genomlysningsposterna är nästa byggbara sak; två användare, Web Push och Cloudflare Pages med Access kräver beslut eller infrastruktur.
+Prova loggvyn och kroppsvikten på telefonen innan något mer byggs. Vid "ändringen syns inte": rensa `workbox-precache-v2-.../beefcake/` eller hårduppdatera; IndexedDB uppgraderas till version 4 automatiskt. Två användare, Web Push och Cloudflare Pages med Access kräver beslut eller infrastruktur.
