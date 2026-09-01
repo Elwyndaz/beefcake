@@ -19,14 +19,15 @@ Två chunkomgångar 2026-09-01, alla commits pushade och live via Pages, Workern
 - **Program i stället för mall** i hela gränssnittet (backloggens P2). Koden heter fortfarande `Template`, routen `/templates`.
 - **RPE per set och anteckning per övning** i loggvyn. `SetEntry.rpe?` (5 till 10) och `SessionExercise.notes?`, båda valfria, validerade i `validateSnapshot`. Passdetaljen visar "@8,5" efter setet och anteckningen under övningsnamnet, och redigeringsläget bär anteckningen genom Spara. På telefon krymptes settabellen (2 px cellpadding, smalare fält, dolda spinnrar) så RPE-kolumnen ryms utan sidled-scroll.
 - **Kortkommandon i loggvyn**: Ctrl+Enter (Cmd+Enter) slutför, Escape stänger avbrytdialog, plattkalkylator och programsparning.
+- **Tredje omgången**: sju oanvända exporter bort (`updateTemplateExerciseLastUsed`, `updateExerciseMuscleGroup`, `getTemplate`, `getMuscleGroup`, `getMuscleGroups`, `getMuscleGroupMap`, `exportAllDataAsJSON`), lokala datum via `parseLocalDate`/`localDateISO` i heatmap, veckotonnage, streak och veckoset (UTC-datum efter 22 svensk tid var gårdagen), passredigeringen använder kortlayouten på alla bredder eftersom desktoptabellen bara redigerade set 1, och nytt set faller tillbaka på programmets standardvärden när historik saknas.
 - **Mallbytets kapplöpning** spärrad i `loadTemplateIntoExercises`. **Vilotimern frågar innan sidan lämnas** när den går. **Datalisten** i programformuläret renderas en gång. **ESLint** i `npm run lint` och CI.
 
 ## Verification
 
 - `npm test` grön: 7 filer, 40 tester. `npm run lint`, `tsc -b`, `npm run build`, `npm run server:check` gröna.
 - Kört i Chromium mot dev-servern med seedad data på 1440 och 390 px: noll set vid start, förifyllning från förra passet, borttagning ner till noll, mallbyte, timerspärr, raderat seedpass borta efter omladdning, RPE 8,5 och anteckning sparade i passet och visade i passdetaljen, settabellen 0 px overflow på 390 px, Escape stänger dialogen, Ctrl+Enter sparar (420 till 421 pass) och landar på Historik.
-- Cartman nivå 2 ("På gång") sedd i webbläsaren efter testpassen. Nivå 3 och 4 är fortfarande bara enhetstestade.
-- Pages-pipeline grön på `8b365f1` (`33525389742`), senare commits `121a90e`, `69a22aa`, `663c2e8` kör samma pipeline. Worker `beefcake-api` deployad som `f3f1bb10-03fb-44e2-afc9-2ac7834a4c14`.
+- Passredigering på 1440 px: ett kort per övning, alla set synliga, reps 10 till 12 sparat med RPE och anteckning kvar. Cartman nivå 2 ("På gång") sedd i webbläsaren efter testpassen. Nivå 3 och 4 är fortfarande bara enhetstestade.
+- Pages-pipeline grön på `8b365f1` (`33525389742`), senare commits `121a90e`, `69a22aa`, `663c2e8`, `f5c4f0c`, `2135f11`, `602db41` kör samma pipeline. Worker `beefcake-api` deployad som `f3f1bb10-03fb-44e2-afc9-2ac7834a4c14`.
 
 ## Unresolved details
 

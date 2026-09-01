@@ -23,6 +23,9 @@
 
 ## Byggt
 
+- Städ (2026-09-01): sju oanvända exporter bort ur dataService och backupService, lokala datum i stället för UTC i heatmap, veckotonnage, streak och veckoset
+- Passredigering visar alla set på alla bredder. Desktoptabellen redigerade bara set 1 och visade inte resten
+- Nytt set i loggvyn faller tillbaka på programmets standardvärden när övningen saknar historik, det enda stället de används sedan nollsetstarten
 - Vokabulär (2026-09-01): *program* i hela gränssnittet där det stod *mall*, koden heter fortfarande `Template`
 - RPE per set (5 till 10, valfritt, `SetEntry.rpe`) och anteckning per övning (`SessionExercise.notes`) i loggvyn, visade som "@8,5" och en rad under övningen i passdetaljen. Settabellen krympt på telefon så RPE-kolumnen ryms utan sidled-scroll
 - Kortkommandon i loggvyn: Ctrl+Enter slutför, Escape stänger dialog, plattkalkylator och programsparning
