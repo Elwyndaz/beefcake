@@ -40,10 +40,14 @@ export default {
   }
 } satisfies ExportedHandler<Env>
 
-async function readSnapshot(db: D1Database, owner: string, headers: Headers): Promise<Response> {
-  const row = await db.prepare(
+async function latestRow(db: D1Database, owner: string): Promise<SnapshotRow | null> {
+  return db.prepare(
     'SELECT revision, payload, created_at FROM snapshots WHERE owner = ? ORDER BY revision DESC LIMIT 1'
   ).bind(owner).first<SnapshotRow>()
+}
+
+async function readSnapshot(db: D1Database, owner: string, headers: Headers): Promise<Response> {
+  const row = await latestRow(db, owner)
 
   if (!row) return json({ revision: 0, data: null }, 200, headers)
   return json({ revision: row.revision, data: JSON.parse(row.payload), updatedAt: row.created_at }, 200, headers)
@@ -67,6 +71,15 @@ async function writeSnapshot(request: Request, db: D1Database, owner: string, he
   if (!isRecord(body) || typeof body.expectedRevision !== 'number') {
     throw new ApiError(400, 'invalid_snapshot', 'Snapshoten har fel format.')
   }
+  // En äldre klient utan kroppsvikt skickar ingen bodyWeight alls (undefined). Då behålls
+  // serverns senaste lista, annars nollas den vid varje skrivning från den gamla bundeln.
+  // En tom lista är ett medvetet "raderat" från en ny klient och respekteras.
+  if (isRecord(body.data) && body.data.bodyWeight === undefined) {
+    const previous = await latestRow(db, owner)
+    const kept = previous ? (JSON.parse(previous.payload) as { bodyWeight?: unknown }).bodyWeight : undefined
+    if (kept !== undefined) body.data = { ...body.data, bodyWeight: kept }
+  }
+
   // Samma domänvalidering som JSON-importen i klienten: D1 tar bara emot hela modellen
   let data: ReturnType<typeof validateSnapshot>
   try {

@@ -75,10 +75,19 @@ export function daysAgoText(days: number): string {
   return days <= 0 ? 'i dag' : days === 1 ? 'i går' : `för ${days} dagar sedan`
 }
 
-/** Måndagen `weeksAgo` veckor bakåt, som YYYY-MM-DD. Veckan börjar på måndag i hela appen. */
-export function mondayISO(weeksAgo = 0): string {
-  const now = parseLocalDate(todayISO())
+/** Måndagen `weeksAgo` veckor bakåt från `fromISO` (i dag som förval), som YYYY-MM-DD. Veckan börjar på måndag i hela appen. */
+export function mondayISO(weeksAgo = 0, fromISO = todayISO()): string {
+  const now = parseLocalDate(fromISO)
   const monday = new Date(now)
   monday.setDate(now.getDate() - ((now.getDay() + 6) % 7) - weeksAgo * 7)
   return localDateISO(monday)
+}
+
+/** ISO 8601-veckonummer för etiketten "v. 36": veckan med årets första torsdag är v. 1. */
+export function isoWeek(iso: string): number {
+  const d = parseLocalDate(iso)
+  const thursday = new Date(d)
+  thursday.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7))
+  const firstThursday = new Date(thursday.getFullYear(), 0, 4)
+  return 1 + Math.round(((thursday.getTime() - firstThursday.getTime()) / 86_400_000 - 3 + ((firstThursday.getDay() + 6) % 7)) / 7)
 }

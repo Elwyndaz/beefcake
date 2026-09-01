@@ -58,7 +58,7 @@ Volym räknas alltid genom `src/lib/volume.ts`. Vikt 0 betyder kroppsvikt eller 
 
 ## Lagring och nödräddning
 
-D1 lagrar versionsnumrerade snapshots per Access-identitet och är sanningskälla. Klienten hämtar serverns snapshot före seedning och använder IndexedDB som lokal cache. Efter varje mutation synkar `syncCloudData()` snapshoten till D1. Workern och JSON-importen validerar hela domänmodellen med samma `validateSnapshot()` i `src/lib/importValidation.ts`, inklusive att varje historikrad pekar på ett pass som finns. Snapshoten har fyra obligatoriska samlingar (`templates`, `exercises`, `sessions`, `exerciseHistory`) och `bodyWeight` som **valfri samling**: äldre snapshots i D1 och äldre klienter saknar fältet, då blir det en tom lista. En äldre klient som skriver en snapshot utan fältet nollar därmed kroppsvikten i D1; båda telefonerna får nya bundeln vid nästa laddning, så det är accepterat.
+D1 lagrar versionsnumrerade snapshots per Access-identitet och är sanningskälla. Klienten hämtar serverns snapshot före seedning och använder IndexedDB som lokal cache. Efter varje mutation synkar `syncCloudData()` snapshoten till D1. Workern och JSON-importen validerar hela domänmodellen med samma `validateSnapshot()` i `src/lib/importValidation.ts`, inklusive att varje historikrad pekar på ett pass som finns. Snapshoten har fyra obligatoriska samlingar (`templates`, `exercises`, `sessions`, `exerciseHistory`) och `bodyWeight` som **valfri samling**: äldre snapshots i D1 och äldre klienter saknar fältet, då blir det en tom lista i klienten. Workern skiljer på saknat och tomt: skriver en klient en snapshot **utan** `bodyWeight` (fältet är `undefined`) kopierar `writeSnapshot` listan från ägarens senaste revision innan valideringen, så en äldre bundel inte nollar kroppsvikten. En **tom lista** är ett medvetet "raderat" från en ny klient och sparas som den är.
 
 - Skrivning använder enkel `POST` med `Content-Type: text/plain` och `credentials: include`, eftersom Cloudflare Access stoppar CORS-preflight utan Access-cookie.
 - Skrivning kräver senaste revision, så en gammal klient får 409 i stället för att skriva över nyare data.
@@ -88,7 +88,7 @@ src/app.css               all styling, tokens överst
 src/components/           Button, Card, Stat, EmptyState, Field, PasswordGate, RestTimer, PlateCalculator, CloudSyncStatus, BeefcakeBadge (märke, avatar, useBeefcakeStreak)
 src/db/schema.ts          IndexedDB-schema och typer
 src/db/seedData.ts        GENERERAD, all träningshistorik
-src/lib/date.ts           all datumhantering, tidszonssäker. Använd den, aldrig new Date() rakt av
+src/lib/date.ts           all datumhantering, tidszonssäker (även mondayISO, isoWeek). Använd den, aldrig new Date() rakt av
 src/lib/format.ts         vikt och set som text, svensk notation
 src/lib/volume.ts         volymformeln, enda stället
 src/lib/hypertrophy.ts    set per vecka mot bandet 10-20

@@ -162,4 +162,41 @@ describe('kroppsvikt i snapshoten', () => {
     expect((await post({ ...base, bodyWeight: [{ date: 'igår', kg: 82.5 }] })).status).toBe(400)
     expect(db.latestRevision()).toBe(revision)
   })
+
+  it('Workern behåller kroppsvikten när en äldre klient skriver utan fältet', async () => {
+    // Ny klient sparar två kroppsvikter
+    const fresh = await newClient()
+    await fresh.data.syncSeed()
+    await fresh.data.saveBodyWeight('2026-09-01', 82.5)
+    await fresh.data.saveBodyWeight('2026-09-02', 82.1)
+    const latestBody = () => (JSON.parse(db.rows[db.rows.length - 1].payload) as { bodyWeight: unknown }).bodyWeight
+    expect(latestBody()).toHaveLength(2)
+
+    // Gammal klient (bundeln före kroppsvikten) skriver ett pass: POST utan fältet alls
+    const { bodyWeight: _omitted, ...oldClientData } = JSON.parse(db.rows[db.rows.length - 1].payload) as Record<string, unknown>
+    const sessions = [...(oldClientData.sessions as unknown[]), {
+      id: 'old-client-1', date: '2026-09-02', templateId: 'custom', templateName: 'Från gammal klient', createdAt: '2026-09-02T10:00:00.000Z',
+      exercises: [{ exerciseId: 'x', exerciseName: 'Bänk', setEntries: [{ sets: 1, reps: 5, weight: 100 }], order: 0 }]
+    }]
+    const response = await apiFetch(`${API}/api/snapshot`, {
+      method: 'POST',
+      body: JSON.stringify({ expectedRevision: db.latestRevision(), data: { ...oldClientData, sessions } })
+    })
+    expect(response.status).toBe(201)
+    expect(latestBody()).toEqual([{ date: '2026-09-01', kg: 82.5 }, { date: '2026-09-02', kg: 82.1 }])
+    expect(db.latestSessionIds()).toContain('old-client-1')
+
+    // Ny klient laddar om: passet från den gamla klienten kom in och båda kroppsvikterna är kvar
+    await fresh.data.syncSeed()
+    expect(await sessionIds(fresh)).toContain('old-client-1')
+    expect((await fresh.data.getBodyWeights()).map(b => b.kg)).toEqual([82.1, 82.5])
+
+    // En ny klient som skickar tom lista har raderat: Workern respekterar det
+    const { bodyWeight: _all, ...rest } = JSON.parse(db.rows[db.rows.length - 1].payload) as Record<string, unknown>
+    expect((await apiFetch(`${API}/api/snapshot`, {
+      method: 'POST',
+      body: JSON.stringify({ expectedRevision: db.latestRevision(), data: { ...rest, bodyWeight: [] } })
+    })).status).toBe(201)
+    expect(latestBody()).toEqual([])
+  })
 })

@@ -1,14 +1,16 @@
 ---
 schemaVersion: 1
 status: active
-currentGoal: Genomlysningen är byggd och godkänd av Patrik 2026-09-01 (båda passen). Nästa: Workern behåller kroppsvikten när en gammal klient skriver, datumtester, tablet- och a11y-svep, uppdateringsbanner för PWA:n
-nextAction: Chunk D till F enligt prompten i dagsnoten 2026-09-01 session 12. Parallellt: prova loggvyn och kroppsvikten på telefonen.
+currentGoal: Härdning efter genomlysningen, chunk D till F. D klar (Worker behåller kroppsvikt, datumtester). Kvar: E tablet- och a11y-svep, F uppdateringsbanner för PWA:n
+nextAction: Chunk E och F enligt prompten i dagsnoten 2026-09-01 session 12. Parallellt: prova loggvyn och kroppsvikten på telefonen.
 blockers:
   - Inga
 reviewedAt: 2026-09-01
 ---
 
 ## Recent work
+
+Tredje passet 2026-09-01, chunkläge. **Chunk D klar**: Workern kopierar senaste revisionens `bodyWeight` när en klient POST:ar utan fältet (tom lista respekteras), tvåklientstestet har fallet, Worker deployad som `40e6fc76`. `isoWeek` flyttad till `src/lib/date.ts`, `mondayISO(weeksAgo, fromISO)` testbar med fasta datum, `src/lib/date.test.ts` ny (68 tester totalt).
 
 Andra passet 2026-09-01, chunkläge. **Chunk A klar** (`0f17c24`): Föregående-kolumnen kompakt på telefon (kg 56 px, 1 px cellpadding, mätt 336 av 340 px), "Nästa pass" på Hem pekar ut det program som väntat längst med dagar sedan under varje knapp. **Chunk B klar** (`09f2d15`): pass per vecka som HTML-staplar i Statistik, kortet "Denna vecka" på Hem med text och muskelgruppschips. **Chunk C klar** (`4408e64`): kroppsvikt som egen store, valfri samling i snapshoten, inmatning i Inställningar, kurva i Statistik, Workern deployad som `16aa6c7d` med den delade valideringen. Alla tre pushade, Pages grön.
 
@@ -30,8 +32,8 @@ Genomlysningens byggpass 2026-09-01 i chunkläge, 14 commits efter `4f36f07` (`6
 
 - Båda passen godkända av Patrik 2026-09-01 ("ja" på helheten). Beslut tagna åt Patrik står i dagsnoten och i rapportens "## Efter" och "## Efter 2".
 - Alla genomlysningsposter är byggda. Kvar i backloggen: Web Push, Cloudflare Pages med Access, tvåanvändarstöd.
-- En äldre klient som skriver en snapshot utan `bodyWeight` nollar kroppsvikten i D1 (snapshoten ersätter hela tillståndet). Accepterat med två telefoner som laddar om bundeln.
-- Ingen autentiserad POST mot Worker-valideringen mot produktions-D1 sedan `f3f1bb10`; `16aa6c7d` är bara testad via tvåklientstestet.
+- Workern behåller kroppsvikten vid skrivning utan fältet sedan `40e6fc76` (chunk D). Testat i tvåklientstestet, inte mot produktions-D1.
+- Ingen autentiserad POST mot produktions-D1 sedan `f3f1bb10`; `16aa6c7d` och `40e6fc76` är bara testade via tvåklientstestet.
 - Access-sessionen för `beefcake` är 1 månad sedan 2026-08-21.
 - Spökpasset 2025-11-19 "Bröst, axlar & biceps" är kvar med flit.
 

@@ -3,7 +3,7 @@ import { Link } from 'wouter'
 import { getAllExercises, getVolumeOverTime, getFrequencyPerTemplate, getPRs, getAllSessions, getEstimated1RM, getVolumeByMuscleGroup, getWeeklyHardSetsPerMuscleGroup, getExerciseTrainingCounts, getSessionYears, getBodyWeights } from '../services/dataService'
 import { classifyWeeklySets, SET_LOAD_LABELS } from '../lib/hypertrophy'
 import { formatWeight } from '../lib/format'
-import { formatDateShort, localDateISO, todayISO, parseLocalDate, mondayISO } from '../lib/date'
+import { formatDateShort, localDateISO, todayISO, parseLocalDate, mondayISO, isoWeek } from '../lib/date'
 import { exercisesVolume } from '../lib/volume'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
@@ -123,15 +123,6 @@ const periodLabels: Record<Period, string> = {
 
 const WEEKS_BACK = 8
 const COUNT_WEEKS_BACK = 12
-
-/** ISO-veckonummer för etiketten "v. 36" */
-function isoWeek(iso: string): number {
-  const d = parseLocalDate(iso)
-  const thursday = new Date(d)
-  thursday.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7))
-  const firstThursday = new Date(thursday.getFullYear(), 0, 4)
-  return 1 + Math.round(((thursday.getTime() - firstThursday.getTime()) / 86_400_000 - 3 + ((firstThursday.getDay() + 6) % 7)) / 7)
-}
 
 interface Last30 {
   sessions: number
