@@ -9,12 +9,15 @@ import {
   getActiveWorkout,
   saveActiveWorkout,
   clearActiveWorkout,
-  getLastPerformanceForExercise
+  getLastPerformanceForExercise,
+  getExerciseRecords
 } from '../services/dataService'
 import { startRestTimer, triggerHaptic } from '../services/timerService'
 import { formatDateShort, formatDateWithWeekday } from '../lib/date'
 import { formatSet, formatSets, formatWeight } from '../lib/format'
 import { barWeightFor, formatPlatesPerSide } from '../lib/plates'
+import { epley1RM } from '../lib/exerciseMetrics'
+import { warmupSets } from '../lib/warmup'
 import { setsVolume } from '../lib/volume'
 import { todayISO, nowISO } from '../models'
 import { icon } from '../icons'
@@ -51,6 +54,8 @@ export function LogSession() {
   const [draggedExerciseIndex, setDraggedExerciseIndex] = useState<number | null>(null)
   const [previousPerformances, setPreviousPerformances] = useState<Record<string, { date: string; setEntries: SetEntry[]; notes?: string }>>({})
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
+  // Rekord per övning vid passets start: ett bockat set som slår dem får PR-märket på raden
+  const [records, setRecords] = useState<Record<string, { maxWeight: number; maxE1RM: number }>>({})
   const [plateCalcModal, setPlateCalcModal] = useState<{ isOpen: boolean; weight: number; barWeight: number; exIdx: number; setIdx: number }>({
     isOpen: false,
     weight: 60,
@@ -74,8 +79,8 @@ export function LogSession() {
 
     const results = await Promise.all(
       missingIds.map(async id => {
-        const perf = await getLastPerformanceForExercise(id)
-        return { id, perf }
+        const [perf, rec] = await Promise.all([getLastPerformanceForExercise(id), getExerciseRecords(id)])
+        return { id, perf, rec }
       })
     )
 
@@ -86,6 +91,11 @@ export function LogSession() {
           next[res.id] = res.perf
         }
       }
+      return next
+    })
+    setRecords(prev => {
+      const next = { ...prev }
+      for (const res of results) next[res.id] = res.rec
       return next
     })
   }, [previousPerformances])
@@ -174,11 +184,17 @@ export function LogSession() {
     activeTemplateRequestRef.current = template.id
     const exMap = new Map(allExList.map(e => [e.id, e.name]))
     // Ladda förra gången först: den vikten är utgångsläget vid stången, inte mallens startvärde
-    const lastPerformances = await Promise.all(
-      template.exercises.map((te: TemplateExercise) => getLastPerformanceForExercise(te.exerciseId))
-    )
+    const [lastPerformances, exerciseRecords] = await Promise.all([
+      Promise.all(template.exercises.map((te: TemplateExercise) => getLastPerformanceForExercise(te.exerciseId))),
+      Promise.all(template.exercises.map((te: TemplateExercise) => getExerciseRecords(te.exerciseId)))
+    ])
     // Ett snabbare mallbyte hann före medan vi väntade: släpp det här svaret
     if (activeTemplateRequestRef.current !== template.id) return
+    setRecords(prev => {
+      const next = { ...prev }
+      template.exercises.forEach((te: TemplateExercise, idx: number) => { next[te.exerciseId] = exerciseRecords[idx] })
+      return next
+    })
     const formExercises: LogFormExercise[] = template.exercises.map((te: TemplateExercise) => ({
       exerciseId: te.exerciseId,
       exerciseName: exMap.get(te.exerciseId) || '',
@@ -254,6 +270,13 @@ export function LogSession() {
     await loadTemplateIntoExercises(template, allEx)
   }
 
+  // Slår setet övningens tyngsta set eller bästa e1RM? Uppvärmning räknas inte.
+  function isRecordSet(exerciseId: string, set: ActiveSetEntry): boolean {
+    const rec = records[exerciseId]
+    if (!rec || !set.completed || set.weight <= 0 || set.type === 'warmup') return false
+    return set.weight > rec.maxWeight || (epley1RM(set.weight, set.reps) ?? 0) > rec.maxE1RM
+  }
+
   // Toggle set completion and trigger rest timer + haptics
   function toggleSetCompleted(exerciseIdx: number, setIdx: number) {
     const ex = exercises[exerciseIdx]
@@ -271,9 +294,22 @@ export function LogSession() {
     setExercises(newExercises)
 
     if (nextCompleted) {
-      triggerHaptic(50)
+      // Rekordet får den långa vibrationen, samma som när passet sparas
+      triggerHaptic(isRecordSet(ex.exerciseId, newSetEntries[setIdx]) ? [60, 40, 100] : 50)
       startRestTimer()
     }
+  }
+
+  // Uppvärmning: tre set före första arbetssetet, 40, 60, 80 % avrundat till 2,5 kg
+  function addWarmup(exerciseIdx: number) {
+    const ex = exercises[exerciseIdx]
+    const working = ex.setEntries.find(s => s.type !== 'warmup' && s.weight > 0)
+    if (!working) return
+    const warm: ActiveSetEntry[] = warmupSets(working.weight).map(s => ({ sets: 1, reps: s.reps, weight: s.weight, completed: false, type: 'warmup' }))
+    const newExercises = [...exercises]
+    newExercises[exerciseIdx] = { ...ex, setEntries: [...warm, ...ex.setEntries] }
+    setExercises(newExercises)
+    triggerHaptic(20)
   }
 
   // Cycle set type: normal -> warmup -> drop -> failure -> normal
@@ -710,6 +746,7 @@ export function LogSession() {
                             const isCompleted = Boolean(set.completed)
                             const setType = set.type || 'normal'
                             const pickerOpen = rpePicker?.exIdx === exIdx && rpePicker.setIdx === setIdx
+                            const isRecord = isRecordSet(ex.exerciseId, set)
 
                             const badgeLabel =
                               setType === 'warmup' ? 'W' :
@@ -804,8 +841,10 @@ export function LogSession() {
                                     class={`btn-check-set ${isCompleted ? 'checked' : ''}`}
                                     onClick={() => toggleSetCompleted(exIdx, setIdx)}
                                     aria-label={isCompleted ? 'Markera som ej klar' : 'Markera som klar'}
+                                    title={isRecord ? 'Nytt rekord för övningen' : undefined}
                                   >
                                     {isCompleted ? '✓' : ''}
+                                    {isRecord && <span class="pr-badge" aria-label="Nytt rekord">PR</span>}
                                   </button>
                                 </td>
                                 <td class="col-del">
@@ -871,6 +910,11 @@ export function LogSession() {
                       {prevSets.length > ex.setEntries.length && (
                         <Button variant="secondary" size="sm" onClick={() => fillFromLast(exIdx)}>
                           Som förra gången
+                        </Button>
+                      )}
+                      {ex.setEntries.some(s => s.type !== 'warmup' && s.weight > 0) && !ex.setEntries.some(s => s.type === 'warmup') && (
+                        <Button variant="secondary" size="sm" onClick={() => addWarmup(exIdx)} title="Tre set på 40, 60 och 80 % av första arbetssetet">
+                          Uppvärmning
                         </Button>
                       )}
                       <input

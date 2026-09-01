@@ -367,6 +367,20 @@ export async function getPRs(): Promise<{ exerciseId: string; exerciseName: stri
   return Array.from(map.entries()).map(([exerciseId, data]) => ({ exerciseId, ...data }))
 }
 
+/** Övningens rekord hittills: tyngsta set och bästa e1RM. Loggvyn jämför bockade set mot dem. */
+export async function getExerciseRecords(exerciseId: string): Promise<{ maxWeight: number; maxE1RM: number }> {
+  const history = await getExerciseHistory(exerciseId)
+  let maxWeight = 0
+  let maxE1RM = 0
+  for (const h of history) {
+    for (const set of h.setEntries) {
+      maxWeight = Math.max(maxWeight, set.weight)
+      maxE1RM = Math.max(maxE1RM, epley1RM(set.weight, set.reps) ?? 0)
+    }
+  }
+  return { maxWeight, maxE1RM }
+}
+
 // Bästa estimerade 1RM över hela historiken. Formeln bor i src/lib/exerciseMetrics.ts.
 export async function getEstimated1RM(exerciseId: string): Promise<{ exerciseName: string; estimated1RM: number; date: string } | null> {
   const history = await getExerciseHistory(exerciseId)

@@ -1249,6 +1249,7 @@ canvas { display: block; max-width: 100%; }
 
 /* Check Set Button */
 .btn-check-set {
+  position: relative;
   width: 44px;
   height: 44px;
   border-radius: var(--radius-sm);
@@ -1270,6 +1271,13 @@ canvas { display: block; max-width: 100%; }
   background: var(--success);
   border-color: var(--success);
   transform: scale(1.05);
+}
+/* PR-märket på bocken när setet slår övningens tyngsta set eller bästa e1RM */
+.pr-badge {
+  position: absolute; top: -7px; right: -7px;
+  padding: 1px 5px; border-radius: 999px;
+  background: var(--warning); color: var(--on-accent);
+  font-size: 9px; font-weight: 800; line-height: 1.4; letter-spacing: 0.04em;
 }
 
 .btn-calc {
