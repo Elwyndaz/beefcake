@@ -844,11 +844,6 @@ canvas { display: block; max-width: 100%; }
 .btn-remove svg { fill: currentColor; display: block; }
 
 /* Exercise Form */
-.exercise-list-table { display: block; overflow-x: auto; }
-.exercise-list-cards { display: none; }
-.exercise-list table { width: 100%; border-collapse: collapse; }
-.exercise-list th, .exercise-list td { padding: var(--space-3); text-align: left; border-bottom: 1px solid var(--border); vertical-align: middle; }
-.exercise-list th { font-weight: 600; color: var(--text-muted); font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.5px; background: transparent; }
 .exercise-card {
   background: var(--surface); border-radius: var(--radius); padding: var(--space-4);
   margin-bottom: var(--space-4); border: 1px solid var(--border);
@@ -1376,9 +1371,6 @@ canvas { display: block; max-width: 100%; }
   .header { padding: var(--space-4); }
   .header h1 { font-size: var(--text-xl); }
   .main { padding-bottom: 80px; }
-  .exercise-list-table { display: none; }
-  .exercise-list-cards { display: block; }
-  .exercise-card-fields .input-group.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); }
   .history-list-table { display: none; }
   .history-list-cards { display: block; }
   .session-detail-table { display: none; }

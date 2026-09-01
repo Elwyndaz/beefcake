@@ -609,51 +609,6 @@ export function SessionDetail() {
         </datalist>
 
         <div class="exercise-list">
-          <div class="exercise-list-table">
-            <table>
-              <thead>
-                <tr>
-                  <th>Övning</th>
-                  <th>Set</th>
-                  <th>Reps</th>
-                  <th>Vikt (kg)</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {formExercises.map((ex, idx) => (
-                  <tr key={idx}>
-                    <td>
-                      <input
-                        type="text"
-                        value={ex.exerciseName}
-                        onChange={e => handleInputChange(e, idx, 'exerciseName')}
-                        placeholder="Skriv övningsnamn..."
-                        list="session-exercise-suggestions"
-                        class="table-input"
-                      />
-                    </td>
-                    <td>
-                      <input type="number" min="1" max="20" value={ex.setEntries[0]?.sets || 0} onChange={e => handleInputChange(e, idx, 'setEntries', 0, 'sets')} class="table-input" />
-                    </td>
-                    <td>
-                      <input type="number" min="1" max="50" value={ex.setEntries[0]?.reps || 0} onChange={e => handleInputChange(e, idx, 'setEntries', 0, 'reps')} class="table-input" />
-                    </td>
-                    <td>
-                      <input type="number" min="0" step="0.5" max="500" value={ex.setEntries[0]?.weight || 0} onChange={e => handleInputChange(e, idx, 'setEntries', 0, 'weight')} class="table-input" />
-                    </td>
-                    <td class="remove-cell">
-                      <button class="btn-remove" onClick={() => removeExercise(idx)} aria-label="Ta bort">
-                        <svg width="20" height="20" viewBox="0 0 19 19">
-                          <use href={icon('trash-icon')} />
-                        </svg>
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
           <div class="exercise-list-cards">
             {formExercises.map((ex, idx) => (
               <div key={idx} class="exercise-card">
