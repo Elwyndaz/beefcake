@@ -64,15 +64,15 @@ D1 lagrar versionsnumrerade snapshots per Access-identitet och är sanningskäll
 
 ## Beefcake-nivån
 
-Cartman speglar träningskedjan, centrerad överst i innehållsflödet på varje sida med statustexten bredvid. `src/lib/streak.ts` äger regeln: ett glapp på över **tre dagar** bryter kedjan och sätter nivå 1, annars stegas nivån upp med kedjans längd (1-3 pass ger 2, 4-9 ger 3, 10 eller fler ger 4). Takten motsvarar "varannan dag", ungefär fyra pass i veckan.
+Cartman speglar träningskedjan. I full storlek med statustexten bara på Hem (sedan 2026-09-01), på övriga sidor som 40 px avatar i headern, sidebaren och railen. `src/lib/streak.ts` äger regeln, och är det enda stället: ett glapp på över **tre dagar** bryter kedjan och sätter nivå 1, annars stegas nivån upp med kedjans längd (1-3 pass ger 2, 4-9 ger 3, 10 eller fler ger 4). Takten motsvarar "varannan dag", ungefär fyra pass i veckan. Streak-kortet i Statistik och alla andra läsningar går genom samma funktion.
 
-`beefcakeStatusText()` returnerar två rader: nivåns namn och förklaringen. Radbrytningen är en del av formatet, texten renderas med `white-space: pre-line`.
+`beefcakeStatusText()` returnerar två rader: nivåns namn och förklaringen. Radbrytningen är en del av formatet, texten renderas med `white-space: pre-line`. Påminnelsen om latmasken efter mer än tre dagar bor i nivå 1-textens andra rad; det finns ingen separat banner.
 
 Avatarerna i `src/assets/beefcake/` och ikonerna `favicon.ico`, `apple-touch-icon.png` och `pwa-*.png` i `public/` är **genererade**, aldrig handredigerade. Originalen ligger i `assets-source/` och byggs om med `python scripts/generate-beefcake-assets.py`. Favicon är huvudet ur `beefcake3.jpg`.
 
 ## Muskelgrupper
 
-`MUSCLE_GROUP_MAP` i `dataService.ts` mappar övningsnamn till muskelgrupp. `backfillMuscleGroups()` körs i `syncSeed` och fyller på det som saknas. Övningar utan mappning visas som "Övrigt" i statistiken. Gruppen härleds ur namnet, den väljs aldrig av användaren vid loggning.
+`MUSCLE_GROUP_MAP` och `EQUIPMENT_MAP` i `dataService.ts` mappar övningsnamn till muskelgrupp respektive stång (`skivstång` 20 kg, `ez-stång` 10 kg, stångvikterna i `src/lib/plates.ts`). `backfillExerciseMeta()` körs i `syncSeed` och fyller på det som saknas, aldrig över ett satt värde. Övningar utan mappning visas som "Övrigt" i statistiken och får ingen plattrad i loggvyn. Både grupp och utrustning härleds ur namnet, de väljs aldrig av användaren vid loggning.
 
 ## Arkitektur
 
@@ -82,7 +82,7 @@ Vite 8 · Preact 10 · TypeScript strict · wouter · `idb` · Chart.js (lazy) �
 src/main.tsx              entry, syncSeed sedan render
 src/app.tsx               Router, navigering, rutter
 src/app.css               all styling, tokens överst
-src/components/           Button, Card, Stat, EmptyState, Field, PasswordGate, RestTimer, PlateCalculator, CloudSyncStatus, BeefcakeBadge
+src/components/           Button, Card, Stat, EmptyState, Field, PasswordGate, RestTimer, PlateCalculator, CloudSyncStatus, BeefcakeBadge (märke, avatar, useBeefcakeStreak)
 src/db/schema.ts          IndexedDB-schema och typer
 src/db/seedData.ts        GENERERAD, all träningshistorik
 src/lib/date.ts           all datumhantering, tidszonssäker. Använd den, aldrig new Date() rakt av
@@ -90,6 +90,9 @@ src/lib/format.ts         vikt och set som text, svensk notation
 src/lib/volume.ts         volymformeln, enda stället
 src/lib/hypertrophy.ts    set per vecka mot bandet 10-20
 src/lib/streak.ts         beefcake-nivån ur passdatumen
+src/lib/plates.ts         skivor per sida och stångvikt per utrustning
+src/lib/exerciseMetrics.ts Epley-1RM, grafens mått per genomförande, rekord per repsantal
+src/lib/warmup.ts         uppvärmningsset ur första arbetssetet
 src/assets/beefcake/      GENERERADE avatarer, se assets-source/ och scripts/
 src/services/dataService.ts   alla läsningar, skrivningar och statistik
 src/services/timerService.ts  vilotimerns presets, notiser och start-event
@@ -106,10 +109,12 @@ Loggvyn startar timern genom att skicka `beefcake-start-timer` på `window`; `Re
 
 - TypeScript strict, ingen `any`, funktioner lyckas eller kastar.
 - Svenskt gränssnitt. Decimalkomma (12,5), mellanslag som tusentalsavgränsare (12 500), **aldrig tankstreck**.
-- Desktop är den primära upplevelsen, mobilen ska ändå vara fullvärdig. Brytpunkter: mobil under 768 px, tablet 768 till 1199 px, desktop från 1200 px. Tryckytor på mobil minst 44 × 44 px.
+- Desktop är den primära upplevelsen, mobilen ska ändå vara fullvärdig. Brytpunkter: mobil under 768 px, tablet 768 till 1199 px, desktop från 1200 px. Tryckytor på mobil minst 44 × 44 px; enda undantaget är settypsbrickan i loggvyn (32 px, trycks sällan). Tabeller som inte ryms på telefon renderas som kort med `.history-list-cards` och `.history-list-table`, aldrig med sidled-scroll.
+- Loggvyn på telefon: inga stegknappar, inget tangentbordsbyte (`inputMode` decimal på kg, numeric på reps), RPE som bricka, plattor som text under tabellen. Vilotimern är det enda som får `--font-mono`.
 - Alla vyer byggs med komponenterna i `src/components/`, aldrig ad-hoc `class="card"`.
-- Färger kommer alltid från tokens i `app.css`. Hårdkodad hex i `.tsx` är förbjudet, Chart.js läser via `getCSSVar()` i Stats.tsx. Nya tokens dokumenteras med kommentar i `app.css`.
-- Typografi: Geist, self-hostad. Rubriker 800 med `-0.02em`, brödtext `line-height: 1.7`, `tabular-nums` på allt numeriskt.
+- Färger kommer alltid från tokens i `app.css`, också utanför `:root`: settypsbrickor, timern och plattkalkylatorn har egna tokens med mörk variant, `--on-accent` för text på fyllda ytor. Hårdkodad hex i `.tsx` är förbjudet (undantag: skivornas IPF-färger i PlateCalculator, en fysisk egenskap), Chart.js läser via `getCSSVar()`. Ljust läge är AA-räknat 2026-09-01: text, muted, accent, success, warning och danger håller minst 4,5:1 mot surface och surface-raised. Nya tokens dokumenteras med kommentar i `app.css`.
+- Typografi: Geist, self-hostad. Rubriker 800 med `-0.02em`, brödtext `line-height: 1.7`, `tabular-nums` på allt numeriskt. Geist Mono bara i vilotimerns siffror.
+- `.card` är stilla; lyft vid hover hör bara till klickbara kort (`.history-card`).
 - `alert()`, `confirm()` och `prompt()` är förbjudna. De blockerar appen och gör automatiserad testning omöjlig.
 - Minsta ändring som helt löser uppgiften. Inga refaktoreringar på vägen.
 - `npm test` (Vitest) täcker de rena beräkningarna i `src/lib/`. Den kör före `npm run build` i deploy-workflowen, så ett rött test stoppar deployen.

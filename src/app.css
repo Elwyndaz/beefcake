@@ -1128,7 +1128,8 @@ canvas { display: block; max-width: 100%; }
   .set-rows-table .set-type-badge:not(.rpe-badge) { width: 32px; height: 32px; }
   .card.exercise-live-card { padding-left: var(--space-2); padding-right: var(--space-2); }
   .drag-handle { flex-shrink: 0; }
-  .exercise-notes-input { min-height: var(--touch-target); }
+  /* Tre knappar plus fältet ryms inte på en rad: anteckningen får egen rad */
+  .exercise-notes-input { min-height: var(--touch-target); flex-basis: 100%; }
   .btn-remove { flex-shrink: 0; }
 }
 
