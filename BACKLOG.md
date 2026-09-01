@@ -8,12 +8,12 @@
 - [x] `[P0]` `Exercise.kind` för kroppsvikt, tid och distans. 95 konditionspass har volym 0 och kroppsviktsövningar räknas fel
 - [x] `[P1]` Autosave av påbörjat pass, utkast i IndexedDB som går att återuppta
 - [x] `[P1]` `importAllData` kräver alla fyra samlingar samt unika, icke-tomma ID:n före rensning. En trasig eller ofullständig JSON tömmer inte längre databasen
-- [ ] `[P1]` Deterministiskt tvåklientsintegrationstest för D1 och IndexedDB: serverradering mot stale cache, revisionskonflikt och fail-closed återhämtning
-- [ ] `[P2]` Validera SnapshotPayload-fält och korsreferenser i Worker-API:t. Servern kräver nu samlingar och unika ID:n men verifierar inte hela domänmodellen
+- [x] `[P1]` Deterministiskt tvåklientsintegrationstest för D1 och IndexedDB: serverradering mot stale cache, revisionskonflikt och fail-closed återhämtning
+- [x] `[P2]` Validera SnapshotPayload-fält och korsreferenser i Worker-API:t. Servern kräver nu samlingar och unika ID:n men verifierar inte hela domänmodellen
 - [x] `[P1]` Övningssida med progression, estimerat 1RM och arbetsvikt över tid per övning
-- [ ] `[P2]` ESLint i CI. Vitest finns och kör före build, linter saknas fortfarande
-- [ ] `[P2]` Race condition i mall-laddningen i LogSession, async-effekt utan avbrottsskydd
-- [ ] `[P2]` `<datalist id="template-exercise-suggestions">` renderas en gång per övningsrad i Templates.tsx. Samma id upprepas, ogiltig HTML. Rendera den en gång utanför loopen
+- [x] `[P2]` ESLint i CI. Vitest finns och kör före build, linter saknas fortfarande
+- [x] `[P2]` Race condition i mall-laddningen i LogSession, async-effekt utan avbrottsskydd
+- [x] `[P2]` `<datalist id="template-exercise-suggestions">` renderas en gång per övningsrad i Templates.tsx. Samma id upprepas, ogiltig HTML. Rendera den en gång utanför loopen
 - [ ] `[P2]` Bestäm vokabulär: *pass* är något du gjorde, *program* är mallen. Byt genomgående
 - [ ] `[P3]` Web Push-påminnelser via service workern
 - [ ] `[P3]` Kortkommandon på desktop
@@ -23,6 +23,11 @@
 
 ## Byggt
 
+- Logga pass börjar på noll set per övning (2026-09-01). Varje "+ Lägg till set" förifylls från samma plats i förra passet, set kan tas bort ner till noll, Slutför är avstängd tills minst ett set finns och övningar utan set sparas inte. "Kör igen" från historiken kopierar fortfarande passets set
+- Lämna sidan med vilotimern igång ger en bekräftelsefråga, både för flikstängning och appens egna länkar
+- Tvåklientstest `server/src/twoClients.test.ts`: riktig dataService och Worker mot fake-indexeddb och en D1-attrapp. Hittade att seeden återupplivade raderade seedpass vid varje uppstart, nu körs den bara i en tom databas
+- `validateSnapshot()` i `src/lib/importValidation.ts` kontrollerar hela domänmodellen och delas av JSON-importen och Worker-API:t
+- ESLint (`npm run lint`) i CI före bygget
 - Beefcake-märket i headern: fyra Cartman-nivåer efter träningskedjan, tre dagars glapp bryter den
 - Favicon, apple-touch-icon och PWA-ikoner genererade ur beefcake3
 - Frekvens per pass med periodfilter (totalt, månad, kvartal, 12 mån, kalenderår)
@@ -47,7 +52,7 @@
 - Muskelgrupper per övning, härledda ur namnet, med volym per grupp i statistiken. Återställs automatiskt om databasen töms (verifierat med wipe + reload)
 - Muskelgrupper på övningar (auto-mappade från övningsnamn), volym per muskelgrupp i Statistik
 - Inline mallhantering i logg- och redigeringsläge: spara övningarna som ny mall, eller spara till befintlig mall
-- All träningsdata seedad ur Excel, additivt och idempotent via `syncSeed()`
+- All träningsdata seedad ur Excel via `syncSeed()`, som sedan 2026-09-01 bara körs i en tom databas
 - PWA med service worker och offline, lösenordsgrind, deploy via GitHub Actions till Pages
 
 ## Bygg inte
@@ -56,8 +61,4 @@ Program-motor (5×5, GZCL) · flerspråkighet · sociala funktioner och delade m
 
 ## Captured
 
-- [ ] [P2] [Wish] Om man har startat timer ska man få en promt/ruta med är du säker på att du vill lämna sidan du har en timer på?
-
 - [ ] [P3] [Wish] göra vanlig sån firebase-inlogg. Delvis löst: lösenordsgrinden ligger i localStorage och synkbannern loggar in mot Access med ett klick. Kvarstår bara om riktig identitet behövs
-
-- [ ] [P2] [Wish] det ska gå att ha 0 i antalet set i övningen när man är inne på logga pass, det är så jag använder den, att alla börjar på 0 så klickar jag mig upp löpande under passet. Alla pass borde börja så förutom om man är inne och redigerar ett gammalt pass

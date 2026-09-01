@@ -49,13 +49,13 @@ Volym räknas alltid genom `src/lib/volume.ts`. Vikt 0 betyder kroppsvikt eller 
 - **All träningsdata är verklig**, från 2024 till 2026-07-28. Radera eller skriv aldrig om historisk data, varken i seed, i IndexedDB eller i en migrering. Additivt eller inget.
 - `src/db/seedData.ts` är **genererad**, aldrig handredigerad. Bygg om med `python scripts/generate-seed.py`.
 - Källan är `C:\dev\Styrkepass v2.xlsx` och den öppnas **bara för läsning**.
-- `syncSeed()` är additiv och idempotent. Den matchar pass på `(datum, passnamn)` och övningar på gemener. Matcha aldrig på `seed-N`-id, sekvensen numreras om så fort en övning tillkommer i källan.
+- `syncSeed()` körs bara i en tom databas (sedan 2026-09-01). Den var additiv vid varje uppstart, men med D1 som sanningskälla kom varje raderat seedpass tillbaka nästa gång appen laddades. Ny seeddata läses in en gång via en tömd klient och sprids sedan via D1. Matchningen inne i seeden är kvar: pass på `(datum, passnamn)`, övningar på gemener, aldrig på `seed-N`-id.
 - Ett spökpass 2025-11-19 "Bröst, axlar & biceps" finns med flit, en artefakt av `=TODAY()`-drift i arket. Städa inte bort det.
 - Seeden innehåller 33 övningar, 9 mallar och 418 pass. Mallen med namnet `undefined` filtreras bort i `syncSeed`, så åtta laddas.
 
 ## Lagring och nödräddning
 
-D1 lagrar versionsnumrerade snapshots per Access-identitet och är sanningskälla. Klienten hämtar serverns snapshot före seedning och använder IndexedDB som lokal cache. Efter varje mutation synkar `autoBackup()` snapshoten till D1.
+D1 lagrar versionsnumrerade snapshots per Access-identitet och är sanningskälla. Klienten hämtar serverns snapshot före seedning och använder IndexedDB som lokal cache. Efter varje mutation synkar `syncCloudData()` snapshoten till D1. Workern och JSON-importen validerar hela domänmodellen med samma `validateSnapshot()` i `src/lib/importValidation.ts`, inklusive att varje historikrad pekar på ett pass som finns.
 
 - Skrivning använder enkel `POST` med `Content-Type: text/plain` och `credentials: include`, eftersom Cloudflare Access stoppar CORS-preflight utan Access-cookie.
 - Skrivning kräver senaste revision, så en gammal klient får 409 i stället för att skriva över nyare data.
