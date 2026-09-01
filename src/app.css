@@ -43,6 +43,7 @@
 
   /* Status Colors - semantic, distinct from the action accent */
   --success: #10b981;
+  --success-bg: rgba(16, 185, 129, 0.10);  /* Avbockat set: rad och fält */
   --warning: #f59e0b;
   --danger: #ef4444;
 
@@ -121,6 +122,7 @@
     --accent-bg: rgba(255, 92, 108, 0.14);
     --accent-strong: #ff2e41;
     --success: #34d399;
+    --success-bg: rgba(52, 211, 153, 0.14);
     --warning: #fbbf24;
     --danger: #ff6b6b;
     --primary: #8fa9c9;
@@ -1047,7 +1049,14 @@ canvas { display: block; max-width: 100%; }
 
 .exercise-notes-input {
   min-width: 0;
-  font-size: var(--text-sm, 0.875rem);
+  min-height: 38px;
+  padding: 0 var(--space-2);
+  font-size: var(--text-sm);
+  font-family: inherit;
+  background: var(--surface-raised);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
 }
 
 /* På telefon får raden inte kräva sidled-scroll: "Klar" är knappen du trycker
@@ -1084,11 +1093,10 @@ canvas { display: block; max-width: 100%; }
 }
 
 .set-row-completed {
-  background-color: rgba(16, 185, 129, 0.08);
+  background-color: var(--success-bg);
 }
 .set-row-completed .set-input {
-  background-color: rgba(16, 185, 129, 0.12);
-  color: var(--text);
+  background-color: var(--success-bg);
 }
 
 /* Set Type Badges */
@@ -1141,6 +1149,14 @@ canvas { display: block; max-width: 100%; }
   font-size: var(--text-base);
   font-weight: 600;
   padding: 0 var(--space-1);
+  /* Utan egen bakgrund och färg blev fälten vita rutor med svart text i mörkt läge */
+  background: var(--surface-raised);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.set-input:focus, .exercise-notes-input:focus {
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg);
 }
 
 .stepper-buttons {
