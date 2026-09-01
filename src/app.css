@@ -608,7 +608,7 @@ th, td {
 }
 .bottom-nav .nav-link { flex-direction: column; gap: var(--space-1); padding: var(--space-2) var(--space-1); min-width: 44px; min-height: 44px; }
 .bottom-nav .nav-icon { width: 24px; height: 24px; }
-.bottom-nav .nav-text { font-size: 0.7rem; }
+.bottom-nav .nav-text { font-size: 0.7rem; line-height: 1.2; }
 
 /* ===================================================================
    COMPONENT STYLES
@@ -640,9 +640,9 @@ th, td {
 .card {
   background: var(--surface-raised); border-radius: var(--radius); box-shadow: var(--shadow);
   padding: var(--space-6); margin-bottom: var(--space-5);
-  transition: transform var(--motion-normal), box-shadow var(--motion-normal);
 }
-.card:hover { transform: translateY(-2px); box-shadow: var(--shadow-hover); }
+/* Kortet är stilla: lyftet vid hover hör bara till klickbara kort (.history-card),
+   på touch fastnade lyftet på formulärkortet medan du skrev i det. */
 .card.padding-none { padding: 0; }
 .card.padding-sm { padding: var(--space-4); }
 .card.padding-md { padding: var(--space-6); }
@@ -983,7 +983,6 @@ canvas { display: block; max-width: 100%; }
   border-radius: var(--radius-sm);
   box-shadow: none;
 }
-.skeleton:hover { transform: none; box-shadow: none; }
 
 .skeleton-text {
   height: 1rem;
@@ -1404,7 +1403,6 @@ canvas { display: block; max-width: 100%; }
   .bottom-nav { display: flex; }
   .bottom-nav .nav-link { flex-direction: column; min-width: 44px; min-height: 44px; padding: var(--space-1); justify-content: center; }
   .bottom-nav .nav-icon { width: 24px; height: 24px; }
-  .bottom-nav .nav-text { display: none; }
   .header-nav-right { display: flex; }
   .header-settings { display: block; }
   .header-settings svg { width: 24px; height: 24px; }

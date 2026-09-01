@@ -86,7 +86,7 @@ function BottomNav() {
   return (
     <nav class="bottom-nav">
       {mobileNavItems.map(item => (
-        <NavLink key={item.href} href={item.href} label={item.label} icon={item.icon} showLabel={false} />
+        <NavLink key={item.href} href={item.href} label={item.label} icon={item.icon} showLabel />
       ))}
     </nav>
   )
