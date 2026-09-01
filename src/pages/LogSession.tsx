@@ -403,14 +403,16 @@ export function LogSession() {
           const setEntries: SetEntry[] = e.setEntries.map(s => ({
             sets: s.sets || 1,
             reps: s.reps || 10,
-            weight: s.weight || 0
+            weight: s.weight || 0,
+            ...(s.rpe ? { rpe: s.rpe } : {})
           }))
 
           return {
             exerciseId,
             exerciseName: e.exerciseName,
             setEntries,
-            order
+            order,
+            ...(e.notes?.trim() ? { notes: e.notes.trim() } : {})
           }
         })
       )
@@ -673,6 +675,7 @@ export function LogSession() {
                             <th class="col-prev">Föregående</th>
                             <th class="col-kg">Kg</th>
                             <th class="col-reps">Reps</th>
+                            <th class="col-rpe">RPE</th>
                             <th class="col-plate"></th>
                             <th class="col-check">Klar</th>
                             <th class="col-del"></th>
@@ -756,6 +759,28 @@ export function LogSession() {
                                     </div>
                                   </div>
                                 </td>
+                                <td class="col-rpe">
+                                  <input
+                                    type="number"
+                                    min="5"
+                                    max="10"
+                                    step="0.5"
+                                    inputMode="decimal"
+                                    value={set.rpe ?? ''}
+                                    placeholder="–"
+                                    aria-label="RPE"
+                                    onChange={(e: Event) => {
+                                      const raw = parseFloat((e.target as HTMLInputElement).value)
+                                      const rpe = Number.isFinite(raw) && raw > 0 ? Math.min(10, Math.max(5, raw)) : undefined
+                                      const newSetEntries = [...ex.setEntries]
+                                      newSetEntries[setIdx] = { ...set, rpe }
+                                      const newExs = [...exercises]
+                                      newExs[exIdx] = { ...ex, setEntries: newSetEntries }
+                                      setExercises(newExs)
+                                    }}
+                                    class="set-input"
+                                  />
+                                </td>
                                 <td class="col-plate">
                                   <button
                                     type="button"
@@ -796,10 +821,22 @@ export function LogSession() {
                       </table>
                     </div>
 
-                    <div class="flex justify-between items-center mt-sm">
+                    <div class="flex justify-between items-center gap-sm mt-sm">
                       <Button variant="secondary" size="sm" onClick={() => addSet(exIdx)}>
                         + Lägg till set
                       </Button>
+                      <input
+                        type="text"
+                        class="exercise-notes-input grow"
+                        value={ex.notes ?? ''}
+                        placeholder="Anteckning"
+                        aria-label="Anteckning för övningen"
+                        onChange={(e: Event) => {
+                          const newExs = [...exercises]
+                          newExs[exIdx] = { ...ex, notes: (e.target as HTMLInputElement).value }
+                          setExercises(newExs)
+                        }}
+                      />
                     </div>
                   </Card>
                 )

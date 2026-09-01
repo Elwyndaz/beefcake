@@ -15,6 +15,8 @@ export interface SetEntry {
   sets: number
   reps: number
   weight: number
+  /** RPE 5 till 10, valfritt. Saknas i all historik före 2026-09-01. */
+  rpe?: number
 }
 
 export interface TemplateExercise {
@@ -35,6 +37,7 @@ export interface SessionExercise {
   exerciseName: string
   setEntries: SetEntry[]
   order: number
+  notes?: string
 }
 
 export interface Session {
@@ -102,13 +105,9 @@ export interface LegacyExerciseHistory {
 
 export type SetType = 'normal' | 'warmup' | 'drop' | 'failure'
 
-export interface ActiveSetEntry {
-  sets: number
-  reps: number
-  weight: number
+export interface ActiveSetEntry extends SetEntry {
   completed?: boolean
   type?: SetType
-  rpe?: number
 }
 
 export interface ActiveExercise {

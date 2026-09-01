@@ -24,6 +24,7 @@ interface FormExercise {
   exerciseId: string
   exerciseName: string
   setEntries: SetEntry[]
+  notes?: string
 }
 
 function calculateExerciseVolume(ex: FormExercise | SessionExercise): number {
@@ -139,7 +140,8 @@ export function SessionDetail() {
           const formEx: FormExercise[] = sess.exercises.map(e => ({
             exerciseId: e.exerciseId,
             exerciseName: e.exerciseName,
-            setEntries: e.setEntries
+            setEntries: e.setEntries,
+            notes: e.notes
           }))
           setFormExercises(formEx)
         }
@@ -188,7 +190,8 @@ export function SessionDetail() {
             exerciseId,
             exerciseName: e.exerciseName,
             setEntries: e.setEntries,
-            order: i
+            order: i,
+            ...(e.notes ? { notes: e.notes } : {})
           }
         })
       )
@@ -215,7 +218,8 @@ export function SessionDetail() {
       setFormExercises(validExercises.map(e => ({
         exerciseId: e.exerciseId,
         exerciseName: e.exerciseName,
-        setEntries: e.setEntries
+        setEntries: e.setEntries,
+        notes: e.notes
       })))
       setEditing(false)
       setSaved(true)
@@ -321,7 +325,8 @@ export function SessionDetail() {
         setFormExercises(session.exercises.map(e => ({
           exerciseId: e.exerciseId,
           exerciseName: e.exerciseName,
-          setEntries: e.setEntries
+          setEntries: e.setEntries,
+          notes: e.notes
         })))
       }
     }
@@ -335,7 +340,8 @@ export function SessionDetail() {
       setFormExercises(session.exercises.map(e => ({
         exerciseId: e.exerciseId,
         exerciseName: e.exerciseName,
-        setEntries: e.setEntries
+        setEntries: e.setEntries,
+        notes: e.notes
       })))
     }
   }
@@ -489,6 +495,7 @@ export function SessionDetail() {
                         {ex.exerciseId
                           ? <Link href={`/exercises/${ex.exerciseId}`} class="exercise-link">{ex.exerciseName}</Link>
                           : ex.exerciseName}
+                        {ex.notes && <div class="text-xs text-muted">{ex.notes}</div>}
                       </td>
                       <td class="tabular-nums">
                         {ex.setEntries.reduce((n, s) => n + (s.sets || 1), 0)}

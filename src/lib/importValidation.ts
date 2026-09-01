@@ -66,7 +66,7 @@ function validateSession(s: Record<string, unknown>): s is Record<string, unknow
     && typeof s.templateName === 'string'
     && typeof s.createdAt === 'string'
     && Array.isArray(s.exercises)
-    && s.exercises.every(e => isRecord(e) && isText(e.exerciseId) && typeof e.exerciseName === 'string' && isSetEntries(e.setEntries) && isNumber(e.order))
+    && s.exercises.every(e => isRecord(e) && isText(e.exerciseId) && typeof e.exerciseName === 'string' && isSetEntries(e.setEntries) && isNumber(e.order) && (e.notes === undefined || typeof e.notes === 'string'))
 }
 
 function validateHistory(h: Record<string, unknown>): h is Record<string, unknown> & ExerciseHistory {
@@ -83,7 +83,7 @@ function isSetEntries(value: unknown): value is SetEntry[] {
 }
 
 function isSetEntry(value: unknown): value is SetEntry {
-  return isRecord(value) && isNumber(value.sets) && isNumber(value.reps) && isNumber(value.weight)
+  return isRecord(value) && isNumber(value.sets) && isNumber(value.reps) && isNumber(value.weight) && (value.rpe === undefined || isNumber(value.rpe))
 }
 
 function isNumber(value: unknown): value is number {

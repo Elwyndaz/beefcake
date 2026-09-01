@@ -26,6 +26,11 @@ describe('formatSet', () => {
   it('skriver bara reps när vikten är 0', () => {
     expect(formatSet({ weight: 0, reps: 12 })).toBe('12 reps')
   })
+
+  it('lägger RPE sist när det finns', () => {
+    expect(formatSet({ weight: 100, reps: 5, rpe: 8.5 })).toBe('100 kg × 5 @8,5')
+    expect(formatSet({ weight: 100, reps: 5, rpe: 0 })).toBe('100 kg × 5')
+  })
 })
 
 describe('formatSets', () => {
