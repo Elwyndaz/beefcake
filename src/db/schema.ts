@@ -153,12 +153,10 @@ export interface BeefcakeDB extends DBSchema {
   settings: {
     key: string
     value: AppSetting
-    indexes: {}
   }
   activeWorkout: {
     key: string
     value: ActiveWorkout
-    indexes: {}
   }
 }
 
