@@ -74,3 +74,11 @@ export function daysBetween(fromISO: string, toISO: string): number {
 export function daysAgoText(days: number): string {
   return days <= 0 ? 'i dag' : days === 1 ? 'i går' : `för ${days} dagar sedan`
 }
+
+/** Måndagen `weeksAgo` veckor bakåt, som YYYY-MM-DD. Veckan börjar på måndag i hela appen. */
+export function mondayISO(weeksAgo = 0): string {
+  const now = parseLocalDate(todayISO())
+  const monday = new Date(now)
+  monday.setDate(now.getDate() - ((now.getDay() + 6) % 7) - weeksAgo * 7)
+  return localDateISO(monday)
+}

@@ -720,6 +720,10 @@ canvas { display: block; max-width: 100%; }
 .week-sets-chip.load-optimal { border-color: var(--success); box-shadow: inset 3px 0 0 var(--success); }
 .week-sets-chip.load-high { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
 
+/* Pass per vecka: etikett, stapel och tal på en rad, tolv rader ska rymmas utan att kortet blir en pelare */
+.week-bars { display: flex; flex-direction: column; gap: var(--space-2); }
+.week-bar-row { display: grid; grid-template-columns: 48px minmax(0, 1fr) 56px; gap: var(--space-2); align-items: center; }
+
 /* Muscle group breakdown list */
 .muscle-group-list { display: flex; flex-direction: column; gap: var(--space-4); }
 .muscle-group-bar { height: 8px; border-radius: 999px; background: var(--surface); overflow: hidden; }

@@ -3,7 +3,7 @@ import { Link } from 'wouter'
 import { getAllExercises, getVolumeOverTime, getFrequencyPerTemplate, getPRs, getAllSessions, getEstimated1RM, getVolumeByMuscleGroup, getWeeklyHardSetsPerMuscleGroup, getExerciseTrainingCounts, getSessionYears } from '../services/dataService'
 import { classifyWeeklySets, SET_LOAD_LABELS } from '../lib/hypertrophy'
 import { formatWeight } from '../lib/format'
-import { formatDateShort, localDateISO, todayISO, parseLocalDate } from '../lib/date'
+import { formatDateShort, localDateISO, todayISO, parseLocalDate, mondayISO } from '../lib/date'
 import { exercisesVolume } from '../lib/volume'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
@@ -122,14 +122,7 @@ const periodLabels: Record<Period, string> = {
 }
 
 const WEEKS_BACK = 8
-
-/** Måndagen `weeksAgo` veckor bakåt, som YYYY-MM-DD */
-function mondayISO(weeksAgo = 0): string {
-  const now = parseLocalDate(todayISO())
-  const monday = new Date(now)
-  monday.setDate(now.getDate() - ((now.getDay() + 6) % 7) - weeksAgo * 7)
-  return localDateISO(monday)
-}
+const COUNT_WEEKS_BACK = 12
 
 /** ISO-veckonummer för etiketten "v. 36" */
 function isoWeek(iso: string): number {
@@ -163,6 +156,8 @@ export function Stats() {
   const [last30, setLast30] = useState<Last30>({ sessions: 0, volume: 0, newPRs: 0 })
   // Set per muskelgrupp per vecka, nyaste veckan först. Tom lista för en vilovecka.
   const [weeklySets, setWeeklySets] = useState<{ weekStart: string; groups: { muscleGroup: string; sets: number }[] }[]>([])
+  // Pass per vecka, nyaste veckan först, tolv veckor bakåt. Staplarna skalas mot veckan med flest pass.
+  const [weeklyCounts, setWeeklyCounts] = useState<{ weekStart: string; count: number }[]>([])
   // e1RM för den mest tränade övningen, oberoende av valet i volymgrafen
   const [topOneRM, setTopOneRM] = useState<{ exerciseName: string; estimated1RM: number | null }>({ exerciseName: '', estimated1RM: null })
   const [loading, setLoading] = useState(true)
@@ -214,6 +209,11 @@ export function Stats() {
       setPRs(prsData)
       setMuscleGroupStats(muscleStats)
       setWeeklySets(weeks)
+      setWeeklyCounts(Array.from({ length: COUNT_WEEKS_BACK }, (_, i) => {
+        const weekStart = mondayISO(i)
+        const weekEnd = mondayISO(i - 1)
+        return { weekStart, count: sessions.filter(s => s.date >= weekStart && s.date < weekEnd).length }
+      }))
       const recent = sessions.filter(s => s.date >= cutoff30ISO)
       setLast30({
         sessions: recent.length,
@@ -349,6 +349,7 @@ export function Stats() {
 
   const sortedPRs = sortByRecentUse(prs, recentCounts)
   const maxFrequency = frequencyData[0]?.count || 1
+  const maxWeeklyCount = Math.max(0, ...weeklyCounts.map(w => w.count))
 
   return (
     <div>
@@ -376,6 +377,8 @@ export function Stats() {
       </div>
 
       <div class="grid grid-2 mb">
+        {/* Vänsterkolumnen har två kort: pass per vecka ligger direkt under set per muskelgrupp */}
+        <div>
         <Card title={`Set per muskelgrupp, senaste ${WEEKS_BACK} veckorna`}>
           {weeklySets.every(w => w.groups.length === 0) ? (
             <EmptyState
@@ -407,6 +410,25 @@ export function Stats() {
             </div>
           )}
         </Card>
+        {/* Kurvan bakåt som komplement till 30-dagarstalen. HTML-staplar, inte canvas: tolv tal behöver ingen graf. */}
+        <Card title={`Pass per vecka, senaste ${COUNT_WEEKS_BACK} veckorna`}>
+          {maxWeeklyCount === 0 ? (
+            <p class="text-sm text-muted m-0">Inga pass på {COUNT_WEEKS_BACK} veckor.</p>
+          ) : (
+            <div class="week-bars">
+              {weeklyCounts.map(w => (
+                <div class="week-bar-row" key={w.weekStart}>
+                  <span class="text-sm font-600 tabular-nums">v. {isoWeek(w.weekStart)}</span>
+                  <div class="muscle-group-bar">
+                    <div class="muscle-group-fill" style={{ width: `${(w.count / maxWeeklyCount) * 100}%` }} />
+                  </div>
+                  <span class="text-sm text-muted tabular-nums text-right">{w.count} pass</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+        </div>
         <Card title="Volym över tid">
           <div class="grid grid-2 gap-sm mb-sm">
             <Field label="Övning" class="m-0">

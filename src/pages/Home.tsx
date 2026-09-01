@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'preact/hooks'
 import { useLocation } from 'wouter'
-import { getAllSessions, getAllTemplates, getActiveWorkout } from '../services/dataService'
-import { formatDateWithWeekday, daysBetween, daysAgoText, todayISO } from '../lib/date'
+import { getAllSessions, getAllTemplates, getActiveWorkout, getPRs, getWeeklyHardSetsPerMuscleGroup } from '../services/dataService'
+import { formatDateWithWeekday, daysBetween, daysAgoText, todayISO, mondayISO } from '../lib/date'
+import { classifyWeeklySets, SET_LOAD_LABELS } from '../lib/hypertrophy'
 import { exercisesVolume } from '../lib/volume'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
@@ -18,6 +19,8 @@ export function Home() {
   const [totalSessions, setTotalSessions] = useState(0)
   const [lastWorkout, setLastWorkout] = useState<string | null>(null)
   const [activeWorkout, setActiveWorkout] = useState<ActiveWorkout | null>(null)
+  // Veckan från måndag: pass, volym, nya PR (maxvikt eller maxvolym daterade i veckan) och set per muskelgrupp
+  const [week, setWeek] = useState<{ sessions: number; volume: number; newPRs: number; groups: { muscleGroup: string; sets: number }[] }>({ sessions: 0, volume: 0, newPRs: 0, groups: [] })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -29,11 +32,21 @@ export function Home() {
     try {
       setLoading(true)
       setError(null)
-      const [sessions, allTemplates, active] = await Promise.all([
+      const monday = mondayISO()
+      const [sessions, allTemplates, active, prs, groups] = await Promise.all([
         getAllSessions(),
         getAllTemplates(),
-        getActiveWorkout()
+        getActiveWorkout(),
+        getPRs(),
+        getWeeklyHardSetsPerMuscleGroup(monday)
       ])
+      const weekSessions = sessions.filter(s => s.date >= monday)
+      setWeek({
+        sessions: weekSessions.length,
+        volume: weekSessions.reduce((sum, s) => sum + exercisesVolume(s.exercises), 0),
+        newPRs: prs.reduce((n, pr) => n + (pr.maxWeightDate >= monday ? 1 : 0) + (pr.maxVolumeDate >= monday ? 1 : 0), 0),
+        groups
+      })
       setRecentSessions(sessions.slice(0, 5))
       setTemplateCount(allTemplates.length)
       setTotalSessions(sessions.length)
@@ -128,6 +141,30 @@ export function Home() {
         ))}
       </Card>
       )}
+
+      {/* Veckans summering som text, inte graf. Tom vecka får en rad, ingen EmptyState. */}
+      <Card>
+        <h2 class="m-0 mb-sm">Denna vecka</h2>
+        {week.sessions === 0 ? (
+          <p class="text-muted m-0">Inga pass än denna vecka</p>
+        ) : (
+          <>
+            <p class="m-0 mb-sm tabular-nums">
+              {week.sessions} pass · {week.volume.toLocaleString('sv-SE')} kg · {week.newPRs === 1 ? '1 nytt PR' : `${week.newPRs} nya PR`}
+            </p>
+            <div class="week-sets-chips">
+              {week.groups.map(mg => {
+                const load = classifyWeeklySets(mg.sets)
+                return (
+                  <span class={`week-sets-chip load-${load}`} key={mg.muscleGroup} title={`${mg.muscleGroup}: ${mg.sets} set, ${SET_LOAD_LABELS[load]}`}>
+                    {mg.muscleGroup} <strong class="tabular-nums">{mg.sets}</strong>
+                  </span>
+                )
+              })}
+            </div>
+          </>
+        )}
+      </Card>
 
       <div class="grid grid-3 mb">
         <Card padding="sm">
