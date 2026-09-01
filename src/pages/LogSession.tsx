@@ -465,8 +465,8 @@ export function LogSession() {
       setShowSaveTemplate(false)
       setTemplateName('')
     } catch (err) {
-      console.error('Kunde inte spara mall:', err)
-      setError('Kunde inte spara mall')
+      console.error('Kunde inte spara program:', err)
+      setError('Kunde inte spara program')
     }
   }
 
@@ -559,7 +559,7 @@ export function LogSession() {
             <Field label="Datum" class="m-0">
               <input type="date" value={date} onChange={(e: Event) => setDate((e.target as HTMLInputElement).value)} />
             </Field>
-            <Field label="Passtyp / Mall" class="m-0">
+            <Field label="Program" class="m-0">
               <select value={selectedTemplateId} onChange={(e: Event) => handleSelectTemplate((e.target as HTMLSelectElement).value)}>
                 <option value="">Fritt pass (egen uppsättning)</option>
                 {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
@@ -573,7 +573,7 @@ export function LogSession() {
           <div class="flex justify-between items-center mb-sm">
             <h2 class="m-0 text-lg">Övningar</h2>
             <Button variant="secondary" size="sm" onClick={() => setShowSaveTemplate(v => !v)}>
-              {showSaveTemplate ? 'Dölj mallsparning' : 'Spara som ny mall'}
+              {showSaveTemplate ? 'Dölj programsparning' : 'Spara som nytt program'}
             </Button>
           </div>
 
@@ -586,7 +586,7 @@ export function LogSession() {
                   handleSaveAsTemplate()
                 }}
               >
-                <Field label="Mallnamn" class="m-0 grow">
+                <Field label="Programnamn" class="m-0 grow">
                   <input
                     type="text"
                     value={templateName}
@@ -596,7 +596,7 @@ export function LogSession() {
                   />
                 </Field>
                 <Button type="submit" disabled={!templateName.trim() || exercises.length === 0}>
-                  Spara mall
+                  Spara program
                 </Button>
               </form>
             </Card>
@@ -606,7 +606,7 @@ export function LogSession() {
             <Card>
               <EmptyState
                 title="Inga övningar tillagda"
-                message="Välj en mall ovan eller lägg till din första övning."
+                message="Välj ett program ovan eller lägg till din första övning."
                 action={<Button onClick={addExercise}>+ Lägg till övning</Button>}
               />
             </Card>

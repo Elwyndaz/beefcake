@@ -232,7 +232,7 @@ export function SessionDetail() {
     if (!session) return
     const template = allTemplates.find(t => t.id === formTemplateId)
     if (!template) {
-      setToastMessage('Denna mall finns inte längre, välj en annan mall eller spara som ny.')
+      setToastMessage('Programmet finns inte längre, välj ett annat eller spara som nytt.')
       return
     }
     try {
@@ -251,10 +251,10 @@ export function SessionDetail() {
         })
       )
       await updateTemplate(template.id, { exercises: templateExercises })
-      setToastMessage(`Mallen "${template.name}" uppdaterad med nuvarande övningar.`)
+      setToastMessage(`Programmet "${template.name}" uppdaterat med nuvarande övningar.`)
     } catch (err) {
       console.error('Failed to update template:', err)
-      setToastMessage('Kunde inte uppdatera mallen.')
+      setToastMessage('Kunde inte uppdatera programmet.')
     }
   }
 
@@ -280,10 +280,10 @@ export function SessionDetail() {
       setFormTemplateId(newTemplate.id)
       setShowSaveTemplate(false)
       setNewTemplateName('')
-      setToastMessage(`Mallen "${newTemplate.name}" skapad.`)
+      setToastMessage(`Programmet "${newTemplate.name}" skapat.`)
     } catch (err) {
       console.error('Failed to create template:', err)
-      setToastMessage('Kunde inte skapa mallen.')
+      setToastMessage('Kunde inte skapa programmet.')
     }
   }
 
@@ -551,7 +551,7 @@ export function SessionDetail() {
           <input type="date" value={formDate} onChange={handleDateChange} />
         </Field>
 
-        <Field label="Passmall" class="mb">
+        <Field label="Program" class="mb">
           <select value={formTemplateId} onChange={handleTemplateChange}>
             {allTemplates.map(t => (
               <option key={t.id} value={t.id}>{t.name}</option>
@@ -561,10 +561,10 @@ export function SessionDetail() {
 
         <div class="flex gap-sm mb">
           <Button variant="secondary" size="sm" onClick={handleUpdateTemplate} disabled={!formTemplateId}>
-            Spara övningarna till mallen
+            Spara övningarna till programmet
           </Button>
           <Button variant="secondary" size="sm" onClick={() => setShowSaveTemplate(v => !v)}>
-            Spara som ny mall
+            Spara som nytt program
           </Button>
         </div>
 
@@ -577,7 +577,7 @@ export function SessionDetail() {
                 handleSaveAsNewTemplate()
               }}
             >
-              <Field label="Mallnamn" class="m-0 grow">
+              <Field label="Programnamn" class="m-0 grow">
                 <input
                   type="text"
                   value={newTemplateName}
@@ -587,7 +587,7 @@ export function SessionDetail() {
                 />
               </Field>
               <Button type="submit" disabled={!newTemplateName.trim() || formExercises.length === 0}>
-                Skapa mall
+                Skapa program
               </Button>
             </form>
           </div>

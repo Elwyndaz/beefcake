@@ -24,7 +24,7 @@ const Stats = lazy(async () => {
 const navItems = [
   { href: '/', label: 'Hem', icon: 'home-icon' },
   { href: '/log', label: 'Logga pass', icon: 'log-icon' },
-  { href: '/templates', label: 'Mallar', icon: 'template-icon' },
+  { href: '/templates', label: 'Program', icon: 'template-icon' },
   { href: '/history', label: 'Historik', icon: 'history-icon' },
   { href: '/stats', label: 'Statistik', icon: 'stats-icon' },
   { href: '/settings', label: 'Inställningar', icon: 'settings-icon' },
@@ -95,7 +95,7 @@ function BottomNav() {
 function HeaderNav() {
   return (
     <div class="header-nav-right flex gap-sm">
-      <Link href="/templates" class="header-settings" aria-label="Mallar">
+      <Link href="/templates" class="header-settings" aria-label="Program">
         <svg width="24" height="24" viewBox="0 0 24 24">
           <use href={icon('template-icon')} />
         </svg>

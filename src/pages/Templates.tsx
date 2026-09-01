@@ -86,7 +86,7 @@ export function Templates() {
       setTemplates(ts)
       setAllExercises(es)
     } catch (err) {
-      setError('Kunde inte ladda mallar. Försök igen.')
+      setError('Kunde inte ladda program. Försök igen.')
       console.error('Fel vid laddning av mallar:', err)
     } finally {
       setLoading(false)
@@ -159,11 +159,11 @@ export function Templates() {
     setDeleteDialog(null)
     try {
       await deleteTemplate(deleteDialog.id)
-      setToastMessage(`Mall "${deleteDialog.name}" raderad.`)
+      setToastMessage(`Programmet "${deleteDialog.name}" raderat.`)
       await loadData()
     } catch (err) {
       console.error('Kunde inte radera mall:', err)
-      setToastMessage('Kunde inte radera mall. Försök igen.')
+      setToastMessage('Kunde inte radera programmet. Försök igen.')
     }
   }
 
@@ -209,8 +209,8 @@ export function Templates() {
     return (
       <div>
         <div class="flex justify-between items-center mb">
-          <h1 class="page-title m-0">Mallar</h1>
-          <Button disabled>+ Ny mall</Button>
+          <h1 class="page-title m-0">Program</h1>
+          <Button disabled>+ Nytt program</Button>
         </div>
         <Card class="skeleton skeleton-card"></Card>
         {toastMessage && <Toast message={toastMessage} onDismiss={dismissToast} />}
@@ -231,15 +231,15 @@ export function Templates() {
   return (
     <div>
       <div class="flex justify-between items-center mb">
-        <h1 class="page-title m-0">Mallar</h1>
-        <Button onClick={startCreate}>+ Ny mall</Button>
+        <h1 class="page-title m-0">Program</h1>
+        <Button onClick={startCreate}>+ Nytt program</Button>
       </div>
 
       {showForm && (
         <Card>
-          <h3 class="mb">{editingId ? 'Redigera mall' : 'Ny mall'}</h3>
+          <h3 class="mb">{editingId ? 'Redigera program' : 'Nytt program'}</h3>
 
-          <Field label="Mallnamn" class="mb">
+          <Field label="Programnamn" class="mb">
             <input type="text" value={formName} onChange={handleNameChange} placeholder="T.ex. Bröst, axlar & biceps" />
           </Field>
 
@@ -295,9 +295,9 @@ export function Templates() {
       <Card padding="none">
         {templates.length === 0 ? (
           <EmptyState
-            title="Inga mallar ännu"
-            message="Skapa din första mall för att komma igång."
-            action={<Button onClick={startCreate}>+ Ny mall</Button>}
+            title="Inga program ännu"
+            message="Skapa ditt första program för att komma igång."
+            action={<Button onClick={startCreate}>+ Nytt program</Button>}
           />
         ) : (
           <div class="table-wrap table-rows" style="padding: var(--space-6) var(--space-6) var(--space-6) var(--space-6)">
@@ -323,7 +323,7 @@ export function Templates() {
                       }
                     }}
                     tabIndex={0}
-                    aria-label={`Redigera mall ${t.name}`}
+                    aria-label={`Redigera program ${t.name}`}
                   >
                     <td><strong>{t.name}</strong></td>
                     <td>{t.exercises.length}</td>
@@ -337,7 +337,7 @@ export function Templates() {
                             event.stopPropagation()
                             handleDelete(t.id)
                           }}
-                          aria-label={`Radera mall ${t.name}`}
+                          aria-label={`Radera program ${t.name}`}
                         >
                           <svg width="20" height="20" viewBox="0 0 19 19">
                             <use href={icon('trash-icon')} />
@@ -358,8 +358,8 @@ export function Templates() {
         isOpen={deleteDialog !== null}
         onClose={dismissDeleteDialog}
         onConfirm={confirmDelete}
-        title="Radera mall"
-        message={`Är du säker på att du vill radera mall "${deleteDialog?.name}"? Det går inte att ångra.`}
+        title="Radera program"
+        message={`Är du säker på att du vill radera programmet "${deleteDialog?.name}"? Det går inte att ångra.`}
       />
 
       {toastMessage && <Toast message={toastMessage} onDismiss={dismissToast} />}

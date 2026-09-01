@@ -232,9 +232,9 @@ export function Settings() {
       {templates.length === 0 ? (
         <Card class="mb">
           <EmptyState
-            title="Inga mallar ännu"
-            message="Skapa din första mall för att komma igång."
-            action={<Button href="/templates">Skapa mall</Button>}
+            title="Inga program ännu"
+            message="Skapa ditt första program för att komma igång."
+            action={<Button href="/templates">Skapa program</Button>}
           />
         </Card>
       ) : null}

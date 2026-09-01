@@ -162,7 +162,7 @@ export function Home() {
           <Stat label="Totala pass" value={totalSessions} />
         </Card>
         <Card padding="sm">
-          <Stat label="Mallar" value={templateCount} />
+          <Stat label="Program" value={templateCount} />
         </Card>
         <Card padding="sm">
           <Stat
@@ -181,8 +181,8 @@ export function Home() {
         {recentSessions.length === 0 ? (
           <EmptyState
             title="Inga pass loggade ännu"
-            message="Börja med att skapa en mall och logga ditt första pass."
-            action={<Button href="/templates">Skapa mall</Button>}
+            message="Börja med att skapa ett program och logga ditt första pass."
+            action={<Button href="/templates">Skapa program</Button>}
           />
         ) : (
           <div class="table-wrap table-rows" style="padding: 0 var(--space-6) var(--space-6) var(--space-6)">
