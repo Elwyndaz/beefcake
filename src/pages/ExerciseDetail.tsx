@@ -105,7 +105,7 @@ export function ExerciseDetail() {
         chartInstanceRef.current = null
       }
 
-      const accentColor = getCSSVar('--accent', '#ff4757')
+      const accentColor = getCSSVar('--accent', '#d6283a')
       const primaryColor = getCSSVar('--primary', '#2c3e50')
       const textColor = getCSSVar('--text-muted', '#5b6472')
       const borderColor = getCSSVar('--border', '#e4e7ee')

@@ -36,16 +36,18 @@
   --text-muted: #5b6472;         /* Secondary text, statistics, labels */
 
   /* Accent - the "action" color. Electric red for energy and primary actions. */
-  --accent: #ff4757;
-  --accent-hover: #e63b4b;
-  --accent-bg: rgba(255, 71, 87, 0.08);   /* Tint for active nav and focus rings */
-  --accent-strong: #ff2e41;               /* Pressed state of the accent */
+  /* AA-räknat 2026-09-01: accent 5,0:1, success 5,5:1, warning 5,0:1, danger 4,8:1 mot vitt.
+     De gamla (#ff4757, #10b981, #f59e0b, #ef4444) låg mellan 2,2 och 3,8:1 som text. */
+  --accent: #d6283a;
+  --accent-hover: #c9313f;
+  --accent-bg: rgba(214, 40, 58, 0.08);   /* Tint for active nav and focus rings */
+  --accent-strong: #b8202f;               /* Pressed state of the accent */
 
   /* Status Colors - semantic, distinct from the action accent */
-  --success: #10b981;
-  --success-bg: rgba(16, 185, 129, 0.10);  /* Avbockat set: rad och fält */
-  --warning: #f59e0b;
-  --danger: #ef4444;
+  --success: #047857;
+  --success-bg: rgba(4, 120, 87, 0.10);   /* Avbockat set: rad och fält */
+  --warning: #b45309;
+  --danger: #dc2626;
 
   /* Primary - grounding blue for buttons, badges, selected states */
   --primary: #2c3e50;

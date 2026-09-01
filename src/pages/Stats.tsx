@@ -54,8 +54,8 @@ interface ChartTheme {
 
 function getChartTheme(): ChartTheme {
   return {
-    accent: getCSSVar('--accent', '#ff4757'),
-    accentBorder: getCSSVar('--accent-hover', '#e63b4b'),
+    accent: getCSSVar('--accent', '#d6283a'),
+    accentBorder: getCSSVar('--accent-hover', '#c9313f'),
     primary: getCSSVar('--primary', '#2c3e50'),
     primaryFill: hexToRgba(getCSSVar('--primary', '#2c3e50'), 0.85),
     inactive: getCSSVar('--border', '#e4e7ee'),
