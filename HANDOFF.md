@@ -37,6 +37,7 @@ Två chunkomgångar 2026-09-01, alla commits pushade och live via Pages, Workern
 - Web Push, Cloudflare Pages med Access och tvåanvändarstöd ligger kvar som P3. Captured: firebase-inlogg, delvis löst.
 - Access-sessionen för `beefcake` är 1 månad sedan 2026-08-21.
 - Spökpasset 2025-11-19 "Bröst, axlar & biceps" är kvar med flit.
+- Genomlysning 2026-09-01: två parallella sessioner skrev var sitt block under "Förslag från genomlysning 2026-09" i `BACKLOG.md`, delvis överlappande, väntar på Patriks strykning. Verifierad bugg i skärmbild: passdetaljen på telefon visar inga övningar (`.session-detail-table` göms under 767 px). Rapport och skärmbilder i vaulten, `Beefcake Designgenomlysning`.
 
 ## Resume here
 
