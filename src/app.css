@@ -1034,6 +1034,7 @@ canvas { display: block; max-width: 100%; }
   background: transparent;
   padding: var(--space-1) var(--space-2);
   width: 100%;
+  min-height: var(--touch-target);
   color: var(--text);
 }
 .exercise-title-input:focus {
@@ -1097,21 +1098,22 @@ canvas { display: block; max-width: 100%; }
   /* Rubriken ska inte brytas i två rader runt knapparna på telefon. */
   .log-session-header { flex-wrap: wrap; gap: var(--space-3); }
   .log-session-header > div:first-child { flex: 1 1 100%; }
-  /* RPE-kolumnen (2026-09-01) kostade 67 px på 390 px: cellpadding, inputbredder och
-     kortpadding krymper tills raden ryms utan sidled-scroll. Mätt i Chromium, inte gissat. */
+  /* Sex kolumner på 390 px: typ 32, kg 60, reps 48, RPE 44, bock 44, kryss 44, plus 2 px cellpadding,
+     296 px av 342 tillgängliga. Stegknapparna och plattknappen är borta: siffertangentbordet är
+     snabbare, och plattorna står som text under tabellen. Allt utom settypsbrickan är 44 px högt. */
   .set-rows-table th, .set-rows-table td { padding: 2px; }
-  .set-rows-table .col-prev { display: none; }
-  .set-rows-table .set-input { width: 46px; appearance: textfield; -moz-appearance: textfield; }
+  .set-rows-table .col-prev, .set-rows-table .col-plate { display: none; }
+  .set-rows-table .stepper-buttons { display: none; }
+  .set-rows-table .set-input { width: 60px; height: 44px; appearance: textfield; -moz-appearance: textfield; }
   .set-rows-table .set-input::-webkit-inner-spin-button,
   .set-rows-table .set-input::-webkit-outer-spin-button { display: none; }
-  .set-rows-table .col-reps .set-input { width: 40px; }
-  .set-rows-table .col-rpe .set-input { width: 36px; }
-  .set-rows-table .set-type-badge { width: 26px; height: 26px; }
-  .set-rows-table .btn-remove-sm { padding: 0; }
+  .set-rows-table .col-reps .set-input { width: 48px; }
+  .set-rows-table .rpe-badge { width: 44px; height: 44px; }
+  .set-rows-table .set-type-badge:not(.rpe-badge) { width: 32px; height: 32px; }
   .card.exercise-live-card { padding-left: var(--space-2); padding-right: var(--space-2); }
-  .set-rows-table .stepper-buttons button { padding: 2px 3px; }
-  /* Bocken behåller 44 px träffyta, resten får krympa. */
-  .set-rows-table .btn-check-set { width: 44px; height: 44px; }
+  .drag-handle { flex-shrink: 0; }
+  .exercise-notes-input { min-height: var(--touch-target); }
+  .btn-remove { flex-shrink: 0; }
 }
 
 .set-row {
@@ -1153,6 +1155,34 @@ canvas { display: block; max-width: 100%; }
 .badge-drop { background: var(--drop-bg); color: var(--drop-text); border-color: var(--drop-border); }
 .badge-failure { background: var(--failure-bg); color: var(--failure-text); border-color: var(--failure-border); }
 
+/* RPE-brickan ser ut som settypsbrickan men är bred nog för "8,5" */
+.rpe-badge { width: 44px; height: 38px; color: var(--text-muted); }
+.rpe-badge.rpe-set { color: var(--text); border-color: var(--border-strong); }
+.rpe-picker { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); }
+.rpe-picker-label { flex-basis: 100%; }
+.rpe-chip { width: 44px; height: 44px; font-size: var(--text-sm); }
+.rpe-chip.rpe-set { background: var(--primary); color: var(--surface-raised); border-color: var(--primary); }
+.rpe-chip-none { width: auto; padding: 0 var(--space-3); }
+
+/* Plattor per sida, en rad per vikt. Knapp: trycket öppnar kalkylatorn för att byta stång. */
+.plate-lines { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.plate-line {
+  min-height: 32px; padding: var(--space-1) var(--space-2); border: 0; border-radius: var(--radius-sm);
+  background: transparent; color: var(--text-muted); font: inherit; font-size: var(--text-xs); text-align: left; cursor: pointer;
+}
+.plate-line:hover { background: var(--surface-hover); color: var(--text); }
+.exercise-prev-notes { font-style: italic; }
+
+/* Passets metarad: program och datum med penna, i stället för ett kort med två fält */
+.log-session-meta { display: flex; align-items: center; gap: var(--space-1); margin-top: var(--space-1); }
+.btn-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: var(--touch-target); height: var(--touch-target); border: 0; border-radius: var(--radius-sm);
+  background: transparent; color: var(--text-muted); cursor: pointer;
+}
+.btn-icon:hover { background: var(--surface-hover); color: var(--text); }
+.log-session-hint { text-align: center; }
+
 /* Inputs with Steppers */
 .input-with-steppers {
   display: flex;
@@ -1164,7 +1194,7 @@ canvas { display: block; max-width: 100%; }
   width: 72px;
   height: 38px;
   text-align: center;
-  font-family: var(--font-mono);
+  font-variant-numeric: var(--font-numeric);
   font-size: var(--text-base);
   font-weight: 600;
   padding: 0 var(--space-1);
@@ -1247,12 +1277,14 @@ canvas { display: block; max-width: 100%; }
 .btn-calc svg { fill: currentColor; display: block; }
 
 .btn-remove-sm {
+  min-width: var(--touch-target);
+  min-height: var(--touch-target);
   background: transparent;
   border: none;
   color: var(--text-muted);
   font-size: 1.3rem;
   cursor: pointer;
-  padding: 0 4px;
+  padding: 0;
 }
 .btn-remove-sm:hover {
   color: var(--danger);
@@ -1285,7 +1317,7 @@ canvas { display: block; max-width: 100%; }
 .plate-calc-weight-display .weight-number {
   font-size: var(--text-3xl);
   font-weight: 900;
-  font-family: var(--font-mono);
+  font-variant-numeric: var(--font-numeric);
   color: var(--text);
   line-height: 1;
 }
@@ -1380,6 +1412,8 @@ canvas { display: block; max-width: 100%; }
   .header nav a { padding: var(--space-1) var(--space-2); font-size: var(--text-sm); }
   .card { padding: var(--space-5); }
   .card.padding-md, .card.padding-lg { padding: var(--space-5); }
+  /* Ligger efter basregeln med flit: samma specificitet, sist vinner */
+  .plate-line { min-height: var(--touch-target); }
 }
 
 @media (min-width: 768px) and (max-width: 1199px) {

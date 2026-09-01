@@ -54,19 +54,26 @@ const MUSCLE_GROUP_MAP: Record<string, string> = {
   'Leg extension': 'Ben'
 }
 
-// Backfill muscleGroup on existing exercises that lack it (from the name map)
-export async function backfillMuscleGroups(): Promise<number> {
+// Övningar med stång: styr plattraden i loggvyn. Ingen övning i seeden har equipment satt,
+// så fältet fylls här av namnet, samma väg som muskelgruppen. Stångvikter i src/lib/plates.ts.
+const EQUIPMENT_MAP: Record<string, string> = {
+  'Benböj': 'skivstång', 'Bänk': 'skivstång', 'Marklyft': 'skivstång', 'Militärpress': 'skivstång',
+  'Skivstångsrodd': 'skivstång', 'Snedbänk': 'skivstång', 'Vadpress skivstång': 'skivstång',
+  'Hip-thrusts': 'skivstång', 'Bicepscurl ez stång': 'ez-stång', 'Triceps stång': 'ez-stång'
+}
+
+// Fyll på muscleGroup och equipment där de saknas, ur namnkartorna. Additivt: ett satt värde rörs aldrig.
+export async function backfillExerciseMeta(): Promise<number> {
   const db = await getDB()
   const exercises = await db.getAll('exercises')
   let updated = 0
   const tx = db.transaction(['exercises'], 'readwrite')
   for (const e of exercises) {
-    if (!e.muscleGroup) {
-      const mg = MUSCLE_GROUP_MAP[e.name]
-      if (mg) {
-        await tx.objectStore('exercises').put({ ...e, muscleGroup: mg })
-        updated++
-      }
+    const mg = e.muscleGroup ? undefined : MUSCLE_GROUP_MAP[e.name]
+    const eq = e.equipment ? undefined : EQUIPMENT_MAP[e.name]
+    if (mg || eq) {
+      await tx.objectStore('exercises').put({ ...e, ...(mg ? { muscleGroup: mg } : {}), ...(eq ? { equipment: eq } : {}) })
+      updated++
     }
   }
   await tx.done
@@ -266,13 +273,18 @@ export async function getVolumeOverTime(exerciseId: string): Promise<{ date: str
   return history.map(h => ({ date: h.date, volume: h.volume }))
 }
 
-export async function getLastPerformanceForExercise(exerciseId: string): Promise<{ date: string; setEntries: SetEntry[] } | null> {
+/** Förra gången övningen kördes: set, datum och passets anteckning (den bor bara på Session, inte i historiken). */
+export async function getLastPerformanceForExercise(exerciseId: string): Promise<{ date: string; setEntries: SetEntry[]; notes?: string } | null> {
   const history = await getExerciseHistory(exerciseId)
   if (history.length === 0) return null
   const latest = history[history.length - 1]
+  const db = await getDB()
+  const session = await db.get('sessions', latest.sessionId)
+  const notes = session?.exercises.find(e => e.exerciseId === exerciseId)?.notes
   return {
     date: latest.date,
-    setEntries: latest.setEntries
+    setEntries: latest.setEntries,
+    ...(notes ? { notes } : {})
   }
 }
 
@@ -534,7 +546,7 @@ export async function syncSeed(): Promise<{ sessionsAdded: number; exercisesAdde
     },
     replaceDataInLocal
   )
-  await backfillMuscleGroups()
+  await backfillExerciseMeta()
 
   const db = await getDB()
   const { seedTemplates, seedExercises, seedSessions } = await import('../db/seedData')
@@ -562,7 +574,8 @@ export async function syncSeed(): Promise<{ sessionsAdded: number; exercisesAdde
     if (exerciseIdByName.has(exerciseKey(e.name))) continue
     exerciseIdByName.set(exerciseKey(e.name), e.id)
     const mg = MUSCLE_GROUP_MAP[e.name]
-    newExercises.push(mg ? { ...e, muscleGroup: mg } : e)
+    const eq = EQUIPMENT_MAP[e.name]
+    newExercises.push({ ...e, ...(mg ? { muscleGroup: mg } : {}), ...(eq ? { equipment: eq } : {}) })
   }
 
   const newTemplates: Template[] = []

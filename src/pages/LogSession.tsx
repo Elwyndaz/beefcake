@@ -12,8 +12,9 @@ import {
   getLastPerformanceForExercise
 } from '../services/dataService'
 import { startRestTimer, triggerHaptic } from '../services/timerService'
-import { formatDateShort } from '../lib/date'
-import { formatSet, formatSets } from '../lib/format'
+import { formatDateShort, formatDateWithWeekday } from '../lib/date'
+import { formatSet, formatSets, formatWeight } from '../lib/format'
+import { barWeightFor, formatPlatesPerSide } from '../lib/plates'
 import { setsVolume } from '../lib/volume'
 import { todayISO, nowISO } from '../models'
 import { icon } from '../icons'
@@ -48,14 +49,19 @@ export function LogSession() {
   const [showSaveTemplate, setShowSaveTemplate] = useState(false)
   const [templateName, setTemplateName] = useState('')
   const [draggedExerciseIndex, setDraggedExerciseIndex] = useState<number | null>(null)
-  const [previousPerformances, setPreviousPerformances] = useState<Record<string, { date: string; setEntries: SetEntry[] }>>({})
+  const [previousPerformances, setPreviousPerformances] = useState<Record<string, { date: string; setEntries: SetEntry[]; notes?: string }>>({})
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
-  const [plateCalcModal, setPlateCalcModal] = useState<{ isOpen: boolean; weight: number; exIdx: number; setIdx: number }>({
+  const [plateCalcModal, setPlateCalcModal] = useState<{ isOpen: boolean; weight: number; barWeight: number; exIdx: number; setIdx: number }>({
     isOpen: false,
     weight: 60,
+    barWeight: 20,
     exIdx: 0,
     setIdx: 0
   })
+  // RPE väljs i en rad brickor under tabellen, inget tangentbord. Öppen för ett set i taget.
+  const [rpePicker, setRpePicker] = useState<{ exIdx: number; setIdx: number } | null>(null)
+  // Datum och program ligger hopfällda bakom pennan: första setet ska synas på första skärmen.
+  const [showSettings, setShowSettings] = useState(false)
 
   const draggedExerciseIndexRef = useRef<number | null>(null)
   const activeTemplateRequestRef = useRef<string>('')
@@ -223,6 +229,7 @@ export function LogSession() {
       } else if (event.key === 'Escape') {
         setCancelDialogOpen(false)
         setShowSaveTemplate(false)
+        setRpePicker(null)
         setPlateCalcModal(prev => ({ ...prev, isOpen: false }))
       }
     }
@@ -297,6 +304,31 @@ export function LogSession() {
 
     const newExercises = [...exercises]
     newExercises[exerciseIdx] = { ...ex, setEntries: newSetEntries }
+    setExercises(newExercises)
+    triggerHaptic(20)
+  }
+
+  function updateSet(exerciseIdx: number, setIdx: number, patch: Partial<ActiveSetEntry>) {
+    setExercises(current => {
+      const ex = current[exerciseIdx]
+      if (!ex || !ex.setEntries[setIdx]) return current
+      const newSetEntries = [...ex.setEntries]
+      newSetEntries[setIdx] = { ...newSetEntries[setIdx], ...patch }
+      const next = [...current]
+      next[exerciseIdx] = { ...ex, setEntries: newSetEntries }
+      return next
+    })
+  }
+
+  // "Som förra gången": fyller på med förra passets set från den plats du står på,
+  // vikt och reps, obockade. Från noll set blir det hela förra passet på ett tryck.
+  function fillFromLast(exerciseIdx: number) {
+    const ex = exercises[exerciseIdx]
+    const missing = (previousPerformances[ex.exerciseId]?.setEntries ?? []).slice(ex.setEntries.length)
+    if (missing.length === 0) return
+    const added: ActiveSetEntry[] = missing.map(s => ({ sets: 1, reps: s.reps, weight: s.weight, completed: false, type: 'normal' }))
+    const newExercises = [...exercises]
+    newExercises[exerciseIdx] = { ...ex, setEntries: [...ex.setEntries, ...added] }
     setExercises(newExercises)
     triggerHaptic(20)
   }
@@ -491,25 +523,12 @@ export function LogSession() {
     }
   }
 
-  function openPlateCalculator(weight: number, exIdx: number, setIdx: number) {
-    setPlateCalcModal({
-      isOpen: true,
-      weight,
-      exIdx,
-      setIdx
-    })
+  function openPlateCalculator(weight: number, barWeight: number, exIdx: number, setIdx: number) {
+    setPlateCalcModal({ isOpen: true, weight, barWeight, exIdx, setIdx })
   }
 
   function applyPlateCalculatorWeight(newWeight: number) {
-    const { exIdx, setIdx } = plateCalcModal
-    if (exercises[exIdx] && exercises[exIdx].setEntries[setIdx]) {
-      const ex = exercises[exIdx]
-      const newSetEntries = [...ex.setEntries]
-      newSetEntries[setIdx] = { ...newSetEntries[setIdx], weight: newWeight }
-      const newExercises = [...exercises]
-      newExercises[exIdx] = { ...ex, setEntries: newSetEntries }
-      setExercises(newExercises)
-    }
+    updateSet(plateCalcModal.exIdx, plateCalcModal.setIdx, { weight: newWeight })
   }
 
   // Volym räknas på avbockade set: siffran ska visa vad du lyft, inte vad du planerat
@@ -544,6 +563,9 @@ export function LogSession() {
     )
   }
 
+  const selectedTemplate = templates.find(t => t.id === selectedTemplateId)
+  const rpeOptions = Array.from({ length: 11 }, (_, i) => 5 + i * 0.5)
+
   return (
     <div class="log-session-layout">
       {/* Global Datalist för övningsförslag (renderas en gång för giltig HTML) */}
@@ -559,75 +581,53 @@ export function LogSession() {
       </aside>
 
       <div class="log-session-main">
-        <div class="flex justify-between items-center mb log-session-header">
-          <div>
-            <h1 class="page-title m-0">Aktivt träningspass</h1>
-            <span class="text-xs text-muted">
-              {completedSetsCount} av {totalSetsCount} set klara • Lyft volym: {totalVolume.toLocaleString('sv-SE')} kg
+        <div class="mb log-session-header">
+          <h1 class="page-title m-0">Aktivt träningspass</h1>
+          <span class="text-xs text-muted">
+            {completedSetsCount} av {totalSetsCount} set klara • Lyft volym: {totalVolume.toLocaleString('sv-SE')} kg
+          </span>
+          {/* Datum och program som en rad med penna: kortet med fälten öppnas bara vid behov */}
+          <div class="log-session-meta">
+            <span class="text-sm">
+              <strong>{selectedTemplate?.name || 'Fritt pass'}</strong> · {formatDateWithWeekday(date)}
             </span>
-          </div>
-          {/* Slutför sitter bara längst ned: två knappar för samma sak förvirrade. */}
-          <div class="flex gap-sm">
-            <Button variant="secondary" size="sm" onClick={() => setCancelDialogOpen(true)}>
-              Avbryt pass
-            </Button>
+            <button
+              type="button"
+              class="btn-icon"
+              aria-label="Ändra datum eller program"
+              aria-expanded={showSettings}
+              onClick={() => setShowSettings(v => !v)}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+              </svg>
+            </button>
           </div>
         </div>
 
-        {/* Passinställningar & mallval */}
-        <Card class="mb">
-          <div class="grid grid-2 gap-3">
-            <Field label="Datum" class="m-0">
-              <input type="date" value={date} onChange={(e: Event) => setDate((e.target as HTMLInputElement).value)} />
-            </Field>
-            <Field label="Program" class="m-0">
-              <select value={selectedTemplateId} onChange={(e: Event) => handleSelectTemplate((e.target as HTMLSelectElement).value)}>
-                <option value="">Fritt pass (egen uppsättning)</option>
-                {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-              </select>
-            </Field>
-          </div>
-        </Card>
+        {showSettings && (
+          <Card class="mb">
+            <div class="grid grid-2 gap-3">
+              <Field label="Datum" class="m-0">
+                <input type="date" value={date} onChange={(e: Event) => setDate((e.target as HTMLInputElement).value)} />
+              </Field>
+              <Field label="Program" class="m-0">
+                <select value={selectedTemplateId} onChange={(e: Event) => handleSelectTemplate((e.target as HTMLSelectElement).value)}>
+                  <option value="">Fritt pass (egen uppsättning)</option>
+                  {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+              </Field>
+            </div>
+          </Card>
+        )}
 
         {/* Övningslista */}
         <div class="exercise-section mb">
-          <div class="flex justify-between items-center mb-sm">
-            <h2 class="m-0 text-lg">Övningar</h2>
-            <Button variant="secondary" size="sm" onClick={() => setShowSaveTemplate(v => !v)}>
-              {showSaveTemplate ? 'Dölj programsparning' : 'Spara som nytt program'}
-            </Button>
-          </div>
-
-          {showSaveTemplate && (
-            <Card class="mb">
-              <form
-                class="flex gap-sm items-end"
-                onSubmit={e => {
-                  e.preventDefault()
-                  handleSaveAsTemplate()
-                }}
-              >
-                <Field label="Programnamn" class="m-0 grow">
-                  <input
-                    type="text"
-                    value={templateName}
-                    onInput={(e: Event) => setTemplateName((e.target as HTMLInputElement).value)}
-                    placeholder="T.ex. Bröst & Axlar tung"
-                    autoFocus
-                  />
-                </Field>
-                <Button type="submit" disabled={!templateName.trim() || exercises.length === 0}>
-                  Spara program
-                </Button>
-              </form>
-            </Card>
-          )}
-
           {exercises.length === 0 ? (
             <Card>
               <EmptyState
                 title="Inga övningar tillagda"
-                message="Välj ett program ovan eller lägg till din första övning."
+                message="Välj ett program via pennan ovan eller lägg till din första övning."
                 action={<Button onClick={addExercise}>+ Lägg till övning</Button>}
               />
             </Card>
@@ -635,6 +635,10 @@ export function LogSession() {
             <div class="exercise-cards-list">
               {exercises.map((ex, exIdx) => {
                 const prev = previousPerformances[ex.exerciseId]
+                const prevSets = prev?.setEntries ?? []
+                const barWeight = barWeightFor(allExercises.find(e => e.id === ex.exerciseId)?.equipment)
+                // En plattrad per distinkt vikt bland seten, så tre set på 82,5 ger en rad, inte tre
+                const plateWeights = barWeight === null ? [] : Array.from(new Set(ex.setEntries.map(s => s.weight).filter(w => w > 0)))
                 return (
                   <Card
                     key={ex.exerciseId || exIdx}
@@ -675,13 +679,12 @@ export function LogSession() {
                       </button>
                     </div>
 
-                    {prev && prev.setEntries.length > 0 && (
+                    {prev && (prevSets.length > 0 || prev.notes) && (
                       <div class="exercise-prev-banner mb-sm">
                         <span class="text-xs text-muted">
                           Förra gången ({formatDateShort(prev.date)}):{' '}
-                          <strong>
-                            {formatSets(prev.setEntries)}
-                          </strong>
+                          <strong>{formatSets(prevSets)}</strong>
+                          {prev.notes && <span class="exercise-prev-notes"> · {prev.notes}</span>}
                         </span>
                       </div>
                     )}
@@ -702,10 +705,11 @@ export function LogSession() {
                         </thead>
                         <tbody>
                           {ex.setEntries.map((set, setIdx) => {
-                            const prevSet = prev?.setEntries[setIdx]
+                            const prevSet = prevSets[setIdx]
                             const prevText = prevSet ? formatSet(prevSet) : '—'
                             const isCompleted = Boolean(set.completed)
                             const setType = set.type || 'normal'
+                            const pickerOpen = rpePicker?.exIdx === exIdx && rpePicker.setIdx === setIdx
 
                             const badgeLabel =
                               setType === 'warmup' ? 'W' :
@@ -738,15 +742,11 @@ export function LogSession() {
                                       step="0.5"
                                       min="0"
                                       max="500"
+                                      inputMode="decimal"
+                                      enterKeyHint="next"
                                       value={set.weight}
-                                      onChange={(e: Event) => {
-                                        const val = parseFloat((e.target as HTMLInputElement).value) || 0
-                                        const newSetEntries = [...ex.setEntries]
-                                        newSetEntries[setIdx] = { ...set, weight: val }
-                                        const newExs = [...exercises]
-                                        newExs[exIdx] = { ...ex, setEntries: newSetEntries }
-                                        setExercises(newExs)
-                                      }}
+                                      aria-label="Kg"
+                                      onChange={(e: Event) => updateSet(exIdx, setIdx, { weight: parseFloat((e.target as HTMLInputElement).value) || 0 })}
                                       class="set-input"
                                     />
                                     <div class="stepper-buttons">
@@ -761,15 +761,11 @@ export function LogSession() {
                                       type="number"
                                       min="1"
                                       max="100"
+                                      inputMode="numeric"
+                                      enterKeyHint="next"
                                       value={set.reps}
-                                      onChange={(e: Event) => {
-                                        const val = parseInt((e.target as HTMLInputElement).value, 10) || 1
-                                        const newSetEntries = [...ex.setEntries]
-                                        newSetEntries[setIdx] = { ...set, reps: val }
-                                        const newExs = [...exercises]
-                                        newExs[exIdx] = { ...ex, setEntries: newSetEntries }
-                                        setExercises(newExs)
-                                      }}
+                                      aria-label="Reps"
+                                      onChange={(e: Event) => updateSet(exIdx, setIdx, { reps: parseInt((e.target as HTMLInputElement).value, 10) || 1 })}
                                       class="set-input"
                                     />
                                     <div class="stepper-buttons">
@@ -779,32 +775,21 @@ export function LogSession() {
                                   </div>
                                 </td>
                                 <td class="col-rpe">
-                                  <input
-                                    type="number"
-                                    min="5"
-                                    max="10"
-                                    step="0.5"
-                                    inputMode="decimal"
-                                    value={set.rpe ?? ''}
-                                    placeholder="–"
-                                    aria-label="RPE"
-                                    onChange={(e: Event) => {
-                                      const raw = parseFloat((e.target as HTMLInputElement).value)
-                                      const rpe = Number.isFinite(raw) && raw > 0 ? Math.min(10, Math.max(5, raw)) : undefined
-                                      const newSetEntries = [...ex.setEntries]
-                                      newSetEntries[setIdx] = { ...set, rpe }
-                                      const newExs = [...exercises]
-                                      newExs[exIdx] = { ...ex, setEntries: newSetEntries }
-                                      setExercises(newExs)
-                                    }}
-                                    class="set-input"
-                                  />
+                                  <button
+                                    type="button"
+                                    class={`set-type-badge rpe-badge ${set.rpe ? 'rpe-set' : ''}`}
+                                    aria-label={set.rpe ? `RPE ${formatWeight(set.rpe)}, ändra` : 'Välj RPE'}
+                                    aria-expanded={pickerOpen}
+                                    onClick={() => setRpePicker(pickerOpen ? null : { exIdx, setIdx })}
+                                  >
+                                    {set.rpe ? formatWeight(set.rpe) : '–'}
+                                  </button>
                                 </td>
                                 <td class="col-plate">
                                   <button
                                     type="button"
                                     class="btn-calc"
-                                    onClick={() => openPlateCalculator(set.weight, exIdx, setIdx)}
+                                    onClick={() => openPlateCalculator(set.weight, barWeight ?? 20, exIdx, setIdx)}
                                     title="Öppna plattkalkylator"
                                     aria-label="Plattkalkylator"
                                   >
@@ -840,10 +825,54 @@ export function LogSession() {
                       </table>
                     </div>
 
-                    <div class="flex justify-between items-center gap-sm mt-sm">
+                    {rpePicker?.exIdx === exIdx && ex.setEntries[rpePicker.setIdx] && (
+                      <div class="rpe-picker mb-sm" role="group" aria-label={`RPE för set ${rpePicker.setIdx + 1}`}>
+                        <span class="text-xs text-muted rpe-picker-label">RPE set {rpePicker.setIdx + 1}</span>
+                        {rpeOptions.map(value => (
+                          <button
+                            key={value}
+                            type="button"
+                            class={`set-type-badge rpe-chip ${ex.setEntries[rpePicker.setIdx].rpe === value ? 'rpe-set' : ''}`}
+                            onClick={() => { updateSet(exIdx, rpePicker.setIdx, { rpe: value }); setRpePicker(null); triggerHaptic(20) }}
+                          >
+                            {formatWeight(value)}
+                          </button>
+                        ))}
+                        <button
+                          type="button"
+                          class="set-type-badge rpe-chip rpe-chip-none"
+                          onClick={() => { updateSet(exIdx, rpePicker.setIdx, { rpe: undefined }); setRpePicker(null) }}
+                        >
+                          Ingen
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Plattor per sida för stångövningar, ingen kalkylator behövs. Raden öppnar den om du vill byta stång. */}
+                    {plateWeights.length > 0 && (
+                      <div class="plate-lines mb-sm">
+                        {plateWeights.map(w => (
+                          <button
+                            key={w}
+                            type="button"
+                            class="plate-line"
+                            onClick={() => openPlateCalculator(w, barWeight ?? 20, exIdx, ex.setEntries.findIndex(s => s.weight === w))}
+                          >
+                            <span class="tabular-nums">{formatWeight(w)} kg:</span> {formatPlatesPerSide(w, barWeight ?? 20)}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    <div class="flex items-center gap-sm mt-sm flex-wrap">
                       <Button variant="secondary" size="sm" onClick={() => addSet(exIdx)}>
                         + Lägg till set
                       </Button>
+                      {prevSets.length > ex.setEntries.length && (
+                        <Button variant="secondary" size="sm" onClick={() => fillFromLast(exIdx)}>
+                          Som förra gången
+                        </Button>
+                      )}
                       <input
                         type="text"
                         class="exercise-notes-input grow"
@@ -868,17 +897,52 @@ export function LogSession() {
           )}
         </div>
 
-        {/* Avsluta eller spara knappar */}
-        <div class="flex gap mt mb-lg">
+        {/* Slutför överst, resten av passets åtgärder under. Två knappar för samma sak förvirrade. */}
+        <div class="mt mb-lg">
           <Button
             variant="primary"
             size="lg"
-            class="grow"
+            class="btn-block"
             onClick={handleFinishSession}
             disabled={saving || totalSetsCount === 0}
           >
             {saving ? 'Sparar pass...' : 'Slutför och spara pass'}
           </Button>
+          {totalSetsCount === 0 && !saving && (
+            <p class="text-xs text-muted mt-1 m-0 log-session-hint">Lägg till minst ett set för att kunna spara passet.</p>
+          )}
+          <div class="flex gap-sm mt flex-wrap">
+            <Button variant="secondary" size="sm" onClick={() => setCancelDialogOpen(true)}>
+              Avbryt pass
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => setShowSaveTemplate(v => !v)} disabled={exercises.length === 0}>
+              {showSaveTemplate ? 'Dölj programsparning' : 'Spara som nytt program'}
+            </Button>
+          </div>
+          {showSaveTemplate && (
+            <Card class="mt">
+              <form
+                class="flex gap-sm items-end"
+                onSubmit={e => {
+                  e.preventDefault()
+                  handleSaveAsTemplate()
+                }}
+              >
+                <Field label="Programnamn" class="m-0 grow">
+                  <input
+                    type="text"
+                    value={templateName}
+                    onInput={(e: Event) => setTemplateName((e.target as HTMLInputElement).value)}
+                    placeholder="T.ex. Bröst & Axlar tung"
+                    autoFocus
+                  />
+                </Field>
+                <Button type="submit" disabled={!templateName.trim() || exercises.length === 0}>
+                  Spara program
+                </Button>
+              </form>
+            </Card>
+          )}
         </div>
 
         {saved && <div class="toast">Passet har sparats framgångsrikt!</div>}
@@ -897,13 +961,16 @@ export function LogSession() {
           </div>
         )}
 
-        {/* Plattkalkylator modal */}
-        <PlateCalculatorModal
-          isOpen={plateCalcModal.isOpen}
-          initialWeight={plateCalcModal.weight}
-          onClose={() => setPlateCalcModal(prev => ({ ...prev, isOpen: false }))}
-          onApplyWeight={applyPlateCalculatorWeight}
-        />
+        {/* Plattkalkylatorn monteras först när den öppnas: useState läser initialWeight bara vid första renderingen */}
+        {plateCalcModal.isOpen && (
+          <PlateCalculatorModal
+            isOpen
+            initialWeight={plateCalcModal.weight}
+            initialBarWeight={plateCalcModal.barWeight}
+            onClose={() => setPlateCalcModal(prev => ({ ...prev, isOpen: false }))}
+            onApplyWeight={applyPlateCalculatorWeight}
+          />
+        )}
       </div>
     </div>
   )

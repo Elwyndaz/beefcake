@@ -1,64 +1,40 @@
 import { useState } from 'preact/hooks'
 import { icon } from '../icons'
 import { Button } from './Button'
+import { calculatePlates } from '../lib/plates'
+import { formatWeight } from '../lib/format'
 
-interface Plate {
-  weight: number
-  color: string
-  textColor: string
-  label: string
-}
-
-const AVAILABLE_PLATES: Plate[] = [
-  { weight: 25, color: '#ef4444', textColor: '#ffffff', label: '25' },
-  { weight: 20, color: '#3b82f6', textColor: '#ffffff', label: '20' },
-  { weight: 15, color: '#eab308', textColor: '#000000', label: '15' },
-  { weight: 10, color: '#22c55e', textColor: '#ffffff', label: '10' },
-  { weight: 5, color: '#f8fafc', textColor: '#0f172a', label: '5' },
-  { weight: 2.5, color: '#1e293b', textColor: '#ffffff', label: '2,5' },
-  { weight: 1.25, color: '#94a3b8', textColor: '#0f172a', label: '1,25' }
-]
-
-export function calculatePlates(targetWeight: number, barWeight = 20): { platesPerSide: { plate: Plate; count: number }[]; remainingWeight: number } {
-  if (targetWeight <= barWeight) {
-    return { platesPerSide: [], remainingWeight: 0 }
-  }
-
-  let weightPerSide = (targetWeight - barWeight) / 2
-  const platesPerSide: { plate: Plate; count: number }[] = []
-
-  for (const plate of AVAILABLE_PLATES) {
-    const count = Math.floor(weightPerSide / plate.weight)
-    if (count > 0) {
-      platesPerSide.push({ plate, count })
-      weightPerSide -= count * plate.weight
-      weightPerSide = Math.round(weightPerSide * 100) / 100
-    }
-  }
-
-  return {
-    platesPerSide,
-    remainingWeight: Math.round(weightPerSide * 2 * 100) / 100
-  }
+// Skivornas färger följer IPF-standarden, en fysisk egenskap, inte ett tema. Därför hex här och inte tokens.
+const PLATE_COLORS: Record<number, { color: string; textColor: string }> = {
+  25: { color: '#ef4444', textColor: '#ffffff' },
+  20: { color: '#3b82f6', textColor: '#ffffff' },
+  15: { color: '#eab308', textColor: '#000000' },
+  10: { color: '#22c55e', textColor: '#ffffff' },
+  5: { color: '#f8fafc', textColor: '#0f172a' },
+  2.5: { color: '#1e293b', textColor: '#ffffff' },
+  1.25: { color: '#94a3b8', textColor: '#0f172a' }
 }
 
 export function PlateCalculatorModal({
   isOpen,
   onClose,
   initialWeight = 60,
+  initialBarWeight = 20,
   onApplyWeight
 }: {
   isOpen: boolean
   onClose: () => void
   initialWeight?: number
+  initialBarWeight?: number
   onApplyWeight?: (weight: number) => void
 }) {
   const [targetWeight, setTargetWeight] = useState(initialWeight)
-  const [barWeight, setBarWeight] = useState(20)
+  const [barWeight, setBarWeight] = useState(initialBarWeight)
 
   if (!isOpen) return null
 
-  const { platesPerSide, remainingWeight } = calculatePlates(targetWeight, barWeight)
+  const { platesPerSide: plates, remainingWeight } = calculatePlates(targetWeight, barWeight)
+  const platesPerSide = plates.map(p => ({ count: p.count, plate: { weight: p.weight, label: formatWeight(p.weight), ...PLATE_COLORS[p.weight] } }))
   const totalPerSide = platesPerSide.reduce((sum, item) => sum + item.plate.weight * item.count, 0)
   const actualTotal = barWeight + totalPerSide * 2
 
