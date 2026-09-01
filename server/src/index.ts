@@ -1,11 +1,5 @@
 import { authenticate, ApiError } from './auth'
-
-interface SnapshotPayload {
-  templates: unknown[]
-  exercises: unknown[]
-  sessions: unknown[]
-  exerciseHistory: unknown[]
-}
+import { validateSnapshot } from '../../src/lib/importValidation'
 
 interface SnapshotRow {
   revision: number
@@ -70,11 +64,18 @@ async function writeSnapshot(request: Request, db: D1Database, owner: string, he
   } catch {
     throw new ApiError(400, 'invalid_snapshot', 'Snapshoten har fel format.')
   }
-  if (!isRecord(body) || typeof body.expectedRevision !== 'number' || !isSnapshotPayload(body.data)) {
+  if (!isRecord(body) || typeof body.expectedRevision !== 'number') {
     throw new ApiError(400, 'invalid_snapshot', 'Snapshoten har fel format.')
   }
+  // Samma domänvalidering som JSON-importen i klienten: D1 tar bara emot hela modellen
+  let data: ReturnType<typeof validateSnapshot>
+  try {
+    data = validateSnapshot(body.data)
+  } catch (error) {
+    throw new ApiError(400, 'invalid_snapshot', safeMessage(error))
+  }
 
-  const payload = JSON.stringify(body.data)
+  const payload = JSON.stringify(data)
   if (new TextEncoder().encode(payload).byteLength > MAX_PAYLOAD_BYTES) {
     throw new ApiError(413, 'payload_too_large', 'Snapshoten är för stor.')
   }
@@ -95,27 +96,6 @@ async function writeSnapshot(request: Request, db: D1Database, owner: string, he
   }
 
   return json({ revision: expectedRevision + 1, updatedAt: createdAt }, 201, headers)
-}
-
-function isSnapshotPayload(value: unknown): value is SnapshotPayload {
-  if (!isRecord(value)) return false
-  return isEntityCollection(value.templates)
-    && isEntityCollection(value.exercises)
-    && isEntityCollection(value.sessions)
-    && isEntityCollection(value.exerciseHistory)
-}
-
-function isEntityCollection(value: unknown): value is Record<string, unknown>[] {
-  if (!Array.isArray(value)) return false
-
-  const ids = new Set<string>()
-  for (const item of value) {
-    if (!isRecord(item) || typeof item.id !== 'string' || item.id.length === 0 || ids.has(item.id)) {
-      return false
-    }
-    ids.add(item.id)
-  }
-  return true
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

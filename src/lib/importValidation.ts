@@ -1,39 +1,99 @@
-export interface ImportData {
-  templates: Record<string, unknown>[]
-  exercises: Record<string, unknown>[]
-  sessions: Record<string, unknown>[]
-  exerciseHistory: Record<string, unknown>[]
-}
+import type { Exercise, ExerciseHistory, ExerciseKind, SetEntry, Session, Template } from '../models'
+import type { SnapshotData } from './snapshot'
+
+export type ImportData = SnapshotData
+
+const EXERCISE_KINDS: ExerciseKind[] = ['weight', 'bodyweight', 'time', 'distance']
 
 export function parseImportData(json: string): ImportData {
-  const parsed: unknown = JSON.parse(json)
-  if (!parsed || typeof parsed !== 'object') throw new Error('Importen har fel format')
-  const data = parsed as Record<string, unknown>
-
-  return {
-    templates: readImportCollection(data.templates, 'templates'),
-    exercises: readImportCollection(data.exercises, 'exercises'),
-    sessions: readImportCollection(data.sessions, 'sessions'),
-    exerciseHistory: readImportCollection(data.exerciseHistory, 'exerciseHistory')
-  }
+  return validateSnapshot(JSON.parse(json))
 }
 
-function readImportCollection(value: unknown, name: string): Record<string, unknown>[] {
+/**
+ * Hela domänmodellen, inte bara samlingar och ID:n. Delas av JSON-importen i
+ * klienten och Worker-API:t, så D1 och IndexedDB avvisar samma saker.
+ * Okända fält släpps igenom: äldre klienter ska inte stoppas av nya fält.
+ */
+export function validateSnapshot(parsed: unknown): SnapshotData {
+  if (!isRecord(parsed)) throw new Error('Importen har fel format')
+
+  const templates = readCollection<Template>(parsed.templates, 'templates', validateTemplate)
+  const exercises = readCollection<Exercise>(parsed.exercises, 'exercises', validateExercise)
+  const sessions = readCollection<Session>(parsed.sessions, 'sessions', validateSession)
+  const exerciseHistory = readCollection<ExerciseHistory>(parsed.exerciseHistory, 'exerciseHistory', validateHistory)
+
+  // Historik utan pass är en föräldralös rad: den kan aldrig raderas via passet
+  const sessionIds = new Set(sessions.map(s => s.id))
+  for (const h of exerciseHistory) {
+    if (!sessionIds.has(h.sessionId)) throw new Error(`Importen har fel format: exerciseHistory ${h.id} pekar på ett pass som saknas`)
+  }
+
+  return { templates, exercises, sessions, exerciseHistory }
+}
+
+function readCollection<T extends { id: string }>(value: unknown, name: string, validate: (item: Record<string, unknown>) => boolean): T[] {
   if (!Array.isArray(value)) throw new Error(`Importen har fel format: ${name}`)
 
   const ids = new Set<string>()
   for (const item of value) {
-    if (!item || typeof item !== 'object') {
+    if (!isRecord(item) || !isText(item.id) || !validate(item)) {
       throw new Error(`Importen har fel format: ${name}`)
     }
-
-    const id = (item as Record<string, unknown>).id
-    if (typeof id !== 'string' || id.trim().length === 0) {
-      throw new Error(`Importen har fel format: ${name}`)
-    }
-    if (ids.has(id)) throw new Error(`Importen innehåller dubbletter: ${name}`)
-    ids.add(id)
+    if (ids.has(item.id)) throw new Error(`Importen innehåller dubbletter: ${name}`)
+    ids.add(item.id)
   }
 
-  return value as Record<string, unknown>[]
+  return value as T[]
+}
+
+function validateExercise(e: Record<string, unknown>): e is Record<string, unknown> & Exercise {
+  return isText(e.name)
+    && typeof e.createdAt === 'string'
+    && (e.kind === undefined || EXERCISE_KINDS.includes(e.kind as ExerciseKind))
+    && (e.muscleGroup === undefined || typeof e.muscleGroup === 'string')
+}
+
+function validateTemplate(t: Record<string, unknown>): t is Record<string, unknown> & Template {
+  return isText(t.name)
+    && typeof t.updatedAt === 'string'
+    && Array.isArray(t.exercises)
+    && t.exercises.every(te => isRecord(te) && isText(te.exerciseId) && isSetEntry(te.defaultSetEntry) && isNumber(te.order))
+}
+
+function validateSession(s: Record<string, unknown>): s is Record<string, unknown> & Session {
+  return typeof s.date === 'string'
+    && typeof s.templateId === 'string'
+    && typeof s.templateName === 'string'
+    && typeof s.createdAt === 'string'
+    && Array.isArray(s.exercises)
+    && s.exercises.every(e => isRecord(e) && isText(e.exerciseId) && typeof e.exerciseName === 'string' && isSetEntries(e.setEntries) && isNumber(e.order))
+}
+
+function validateHistory(h: Record<string, unknown>): h is Record<string, unknown> & ExerciseHistory {
+  return typeof h.date === 'string'
+    && isText(h.exerciseId)
+    && typeof h.exerciseName === 'string'
+    && isSetEntries(h.setEntries)
+    && isNumber(h.volume)
+    && isText(h.sessionId)
+}
+
+function isSetEntries(value: unknown): value is SetEntry[] {
+  return Array.isArray(value) && value.every(isSetEntry)
+}
+
+function isSetEntry(value: unknown): value is SetEntry {
+  return isRecord(value) && isNumber(value.sets) && isNumber(value.reps) && isNumber(value.weight)
+}
+
+function isNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0
+}
+
+function isText(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
 }
