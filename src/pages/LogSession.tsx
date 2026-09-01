@@ -213,6 +213,23 @@ export function LogSession() {
     })
   }, [exercises, date, selectedTemplateId, startTime, loading, templates])
 
+  // Kortkommandon på desktop: Ctrl+Enter slutför passet, Escape stänger det som är öppet.
+  // Inget mer förrän något saknas på riktigt; fler tangenter är fler saker att glömma.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+        event.preventDefault()
+        void handleFinishSession()
+      } else if (event.key === 'Escape') {
+        setCancelDialogOpen(false)
+        setShowSaveTemplate(false)
+        setPlateCalcModal(prev => ({ ...prev, isOpen: false }))
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  })
+
   // Template switch handler with race-condition prevention
   async function handleSelectTemplate(newTemplateId: string) {
     setSelectedTemplateId(newTemplateId)
