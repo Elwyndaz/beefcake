@@ -294,6 +294,7 @@ th, td {
 .w-full { width: 100%; }
 .h-full { height: 100%; }
 .nowrap { white-space: nowrap; }
+.flex-wrap { flex-wrap: wrap; }
 
 /* Height utilities */
 .h-200 { height: 200px; }
