@@ -74,11 +74,6 @@ async function writeConfiguredBackup(json: string): Promise<boolean> {
   return true
 }
 
-export async function exportAllDataAsJSON(): Promise<string> {
-  const { exportAllData } = await import('./dataService')
-  return exportAllData()
-}
-
 export async function saveBackupToFile(): Promise<{ success: boolean; error?: string }> {
   try {
     const { exportAllData } = await import('./dataService')

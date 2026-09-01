@@ -14,6 +14,7 @@ import type {
 import { loadSnapshotFromCloud, syncSnapshot } from './cloudSyncService'
 import { parseImportData } from '../lib/importValidation'
 import { setVolume, setsVolume, exercisesVolume } from '../lib/volume'
+import { localDateISO, parseLocalDate } from '../lib/date'
 
 // Active Workout Service (pågående pass sparat lokalt i realtid)
 export async function getActiveWorkout(): Promise<ActiveWorkout | undefined> {
@@ -53,18 +54,6 @@ const MUSCLE_GROUP_MAP: Record<string, string> = {
   'Leg extension': 'Ben'
 }
 
-export function getMuscleGroup(exerciseName: string): string | undefined {
-  return MUSCLE_GROUP_MAP[exerciseName.trim()]
-}
-
-export function getMuscleGroups(): string[] {
-  return [...new Set(Object.values(MUSCLE_GROUP_MAP))].sort()
-}
-
-export function getMuscleGroupMap(): Record<string, string> {
-  return MUSCLE_GROUP_MAP
-}
-
 // Backfill muscleGroup on existing exercises that lack it (from the name map)
 export async function backfillMuscleGroups(): Promise<number> {
   const db = await getDB()
@@ -88,11 +77,6 @@ export async function backfillMuscleGroups(): Promise<number> {
 export async function getAllTemplates(): Promise<Template[]> {
   const db = await getDB()
   return db.getAllFromIndex('templates', 'by-updated')
-}
-
-export async function getTemplate(id: string): Promise<Template | undefined> {
-  const db = await getDB()
-  return db.get('templates', id)
 }
 
 export async function createTemplate(name: string, exercises: Omit<TemplateExercise, 'order'>[]): Promise<Template> {
@@ -126,22 +110,6 @@ export async function deleteTemplate(id: string): Promise<void> {
   await syncCloudData()
 }
 
-export async function updateTemplateExerciseLastUsed(
-  templateId: string,
-  exerciseId: string,
-  setEntry: SetEntry
-): Promise<void> {
-  const db = await getDB()
-  const template = await db.get('templates', templateId)
-  if (!template) return
-  const ex = template.exercises.find(e => e.exerciseId === exerciseId)
-  if (ex) {
-    ex.defaultSetEntry = setEntry
-    template.updatedAt = nowISO()
-    await db.put('templates', template)
-  }
-}
-
 // Exercise Service
 export async function getAllExercises(): Promise<Exercise[]> {
   const db = await getDB()
@@ -151,15 +119,6 @@ export async function getAllExercises(): Promise<Exercise[]> {
 export async function getExercise(id: string): Promise<Exercise | undefined> {
   const db = await getDB()
   return db.get('exercises', id)
-}
-
-export async function updateExerciseMuscleGroup(exerciseId: string, muscleGroup: string): Promise<void> {
-  const db = await getDB()
-  const existing = await db.get('exercises', exerciseId)
-  if (existing) {
-    existing.muscleGroup = muscleGroup
-    await db.put('exercises', existing)
-  }
 }
 
 export async function getOrCreateExercise(name: string, muscleGroup?: string): Promise<Exercise> {
@@ -367,7 +326,7 @@ export async function getHeatmapData(days: number = 30): Promise<{ date: string;
   const sessions = await db.getAll('sessions')
   const cutoff = new Date()
   cutoff.setDate(cutoff.getDate() - days)
-  const cutoffISO = cutoff.toISOString().split('T')[0]
+  const cutoffISO = localDateISO(cutoff)
 
   const map = new Map<string, number>()
   for (const s of sessions) {
@@ -440,9 +399,9 @@ export async function getWeeklyTonnage(weekStartDate: string): Promise<number> {
   const db = await getDB()
   const sessions = await db.getAll('sessions')
   
-  const weekEndDate = new Date(weekStartDate)
+  const weekEndDate = parseLocalDate(weekStartDate)
   weekEndDate.setDate(weekEndDate.getDate() + 6)
-  const weekEndISO = weekEndDate.toISOString().split('T')[0]
+  const weekEndISO = localDateISO(weekEndDate)
   
   return sessions
     .filter(s => s.date >= weekStartDate && s.date <= weekEndISO)
@@ -469,9 +428,9 @@ export async function getCurrentStreak(): Promise<{ streakDays: number; lastWork
     if (sessionOnDate) {
       streakDays++
       lastDate = currentDate
-      const prevDate = new Date(currentDate)
+      const prevDate = parseLocalDate(currentDate)
       prevDate.setDate(prevDate.getDate() - 1)
-      currentDate = prevDate.toISOString().split('T')[0]
+      currentDate = localDateISO(prevDate)
     } else {
       break
     }
@@ -515,9 +474,9 @@ export async function getWeeklyHardSetsPerMuscleGroup(weekStartDate: string): Pr
   ])
 
   const exerciseMuscleMap = new Map(exercises.map(e => [e.id, e.muscleGroup || 'Övrigt']))
-  const weekEndDate = new Date(weekStartDate)
+  const weekEndDate = parseLocalDate(weekStartDate)
   weekEndDate.setDate(weekEndDate.getDate() + 6)
-  const weekEndISO = weekEndDate.toISOString().split('T')[0]
+  const weekEndISO = localDateISO(weekEndDate)
 
   const map = new Map<string, number>()
   for (const s of sessions) {
