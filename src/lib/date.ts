@@ -64,3 +64,13 @@ export function localDateISO(d: Date): string {
 export function todayISO(): string {
   return localDateISO(new Date())
 }
+
+/** Hela dagar mellan två lokala datum, positivt när `toISO` är senare. */
+export function daysBetween(fromISO: string, toISO: string): number {
+  return Math.round((parseLocalDate(toISO).getTime() - parseLocalDate(fromISO).getTime()) / 86_400_000)
+}
+
+/** "i dag", "i går", annars "för N dagar sedan". Matar "senast ..." under knapparna på Hem. */
+export function daysAgoText(days: number): string {
+  return days <= 0 ? 'i dag' : days === 1 ? 'i går' : `för ${days} dagar sedan`
+}

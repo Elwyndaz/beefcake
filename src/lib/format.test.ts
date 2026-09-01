@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatWeight, formatSet, formatSets } from './format'
+import { formatWeight, formatSet, formatSets, formatSetCompact } from './format'
 
 // Non-breaking space: svensk tusentalsavgränsare i Intl är U+00A0, inte mellanslag.
 const NBSP = ' '
@@ -39,5 +39,15 @@ describe('formatSets', () => {
       { weight: 82.5, reps: 8 },
       { weight: 82.5, reps: 7 }
     ])).toBe('82,5 kg × 8, 82,5 kg × 7')
+  })
+})
+
+describe('formatSetCompact', () => {
+  it('skriver vikt gånger reps utan enhet', () => {
+    expect(formatSetCompact({ weight: 27.5, reps: 10 })).toBe('27,5×10')
+  })
+
+  it('skriver kroppsvikt som reps', () => {
+    expect(formatSetCompact({ weight: 0, reps: 12 })).toBe('12 reps')
   })
 })

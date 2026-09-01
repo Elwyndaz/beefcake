@@ -14,7 +14,7 @@ import {
 } from '../services/dataService'
 import { startRestTimer, triggerHaptic } from '../services/timerService'
 import { formatDateShort, formatDateWithWeekday } from '../lib/date'
-import { formatSet, formatSets, formatWeight } from '../lib/format'
+import { formatSet, formatSetCompact, formatSets, formatWeight } from '../lib/format'
 import { barWeightFor, formatPlatesPerSide } from '../lib/plates'
 import { epley1RM } from '../lib/exerciseMetrics'
 import { warmupSets } from '../lib/warmup'
@@ -730,7 +730,7 @@ export function LogSession() {
                         <thead>
                           <tr>
                             <th class="col-type">Typ</th>
-                            <th class="col-prev">Föregående</th>
+                            <th class="col-prev"><span class="prev-full">Föregående</span><span class="prev-compact">Förra</span></th>
                             <th class="col-kg">Kg</th>
                             <th class="col-reps">Reps</th>
                             <th class="col-rpe">RPE</th>
@@ -742,7 +742,6 @@ export function LogSession() {
                         <tbody>
                           {ex.setEntries.map((set, setIdx) => {
                             const prevSet = prevSets[setIdx]
-                            const prevText = prevSet ? formatSet(prevSet) : '—'
                             const isCompleted = Boolean(set.completed)
                             const setType = set.type || 'normal'
                             const pickerOpen = rpePicker?.exIdx === exIdx && rpePicker.setIdx === setIdx
@@ -769,8 +768,9 @@ export function LogSession() {
                                     {badgeLabel}
                                   </button>
                                 </td>
+                                {/* Telefonen visar den kompakta formen, desktop den fulla; CSS väljer */}
                                 <td class="col-prev text-xs text-muted tabular-nums">
-                                  {prevText}
+                                  {prevSet ? <><span class="prev-full">{formatSet(prevSet)}</span><span class="prev-compact">{formatSetCompact(prevSet)}</span></> : '—'}
                                 </td>
                                 <td class="col-kg">
                                   <div class="input-with-steppers">

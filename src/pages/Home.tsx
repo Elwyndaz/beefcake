@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'preact/hooks'
 import { useLocation } from 'wouter'
 import { getAllSessions, getAllTemplates, getActiveWorkout } from '../services/dataService'
-import { formatDateWithWeekday } from '../lib/date'
+import { formatDateWithWeekday, daysBetween, daysAgoText, todayISO } from '../lib/date'
 import { exercisesVolume } from '../lib/volume'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
@@ -12,7 +12,8 @@ import type { Session, ActiveWorkout } from '../models'
 export function Home() {
   const [, navigate] = useLocation()
   const [recentSessions, setRecentSessions] = useState<Session[]>([])
-  const [recentTemplates, setRecentTemplates] = useState<string[]>([])
+  // De tre senast körda programmen, det som väntat längst först: det är nästa pass
+  const [nextPrograms, setNextPrograms] = useState<{ name: string; date: string }[]>([])
   const [templateCount, setTemplateCount] = useState(0)
   const [totalSessions, setTotalSessions] = useState(0)
   const [lastWorkout, setLastWorkout] = useState<string | null>(null)
@@ -43,15 +44,13 @@ export function Home() {
       }
       if (sessions.length > 0) {
         setLastWorkout(sessions[0].date)
-        // Extrahera unika template-namn från senaste sessioner
-        const uniqueTemplates: string[] = []
+        // Första förekomsten per programnamn är senaste datumet, listan är nyast först
+        const lastRun = new Map<string, string>()
         for (const s of sessions) {
-          if (!uniqueTemplates.includes(s.templateName)) {
-            uniqueTemplates.push(s.templateName)
-          }
-          if (uniqueTemplates.length >= 3) break
+          if (!lastRun.has(s.templateName)) lastRun.set(s.templateName, s.date)
+          if (lastRun.size >= 3) break
         }
-        setRecentTemplates(uniqueTemplates)
+        setNextPrograms([...lastRun].map(([name, date]) => ({ name, date })).sort((a, b) => a.date.localeCompare(b.date)))
       }
     } catch (err) {
       setError('Kunde inte ladda data. Försök igen.')
@@ -111,18 +110,21 @@ export function Home() {
       )}
 
       {/* Utan mallar har kortet inget innehåll: tomma kortet ersätts av CTA:n i "Senaste pass". */}
-      {recentTemplates.length > 0 && (
+      {nextPrograms.length > 0 && (
       <Card>
         <h2 class="m-0 mb-sm">Nästa pass</h2>
-        {recentTemplates.slice(0, 3).map((templateName) => (
-          <Button
-            key={templateName}
-            size="lg"
-            class="btn-block mb-sm"
-            onClick={() => navigate(`/log?template=${encodeURIComponent(templateName)}`)}
-          >
-            Kör "{templateName}" igen
-          </Button>
+        {nextPrograms.map((p, i) => (
+          <div class="mb-sm" key={p.name}>
+            <Button
+              variant={i === 0 ? 'primary' : 'secondary'}
+              size="lg"
+              class="btn-block"
+              onClick={() => navigate(`/log?template=${encodeURIComponent(p.name)}`)}
+            >
+              Kör "{p.name}" igen
+            </Button>
+            <p class="text-xs text-muted text-center m-0 mt-1">senast {daysAgoText(daysBetween(p.date, todayISO()))}</p>
+          </div>
         ))}
       </Card>
       )}

@@ -218,6 +218,7 @@ th, td {
 .font-medium { font-weight: 500; }
 .font-normal { font-weight: 400; }
 .text-right { text-align: right; }
+.text-center { text-align: center; }
 .font-numeric { font-variant-numeric: var(--font-numeric); }
 .tracking-tight { letter-spacing: var(--tracking-tight); }
 
@@ -1108,20 +1109,27 @@ canvas { display: block; max-width: 100%; }
   border-radius: var(--radius-sm);
 }
 
+/* Föregående per rad: full text på desktop, kompakt "27,5×10" på telefon */
+.set-rows-table .prev-compact { display: none; }
+
 /* På telefon får raden inte kräva sidled-scroll: "Klar" är knappen du trycker
-   mest på under ett pass. Föregående-kolumnen tas bort, den står redan i
-   bannern ovanför övningen. */
+   mest på under ett pass. */
 @media (max-width: 600px) {
   /* Rubriken ska inte brytas i två rader runt knapparna på telefon. */
   .log-session-header { flex-wrap: wrap; gap: var(--space-3); }
   .log-session-header > div:first-child { flex: 1 1 100%; }
-  /* Sex kolumner på 390 px: typ 32, kg 60, reps 48, RPE 44, bock 44, kryss 44, plus 2 px cellpadding,
-     296 px av 342 tillgängliga. Stegknapparna och plattknappen är borta: siffertangentbordet är
-     snabbare, och plattorna står som text under tabellen. Allt utom settypsbrickan är 44 px högt. */
-  .set-rows-table th, .set-rows-table td { padding: 2px; }
-  .set-rows-table .col-prev, .set-rows-table .col-plate { display: none; }
+  /* Sju kolumner på 390 px: typ 32, förra upp till 54 ("13,75×12"), kg 56, reps 48, RPE 44, bock 44,
+     kryss 44, plus 1 px cellpadding: 336 px av 340 tillgängliga. Med kg 60 och 2 px padding stack raden
+     ut 6 px. Stegknapparna och plattknappen är borta: siffertangentbordet är snabbare, och plattorna
+     står som text under tabellen. Allt utom settypsbrickan är 44 px högt. Förra gången per rad är
+     referensen mitt i setet, bannern ovanför räcker inte när du står vid set tre. */
+  .set-rows-table th, .set-rows-table td { padding: 1px; }
+  .set-rows-table .col-plate { display: none; }
+  .set-rows-table .col-prev { white-space: nowrap; }
+  .set-rows-table .prev-full { display: none; }
+  .set-rows-table .prev-compact { display: inline; }
   .set-rows-table .stepper-buttons { display: none; }
-  .set-rows-table .set-input { width: 60px; height: 44px; appearance: textfield; -moz-appearance: textfield; }
+  .set-rows-table .set-input { width: 56px; height: 44px; appearance: textfield; -moz-appearance: textfield; }
   .set-rows-table .set-input::-webkit-inner-spin-button,
   .set-rows-table .set-input::-webkit-outer-spin-button { display: none; }
   .set-rows-table .col-reps .set-input { width: 48px; }

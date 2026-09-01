@@ -1,14 +1,16 @@
 ---
 schemaVersion: 1
 status: active
-currentGoal: Få Patriks ja eller nej på genomlysningens fyra steg (buggar och tokens, loggvyn, statistiken, PR-märke och uppvärmning), sedan prova loggvyn på riktigt på telefonen i gymmet
-nextAction: Öppna Beefcake på mobilen, starta "Ben", tryck "Som förra gången", bocka ett set, välj RPE i brickan, läs plattraden under tabellen. Kontrollera att pennan öppnar datum och program och att Avbryt ligger under Slutför.
+currentGoal: Genomlysningens fem sista poster i chunkläge (A loggvyn och Hem, B statistik och Hem, C kroppsvikt), sedan Patriks ja eller nej på helheten
+nextAction: Chunk B: pass per vecka som stapellista i Statistik och kortet "Denna vecka" på Hem. Sedan chunk C, kroppsvikt.
 blockers:
   - Inga
 reviewedAt: 2026-09-01
 ---
 
 ## Recent work
+
+Andra passet 2026-09-01, chunkläge: **Chunk A klar.** Föregående-kolumnen kompakt på telefon (kg 56 px, 1 px cellpadding, mätt 336 av 340 px), "Nästa pass" på Hem pekar ut det program som väntat längst med dagar sedan under varje knapp.
 
 Genomlysningens byggpass 2026-09-01 i chunkläge, 14 commits efter `4f36f07` (`68303eb` till `034b331`, inklusive den här docs-rättningen), alla pushade och byggda av Pages.
 
