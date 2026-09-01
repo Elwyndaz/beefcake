@@ -1,8 +1,8 @@
 ---
 schemaVersion: 1
 status: active
-currentGoal: Genomlysningens fem sista poster i chunkläge (A loggvyn och Hem, B statistik och Hem, C kroppsvikt), sedan Patriks ja eller nej på helheten
-nextAction: Patriks ja eller nej på andra passets tre chunkar. Sedan prova loggvyn och kroppsviktsinmatningen på telefonen.
+currentGoal: Genomlysningen är byggd och godkänd av Patrik 2026-09-01 (båda passen). Nästa: Workern behåller kroppsvikten när en gammal klient skriver, datumtester, tablet- och a11y-svep, uppdateringsbanner för PWA:n
+nextAction: Chunk D till F enligt prompten i dagsnoten 2026-09-01 session 12. Parallellt: prova loggvyn och kroppsvikten på telefonen.
 blockers:
   - Inga
 reviewedAt: 2026-09-01
@@ -28,7 +28,7 @@ Genomlysningens byggpass 2026-09-01 i chunkläge, 14 commits efter `4f36f07` (`6
 
 ## Unresolved details
 
-- Båda passen är byggda i chunkläge utan förhandsgodkännande; varje commit är en `git revert` bort. Beslut tagna åt Patrik står i dagsnoten och i rapportens "## Efter" och "## Efter 2".
+- Båda passen godkända av Patrik 2026-09-01 ("ja" på helheten). Beslut tagna åt Patrik står i dagsnoten och i rapportens "## Efter" och "## Efter 2".
 - Alla genomlysningsposter är byggda. Kvar i backloggen: Web Push, Cloudflare Pages med Access, tvåanvändarstöd.
 - En äldre klient som skriver en snapshot utan `bodyWeight` nollar kroppsvikten i D1 (snapshoten ersätter hela tillståndet). Accepterat med två telefoner som laddar om bundeln.
 - Ingen autentiserad POST mot Worker-valideringen mot produktions-D1 sedan `f3f1bb10`; `16aa6c7d` är bara testad via tvåklientstestet.
