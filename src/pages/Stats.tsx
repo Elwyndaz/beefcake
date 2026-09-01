@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'preact/hooks'
 import { Link } from 'wouter'
-import { getAllExercises, getVolumeOverTime, getFrequencyPerTemplate, getHeatmapData, getPRs, getCurrentStreak, getWeeklyTonnage, getEstimated1RM, getVolumeByMuscleGroup, getWeeklyHardSetsPerMuscleGroup, getExerciseTrainingCounts, getSessionYears } from '../services/dataService'
+import { getAllExercises, getVolumeOverTime, getFrequencyPerTemplate, getHeatmapData, getPRs, getAllSessions, getWeeklyTonnage, getEstimated1RM, getVolumeByMuscleGroup, getWeeklyHardSetsPerMuscleGroup, getExerciseTrainingCounts, getSessionYears } from '../services/dataService'
 import { classifyWeeklySets, SET_LOAD_LABELS } from '../lib/hypertrophy'
+import { beefcakeStreak, MAX_GAP_DAYS, type BeefcakeStreak } from '../lib/streak'
 import { formatWeight } from '../lib/format'
 import { formatDateShort, localDateISO, todayISO, parseLocalDate } from '../lib/date'
 import { Card } from '../components/Card'
@@ -145,7 +146,8 @@ export function Stats() {
   const [heatmapData, setHeatmapData] = useState<{ date: string; count: number }[]>([])
   const [prs, setPRs] = useState<PR[]>([])
   const [muscleGroupStats, setMuscleGroupStats] = useState<{ muscleGroup: string; volume: number; sessions: number }[]>([])
-  const [streak, setStreak] = useState<{ streakDays: number; lastWorkoutDate: string | null }>({ streakDays: 0, lastWorkoutDate: null })
+  // Samma regel som Cartman-märket: src/lib/streak.ts äger kedjan, tre dagars glapp bryter den
+  const [streak, setStreak] = useState<BeefcakeStreak>({ level: 1, streak: 0, daysSinceLast: null })
   const [thisWeekTonnage, setThisWeekTonnage] = useState<number>(0)
   const [weeklyHardSets, setWeeklyHardSets] = useState<{ muscleGroup: string; sets: number }[]>([])
   const [oneRM, setOneRM] = useState<{ exerciseName: string; estimated1RM: number; date: string } | null>(null)
@@ -203,11 +205,11 @@ export function Stats() {
       setLoading(true)
       setError(null)
       const quarterStart = frequencyRangeBounds('quarter', todayISO()).from!
-      const [es, heat, prsData, streakData, tonnageData, muscleStats, hardSets, counts, years] = await Promise.all([
+      const [es, heat, prsData, sessions, tonnageData, muscleStats, hardSets, counts, years] = await Promise.all([
         getAllExercises(),
         getHeatmapData(30),
         getPRs(),
-        getCurrentStreak(),
+        getAllSessions(),
         getThisWeekTonnage(),
         getVolumeByMuscleGroup(),
         getWeeklyHardSetsPerMuscleGroup(getMondayISO()),
@@ -222,7 +224,7 @@ export function Stats() {
       setPRs(prsData)
       setMuscleGroupStats(muscleStats)
       setWeeklyHardSets(hardSets)
-      setStreak(streakData)
+      setStreak(beefcakeStreak(sessions.map(s => s.date), todayISO()))
       setThisWeekTonnage(tonnageData)
       if (sorted.length > 0 && !selectedExerciseId) {
         setSelectedExerciseId(sorted[0].id)
@@ -488,8 +490,12 @@ export function Stats() {
         <Card padding="sm">
           <Stat
             label="Streak"
-            value={streak.streakDays}
-            sub={streak.streakDays === 1 ? 'dag i rad' : 'dagar i rad'}
+            value={streak.streak}
+            sub={streak.daysSinceLast === null
+              ? 'inga pass än'
+              : streak.streak === 0
+                ? `kedjan bröts, ${streak.daysSinceLast} dagar sedan senaste passet`
+                : `pass i rad, max ${MAX_GAP_DAYS} dagars glapp`}
           />
         </Card>
         <Card padding="sm">

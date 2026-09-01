@@ -408,39 +408,6 @@ export async function getWeeklyTonnage(weekStartDate: string): Promise<number> {
     .reduce((sum, s) => sum + exercisesVolume(s.exercises), 0)
 }
 
-// Get current training streak (consecutive days with workouts)
-export async function getCurrentStreak(): Promise<{ streakDays: number; lastWorkoutDate: string | null }> {
-  const db = await getDB()
-  const sessions = await db.getAll('sessions')
-  
-  if (sessions.length === 0) {
-    return { streakDays: 0, lastWorkoutDate: null }
-  }
-
-  const sortedSessions = [...sessions].sort((a, b) => b.date.localeCompare(a.date))
-  
-  let streakDays = 0
-  let lastDate: string | null = null
-  let currentDate = sortedSessions[0].date
-  
-  while (true) {
-    const sessionOnDate = sortedSessions.find(s => s.date === currentDate)
-    if (sessionOnDate) {
-      streakDays++
-      lastDate = currentDate
-      const prevDate = parseLocalDate(currentDate)
-      prevDate.setDate(prevDate.getDate() - 1)
-      currentDate = localDateISO(prevDate)
-    } else {
-      break
-    }
-    
-    if (streakDays >= 365) break
-  }
-  
-  return { streakDays, lastWorkoutDate: lastDate }
-}
-
 // Get volume per muscle group
 export async function getVolumeByMuscleGroup(): Promise<{ muscleGroup: string; volume: number; sessions: number }[]> {
   const db = await getDB()
