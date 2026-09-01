@@ -24,15 +24,15 @@ Ordet **mall** används både om övningsprogram och passtyp i gränssnittet. De
 Fem object stores i IndexedDB `beefcake-db`. Typerna bor i `src/db/schema.ts` och återexporteras via `src/models/index.ts`.
 
 ```ts
-SetEntry         { sets, reps, weight }
+SetEntry         { sets, reps, weight, rpe? }
 ExerciseKind     'weight' | 'bodyweight' | 'time' | 'distance'
 Exercise         { id, name, kind?, muscleGroup?, equipment?, createdAt }
 TemplateExercise { exerciseId, defaultSetEntry: SetEntry, order }
 Template         { id, name, exercises: TemplateExercise[], updatedAt }
-SessionExercise  { exerciseId, exerciseName, setEntries: SetEntry[], order }
+SessionExercise  { exerciseId, exerciseName, setEntries: SetEntry[], order, notes? }
 Session          { id, date (YYYY-MM-DD), templateId, templateName, exercises: SessionExercise[], createdAt }
 ExerciseHistory  { id, date, exerciseId, exerciseName, setEntries: SetEntry[], volume, sessionId }
-ActiveSetEntry   SetEntry plus { completed?, type?: 'normal'|'warmup'|'drop'|'failure', rpe? }
+ActiveSetEntry   SetEntry plus { completed?, type?: 'normal'|'warmup'|'drop'|'failure' }
 ActiveWorkout    { id, date, templateId, templateName, exercises: ActiveExercise[], startTime, updatedAt }
 ```
 

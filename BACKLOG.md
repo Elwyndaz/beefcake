@@ -14,15 +14,18 @@
 - [x] `[P2]` ESLint i CI. Vitest finns och kör före build, linter saknas fortfarande
 - [x] `[P2]` Race condition i mall-laddningen i LogSession, async-effekt utan avbrottsskydd
 - [x] `[P2]` `<datalist id="template-exercise-suggestions">` renderas en gång per övningsrad i Templates.tsx. Samma id upprepas, ogiltig HTML. Rendera den en gång utanför loopen
-- [ ] `[P2]` Bestäm vokabulär: *pass* är något du gjorde, *program* är mallen. Byt genomgående
+- [x] `[P2]` Bestäm vokabulär: *pass* är något du gjorde, *program* är mallen. Byt genomgående
 - [ ] `[P3]` Web Push-påminnelser via service workern
-- [ ] `[P3]` Kortkommandon på desktop
+- [x] `[P3]` Kortkommandon på desktop
 - [ ] `[P3]` Cloudflare Pages med Access istället för GitHub Pages, riktig autentisering
-- [ ] `[P3]` RIR/RPE och anteckningar i gränssnittet
+- [x] `[P3]` RIR/RPE och anteckningar i gränssnittet
 - [ ] `[P3]` Tvåanvändarstöd, om det verkligen behövs. Största produktbeslutet i listan
 
 ## Byggt
 
+- Vokabulär (2026-09-01): *program* i hela gränssnittet där det stod *mall*, koden heter fortfarande `Template`
+- RPE per set (5 till 10, valfritt, `SetEntry.rpe`) och anteckning per övning (`SessionExercise.notes`) i loggvyn, visade som "@8,5" och en rad under övningen i passdetaljen. Settabellen krympt på telefon så RPE-kolumnen ryms utan sidled-scroll
+- Kortkommandon i loggvyn: Ctrl+Enter slutför, Escape stänger dialog, plattkalkylator och programsparning
 - Logga pass börjar på noll set per övning (2026-09-01). Varje "+ Lägg till set" förifylls från samma plats i förra passet, set kan tas bort ner till noll, Slutför är avstängd tills minst ett set finns och övningar utan set sparas inte. "Kör igen" från historiken kopierar fortfarande passets set
 - Lämna sidan med vilotimern igång ger en bekräftelsefråga, både för flikstängning och appens egna länkar
 - Tvåklientstest `server/src/twoClients.test.ts`: riktig dataService och Worker mot fake-indexeddb och en D1-attrapp. Hittade att seeden återupplivade raderade seedpass vid varje uppstart, nu körs den bara i en tom databas
