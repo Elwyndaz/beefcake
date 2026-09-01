@@ -244,6 +244,10 @@ export function Templates() {
           </Field>
 
           <h4 class="mb-sm">Övningar</h4>
+          {/* Ett id per dokument: datalisten renderas en gång, inte per rad */}
+          <datalist id="template-exercise-suggestions">
+            {allExercises.map(e => <option key={e.id} value={e.name} />)}
+          </datalist>
           {formExercises.map((fe, idx) => (
             <div key={idx} class="grid grid-4 mb items-end gap-3">
               <Field label="Övning" class="m-0 flex-2">
@@ -254,9 +258,6 @@ export function Templates() {
                   placeholder="Skriv övningsnamn..."
                   list="template-exercise-suggestions"
                 />
-                <datalist id="template-exercise-suggestions">
-                  {allExercises.map(e => <option key={e.id} value={e.name} />)}
-                </datalist>
               </Field>
               <Field label="Set" class="m-0">
                 <input type="number" min="1" max="20" value={fe.defaultSetEntry.sets} onChange={e => handleInputChange(e, idx, 'defaultSetEntry', 'sets')} />
