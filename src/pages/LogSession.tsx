@@ -17,6 +17,7 @@ import { formatSet, formatSets } from '../lib/format'
 import { setsVolume } from '../lib/volume'
 import { todayISO, nowISO } from '../models'
 import { icon } from '../icons'
+import { useLocation } from 'wouter'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
 import { EmptyState } from '../components/EmptyState'
@@ -33,6 +34,7 @@ export interface LogFormExercise {
 }
 
 export function LogSession() {
+  const [, navigate] = useLocation()
   const [templates, setTemplates] = useState<Template[]>([])
   const [allExercises, setAllExercises] = useState<Exercise[]>([])
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('')
@@ -163,29 +165,20 @@ export function LogSession() {
   }
 
   async function loadTemplateIntoExercises(template: Template, allExList: Exercise[]) {
+    activeTemplateRequestRef.current = template.id
     const exMap = new Map(allExList.map(e => [e.id, e.name]))
     // Ladda förra gången först: den vikten är utgångsläget vid stången, inte mallens startvärde
     const lastPerformances = await Promise.all(
       template.exercises.map((te: TemplateExercise) => getLastPerformanceForExercise(te.exerciseId))
     )
-    const formExercises: LogFormExercise[] = template.exercises.map((te: TemplateExercise, exIdx: number) => {
-      const last = lastPerformances[exIdx]
-      return {
-        exerciseId: te.exerciseId,
-        exerciseName: exMap.get(te.exerciseId) || '',
-        setEntries: Array.from({ length: te.defaultSetEntry.sets || 3 }).map((_, setIdx) => {
-          // Fler set än förra gången: upprepa sista setet i stället för att falla tillbaka på mallen
-          const ref = last?.setEntries[setIdx] ?? last?.setEntries[last.setEntries.length - 1]
-          return {
-            sets: 1,
-            reps: ref?.reps ?? te.defaultSetEntry.reps ?? 10,
-            weight: ref?.weight ?? te.defaultSetEntry.weight ?? 0,
-            completed: false,
-            type: 'normal' as const
-          }
-        })
-      }
-    })
+    // Ett snabbare mallbyte hann före medan vi väntade: släpp det här svaret
+    if (activeTemplateRequestRef.current !== template.id) return
+    const formExercises: LogFormExercise[] = template.exercises.map((te: TemplateExercise) => ({
+      exerciseId: te.exerciseId,
+      exerciseName: exMap.get(te.exerciseId) || '',
+      // Passet börjar på noll set: du klickar upp dem under passet, förra gången syns i bannern
+      setEntries: []
+    }))
     setExercises(formExercises)
     setPreviousPerformances(prev => {
       const next = { ...prev }
@@ -314,11 +307,7 @@ export function LogSession() {
       {
         exerciseId: `new-${Date.now()}`,
         exerciseName: '',
-        setEntries: [
-          { sets: 1, reps: 10, weight: 0, completed: false, type: 'normal' },
-          { sets: 1, reps: 10, weight: 0, completed: false, type: 'normal' },
-          { sets: 1, reps: 10, weight: 0, completed: false, type: 'normal' }
-        ]
+        setEntries: []
       }
     ])
   }
@@ -330,10 +319,13 @@ export function LogSession() {
   function addSet(exerciseIdx: number) {
     const ex = exercises[exerciseIdx]
     const lastSet = ex.setEntries[ex.setEntries.length - 1]
+    // Nytt set: samma plats i förra passet, annars förra passets sista set, annars föregående rad
+    const prevSets = previousPerformances[ex.exerciseId]?.setEntries
+    const ref = prevSets?.[ex.setEntries.length] ?? prevSets?.[prevSets.length - 1] ?? lastSet
     const newSet: ActiveSetEntry = {
       sets: 1,
-      reps: lastSet?.reps || 10,
-      weight: lastSet?.weight || 0,
+      reps: ref?.reps || 10,
+      weight: ref?.weight || 0,
       completed: false,
       type: 'normal'
     }
@@ -348,8 +340,6 @@ export function LogSession() {
 
   function removeSet(exerciseIdx: number, setIdx: number) {
     const ex = exercises[exerciseIdx]
-    if (ex.setEntries.length <= 1) return
-
     const newExercises = [...exercises]
     newExercises[exerciseIdx] = {
       ...ex,
@@ -394,14 +384,15 @@ export function LogSession() {
   }
 
   async function handleFinishSession() {
-    if (exercises.length === 0) return
+    if (totalSetsCount === 0) return
     setSaving(true)
     try {
       const template = templates.find(t => t.id === selectedTemplateId)
       const templateTitle = template?.name || 'Fritt pass'
 
+      // Övningar utan set gjordes inte: de hör inte hemma i historiken
       const validExercises = await Promise.all(
-        exercises.map(async (e, order) => {
+        exercises.filter(e => e.setEntries.length > 0).map(async (e, order) => {
           let exerciseId = e.exerciseId
           if (!exerciseId || exerciseId.startsWith('new-')) {
             const ex = await getOrCreateExercise(e.exerciseName)
@@ -431,7 +422,7 @@ export function LogSession() {
       triggerHaptic([60, 40, 100])
       setTimeout(() => {
         setSaved(false)
-        window.location.href = `${import.meta.env.BASE_URL}history`
+        navigate('/history')
       }, 1200)
     } catch (err) {
       console.error('Kunde inte spara pass:', err)
@@ -445,7 +436,7 @@ export function LogSession() {
     await clearActiveWorkout()
     setCancelDialogOpen(false)
     setExercises([])
-    window.location.href = `${import.meta.env.BASE_URL}`
+    navigate('/')
   }
 
   async function handleSaveAsTemplate() {
@@ -461,7 +452,7 @@ export function LogSession() {
           return {
             exerciseId,
             defaultSetEntry: {
-              sets: e.setEntries.length,
+              sets: e.setEntries.length || 3,
               reps: e.setEntries[0]?.reps || 10,
               weight: e.setEntries[0]?.weight || 0
             }
@@ -789,16 +780,14 @@ export function LogSession() {
                                   </button>
                                 </td>
                                 <td class="col-del">
-                                  {ex.setEntries.length > 1 && (
-                                    <button
-                                      type="button"
-                                      class="btn-remove-sm"
-                                      onClick={() => removeSet(exIdx, setIdx)}
-                                      aria-label="Ta bort set"
-                                    >
-                                      ×
-                                    </button>
-                                  )}
+                                  <button
+                                    type="button"
+                                    class="btn-remove-sm"
+                                    onClick={() => removeSet(exIdx, setIdx)}
+                                    aria-label="Ta bort set"
+                                  >
+                                    ×
+                                  </button>
                                 </td>
                               </tr>
                             )
@@ -830,7 +819,7 @@ export function LogSession() {
             size="lg"
             class="grow"
             onClick={handleFinishSession}
-            disabled={saving || exercises.length === 0}
+            disabled={saving || totalSetsCount === 0}
           >
             {saving ? 'Sparar pass...' : 'Slutför och spara pass'}
           </Button>
