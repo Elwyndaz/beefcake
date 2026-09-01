@@ -437,13 +437,13 @@ export function Stats() {
                   <span class="week-sets-label text-sm font-600 tabular-nums">
                     {idx === 0 ? 'Denna vecka' : `v. ${isoWeek(week.weekStart)}`}
                   </span>
-                  <div class="week-sets-chips">
+                  <div class="week-sets-chips" role={week.groups.length ? 'list' : undefined} aria-label={week.groups.length ? `Set per muskelgrupp ${idx === 0 ? 'denna vecka' : `vecka ${isoWeek(week.weekStart)}`}` : undefined}>
                     {week.groups.length === 0 ? (
                       <span class="text-xs text-muted">vila</span>
                     ) : week.groups.map(mg => {
                       const load = classifyWeeklySets(mg.sets)
                       return (
-                        <span class={`week-sets-chip load-${load}`} key={mg.muscleGroup} title={`${mg.muscleGroup}: ${mg.sets} set, ${SET_LOAD_LABELS[load]}`}>
+                        <span class={`week-sets-chip load-${load}`} role="listitem" key={mg.muscleGroup} title={`${mg.muscleGroup}: ${mg.sets} set, ${SET_LOAD_LABELS[load]}`}>
                           {mg.muscleGroup} <strong class="tabular-nums">{mg.sets}</strong>
                         </span>
                       )
@@ -460,9 +460,9 @@ export function Stats() {
           {maxWeeklyCount === 0 ? (
             <p class="text-sm text-muted m-0">Inga pass på {COUNT_WEEKS_BACK} veckor.</p>
           ) : (
-            <div class="week-bars">
+            <div class="week-bars" role="list" aria-label="Pass per vecka">
               {weeklyCounts.map(w => (
-                <div class="week-bar-row" key={w.weekStart}>
+                <div class="week-bar-row" role="listitem" key={w.weekStart}>
                   <span class="text-sm font-600 tabular-nums">v. {isoWeek(w.weekStart)}</span>
                   <div class="muscle-group-bar">
                     <div class="muscle-group-fill" style={{ width: `${(w.count / maxWeeklyCount) * 100}%` }} />

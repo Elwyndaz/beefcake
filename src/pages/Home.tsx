@@ -152,11 +152,11 @@ export function Home() {
             <p class="m-0 mb-sm tabular-nums">
               {week.sessions} pass · {week.volume.toLocaleString('sv-SE')} kg · {week.newPRs === 1 ? '1 nytt PR' : `${week.newPRs} nya PR`}
             </p>
-            <div class="week-sets-chips">
+            <div class="week-sets-chips" role="list" aria-label="Set per muskelgrupp denna vecka">
               {week.groups.map(mg => {
                 const load = classifyWeeklySets(mg.sets)
                 return (
-                  <span class={`week-sets-chip load-${load}`} key={mg.muscleGroup} title={`${mg.muscleGroup}: ${mg.sets} set, ${SET_LOAD_LABELS[load]}`}>
+                  <span class={`week-sets-chip load-${load}`} role="listitem" key={mg.muscleGroup} title={`${mg.muscleGroup}: ${mg.sets} set, ${SET_LOAD_LABELS[load]}`}>
                     {mg.muscleGroup} <strong class="tabular-nums">{mg.sets}</strong>
                   </span>
                 )

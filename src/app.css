@@ -1459,6 +1459,16 @@ canvas { display: block; max-width: 100%; }
   .rail { display: flex; }
   .rail-nav .nav-link { width: 44px; height: 44px; justify-content: center; padding: 0; }
   .rail-nav .nav-icon { width: 24px; height: 24px; }
+  /* Tablet är finger, inte mus: samma val som på telefon. Settabellen (619 px med full Föregående
+     och stegknappar) klippte kolumnen Ta bort bakom en inre sidled-scroll i kortet (574 px på 768). */
+  .plate-line { min-height: var(--touch-target); }
+  .set-rows-table .col-prev { white-space: nowrap; }
+  .set-rows-table .prev-full { display: none; }
+  .set-rows-table .prev-compact { display: inline; }
+  .set-rows-table .stepper-buttons { display: none; }
+  .set-rows-table .set-input { height: 44px; appearance: textfield; -moz-appearance: textfield; }
+  .set-rows-table .set-input::-webkit-inner-spin-button,
+  .set-rows-table .set-input::-webkit-outer-spin-button { display: none; }
   .app { margin-left: 64px; }
   .header { display: none; }
   .main { width: 100%; }

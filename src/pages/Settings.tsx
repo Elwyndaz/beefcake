@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'preact/hooks'
+import { useState, useEffect, useRef } from 'preact/hooks'
 import { getAllTemplates, exportAllData, importAllData, exportSessionsCSV, clearAllData, getBodyWeights, saveBodyWeight, deleteBodyWeight } from '../services/dataService'
 import { formatDateWithWeekday, todayISO } from '../lib/date'
 import { formatWeight } from '../lib/format'
@@ -79,6 +79,7 @@ export function Settings() {
   const [bodyWeights, setBodyWeights] = useState<BodyWeight[]>([])
   const [bwDate, setBwDate] = useState(() => todayISO())
   const [bwKg, setBwKg] = useState('')
+  const bwKgRef = useRef<HTMLInputElement>(null)
 
   async function loadData() {
     try {
@@ -106,6 +107,7 @@ export function Settings() {
       await saveBodyWeight(bwDate, kg)
       setBodyWeights(await getBodyWeights())
       setBwKg('')
+      bwKgRef.current?.focus() // nästa värde utan att leta upp fältet igen
       setToastMessage('Kroppsvikt sparad')
     } catch (err) {
       console.error('Fel vid sparande av kroppsvikt:', err)
@@ -287,6 +289,7 @@ export function Settings() {
               type="text"
               inputMode="decimal"
               class="input-short"
+              ref={bwKgRef}
               value={bwKg}
               placeholder="82,5"
               aria-label="Kroppsvikt i kilo"
