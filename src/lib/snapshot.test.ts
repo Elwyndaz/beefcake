@@ -23,7 +23,8 @@ function snapshot(sessionName: string, extraSessionId?: string): SnapshotData {
         createdAt: '2026-08-24T08:00:00.000Z'
       }] : [])
     ],
-    exerciseHistory: []
+    exerciseHistory: [],
+    bodyWeight: []
   }
 }
 

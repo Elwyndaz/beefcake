@@ -9,8 +9,10 @@ import type {
   SetEntry,
   LegacySession,
   LegacyTemplateExercise,
-  ActiveWorkout
+  ActiveWorkout,
+  BodyWeight
 } from '../models'
+import type { SnapshotData } from '../lib/snapshot'
 import { loadSnapshotFromCloud, syncSnapshot } from './cloudSyncService'
 import { parseImportData } from '../lib/importValidation'
 import { setVolume, setsVolume } from '../lib/volume'
@@ -450,57 +452,57 @@ export async function getWeeklyHardSetsPerMuscleGroup(weekStartDate: string): Pr
     .sort((a, b) => b.sets - a.sets)
 }
 
-// Export/Import
-export async function exportAllData(): Promise<string> {
+// Kroppsvikt: ett värde per dag, samma datum skriver över. Nyast först.
+export async function getBodyWeights(): Promise<BodyWeight[]> {
   const db = await getDB()
-  const tx = db.transaction(['templates', 'exercises', 'sessions', 'exerciseHistory'], 'readonly')
-  const [templates, exercises, sessions, history] = await Promise.all([
-    tx.objectStore('templates').getAll(),
-    tx.objectStore('exercises').getAll(),
-    tx.objectStore('sessions').getAll(),
-    tx.objectStore('exerciseHistory').getAll()
-  ])
-  await tx.done
-  return JSON.stringify({ templates, exercises, sessions, exerciseHistory: history }, null, 2)
+  return (await db.getAll('bodyWeight')).sort((a, b) => b.date.localeCompare(a.date))
 }
 
-export async function importAllData(json: string): Promise<void> {
+export async function saveBodyWeight(date: string, kg: number): Promise<void> {
   const db = await getDB()
-  const { templates, exercises, sessions, exerciseHistory } = parseImportData(json)
-  const tx = db.transaction(['templates', 'exercises', 'sessions', 'exerciseHistory'], 'readwrite')
-  await Promise.all([
-    tx.objectStore('templates').clear(),
-    tx.objectStore('exercises').clear(),
-    tx.objectStore('sessions').clear(),
-    tx.objectStore('exerciseHistory').clear()
-  ])
-  for (const t of templates) await tx.objectStore('templates').put(t as unknown as Template)
-  for (const e of exercises) await tx.objectStore('exercises').put(e as unknown as Exercise)
-  for (const s of sessions) await tx.objectStore('sessions').put(s as unknown as Session)
-  for (const h of exerciseHistory) await tx.objectStore('exerciseHistory').put(h as unknown as ExerciseHistory)
-  await tx.done
+  await db.put('bodyWeight', { date, kg: Math.round(kg * 10) / 10 })
   await syncCloudData()
 }
 
-/** Ersätt den lokala cachen med D1:s auktoritativa snapshot. */
-async function replaceDataInLocal(data: {
-  templates: Template[]
-  exercises: Exercise[]
-  sessions: Session[]
-  exerciseHistory: ExerciseHistory[]
-}): Promise<void> {
+export async function deleteBodyWeight(date: string): Promise<void> {
   const db = await getDB()
-  const tx = db.transaction(['templates', 'exercises', 'sessions', 'exerciseHistory'], 'readwrite')
-  await Promise.all([
-    tx.objectStore('templates').clear(),
-    tx.objectStore('exercises').clear(),
-    tx.objectStore('sessions').clear(),
-    tx.objectStore('exerciseHistory').clear()
+  await db.delete('bodyWeight', date)
+  await syncCloudData()
+}
+
+// Export/Import. Snapshotens samlingar: de fyra i domänmodellen plus kroppsvikten.
+const SNAPSHOT_STORES = ['templates', 'exercises', 'sessions', 'exerciseHistory', 'bodyWeight'] as const
+
+export async function exportAllData(): Promise<string> {
+  const db = await getDB()
+  const tx = db.transaction(SNAPSHOT_STORES, 'readonly')
+  const [templates, exercises, sessions, history, bodyWeight] = await Promise.all([
+    tx.objectStore('templates').getAll(),
+    tx.objectStore('exercises').getAll(),
+    tx.objectStore('sessions').getAll(),
+    tx.objectStore('exerciseHistory').getAll(),
+    tx.objectStore('bodyWeight').getAll()
   ])
+  await tx.done
+  return JSON.stringify({ templates, exercises, sessions, exerciseHistory: history, bodyWeight }, null, 2)
+}
+
+export async function importAllData(json: string): Promise<void> {
+  await replaceDataInLocal(parseImportData(json))
+  await syncCloudData()
+}
+
+/** Ersätt den lokala cachen med en hel snapshot: D1:s auktoritativa eller en importerad JSON. */
+async function replaceDataInLocal(data: SnapshotData): Promise<void> {
+  const db = await getDB()
+  const tx = db.transaction(SNAPSHOT_STORES, 'readwrite')
+  await Promise.all(SNAPSHOT_STORES.map(store => tx.objectStore(store).clear()))
   for (const t of data.templates) await tx.objectStore('templates').put(t)
   for (const e of data.exercises) await tx.objectStore('exercises').put(e)
   for (const s of data.sessions) await tx.objectStore('sessions').put(s)
   for (const h of data.exerciseHistory) await tx.objectStore('exerciseHistory').put(h)
+  // Serverns snapshot kommer råa: en äldre D1-snapshot saknar bodyWeight
+  for (const b of data.bodyWeight ?? []) await tx.objectStore('bodyWeight').put(b)
   await tx.done
 }
 
@@ -513,15 +515,7 @@ function sessionKey(date: string, templateName: string): string {
 }
 
 export async function syncSeed(): Promise<{ sessionsAdded: number; exercisesAdded: number }> {
-  await loadSnapshotFromCloud(
-    JSON.parse(await exportAllData()) as {
-      templates: Template[]
-      exercises: Exercise[]
-      sessions: Session[]
-      exerciseHistory: ExerciseHistory[]
-    },
-    replaceDataInLocal
-  )
+  await loadSnapshotFromCloud(JSON.parse(await exportAllData()) as SnapshotData, replaceDataInLocal)
   await backfillExerciseMeta()
 
   const db = await getDB()
@@ -646,23 +640,12 @@ export async function exportSessionsCSV(): Promise<string> {
 
 export async function clearAllData(): Promise<void> {
   const db = await getDB()
-  const tx = db.transaction(['templates', 'exercises', 'sessions', 'exerciseHistory'], 'readwrite')
-  await Promise.all([
-    tx.objectStore('templates').clear(),
-    tx.objectStore('exercises').clear(),
-    tx.objectStore('sessions').clear(),
-    tx.objectStore('exerciseHistory').clear()
-  ])
+  const tx = db.transaction(SNAPSHOT_STORES, 'readwrite')
+  await Promise.all(SNAPSHOT_STORES.map(store => tx.objectStore(store).clear()))
   await tx.done
   await syncCloudData()
 }
 
 async function syncCloudData(): Promise<void> {
-  const data = await exportAllData()
-  await syncSnapshot(JSON.parse(data) as {
-    templates: Template[]
-    exercises: Exercise[]
-    sessions: Session[]
-    exerciseHistory: ExerciseHistory[]
-  })
+  await syncSnapshot(JSON.parse(await exportAllData()) as SnapshotData)
 }

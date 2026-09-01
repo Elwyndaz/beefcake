@@ -142,3 +142,24 @@ describe('två klienter mot D1', () => {
     expect(db.latestRevision()).toBe(5)
   })
 })
+
+describe('kroppsvikt i snapshoten', () => {
+  it('Workern tar emot en snapshot utan bodyWeight, en med, och avvisar en trasig', async () => {
+    const base = JSON.parse(db.rows[db.rows.length - 1].payload) as Record<string, unknown>
+    const post = (data: unknown) => apiFetch(`${API}/api/snapshot`, {
+      method: 'POST',
+      body: JSON.stringify({ expectedRevision: db.latestRevision(), data })
+    })
+    const { bodyWeight: _bodyWeight, ...withoutBodyWeight } = base
+    expect((await post(withoutBodyWeight)).status).toBe(201)
+    expect((JSON.parse(db.rows[db.rows.length - 1].payload) as { bodyWeight: unknown }).bodyWeight).toEqual([])
+
+    const rows = [{ date: '2026-09-01', kg: 82.5 }]
+    expect((await post({ ...base, bodyWeight: rows })).status).toBe(201)
+    expect((JSON.parse(db.rows[db.rows.length - 1].payload) as { bodyWeight: unknown }).bodyWeight).toEqual(rows)
+
+    const revision = db.latestRevision()
+    expect((await post({ ...base, bodyWeight: [{ date: 'igår', kg: 82.5 }] })).status).toBe(400)
+    expect(db.latestRevision()).toBe(revision)
+  })
+})

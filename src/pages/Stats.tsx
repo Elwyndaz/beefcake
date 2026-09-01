@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'preact/hooks'
 import { Link } from 'wouter'
-import { getAllExercises, getVolumeOverTime, getFrequencyPerTemplate, getPRs, getAllSessions, getEstimated1RM, getVolumeByMuscleGroup, getWeeklyHardSetsPerMuscleGroup, getExerciseTrainingCounts, getSessionYears } from '../services/dataService'
+import { getAllExercises, getVolumeOverTime, getFrequencyPerTemplate, getPRs, getAllSessions, getEstimated1RM, getVolumeByMuscleGroup, getWeeklyHardSetsPerMuscleGroup, getExerciseTrainingCounts, getSessionYears, getBodyWeights } from '../services/dataService'
 import { classifyWeeklySets, SET_LOAD_LABELS } from '../lib/hypertrophy'
 import { formatWeight } from '../lib/format'
 import { formatDateShort, localDateISO, todayISO, parseLocalDate, mondayISO } from '../lib/date'
@@ -10,7 +10,7 @@ import { Button } from '../components/Button'
 import { EmptyState } from '../components/EmptyState'
 import { Field } from '../components/Field'
 import { Stat } from '../components/Stat'
-import type { Exercise } from '../models'
+import type { Exercise, BodyWeight } from '../models'
 import type { Chart } from 'chart.js'
 
 // Lazy load Chart.js
@@ -158,6 +158,10 @@ export function Stats() {
   const [weeklySets, setWeeklySets] = useState<{ weekStart: string; groups: { muscleGroup: string; sets: number }[] }[]>([])
   // Pass per vecka, nyaste veckan först, tolv veckor bakåt. Staplarna skalas mot veckan med flest pass.
   const [weeklyCounts, setWeeklyCounts] = useState<{ weekStart: string; count: number }[]>([])
+  // Kroppsvikt, nyast först. Kortet visas först vid två värden: en punkt är ingen kurva.
+  const [bodyWeights, setBodyWeights] = useState<BodyWeight[]>([])
+  const bodyChartRef = useRef<Chart | null>(null)
+  const bodyCanvasRef = useRef<HTMLCanvasElement>(null)
   // e1RM för den mest tränade övningen, oberoende av valet i volymgrafen
   const [topOneRM, setTopOneRM] = useState<{ exerciseName: string; estimated1RM: number | null }>({ exerciseName: '', estimated1RM: null })
   const [loading, setLoading] = useState(true)
@@ -181,6 +185,50 @@ export function Stats() {
     }
   }, [selectedExerciseId, period, loading])
 
+  // Egen effekt och egen instans: kurvan delar varken period eller Chart-objekt med volymkurvan
+  useEffect(() => {
+    if (loading || bodyWeights.length < 2) return
+    void loadBodyWeightChart()
+    return () => {
+      bodyChartRef.current?.destroy()
+      bodyChartRef.current = null
+    }
+  }, [bodyWeights, loading])
+
+  async function loadBodyWeightChart() {
+    const ctx = bodyCanvasRef.current
+    if (!ctx) return
+    const Chart = (await getChartModule()).Chart
+    const theme = getChartTheme()
+    const points = [...bodyWeights].reverse()
+    bodyChartRef.current?.destroy()
+    bodyChartRef.current = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: points.map(b => b.date),
+        datasets: [{
+          label: 'Kroppsvikt (kg)',
+          data: points.map(b => b.kg),
+          borderColor: theme.accent,
+          backgroundColor: hexToRgba(theme.accent, 0.12),
+          fill: true,
+          tension: 0.3,
+          pointRadius: 4,
+          pointHoverRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { type: 'time', ticks: { maxTicksLimit: 8, color: theme.text }, grid: { color: theme.grid } },
+          y: { ticks: { color: theme.text }, grid: { color: theme.grid } }
+        }
+      }
+    })
+  }
+
   async function loadData() {
     try {
       setLoading(true)
@@ -190,13 +238,14 @@ export function Stats() {
       const cutoff30 = new Date(parseLocalDate(today))
       cutoff30.setDate(cutoff30.getDate() - 30)
       const cutoff30ISO = localDateISO(cutoff30)
-      const [es, prsData, sessions, muscleStats, counts, years, weeks] = await Promise.all([
+      const [es, prsData, sessions, muscleStats, counts, years, bws, weeks] = await Promise.all([
         getAllExercises(),
         getPRs(),
         getAllSessions(),
         getVolumeByMuscleGroup(),
         getExerciseTrainingCounts(quarterStart),
         getSessionYears(),
+        getBodyWeights(),
         Promise.all(Array.from({ length: WEEKS_BACK }, (_, i) => {
           const weekStart = mondayISO(i)
           return getWeeklyHardSetsPerMuscleGroup(weekStart).then(groups => ({ weekStart, groups }))
@@ -209,6 +258,7 @@ export function Stats() {
       setPRs(prsData)
       setMuscleGroupStats(muscleStats)
       setWeeklySets(weeks)
+      setBodyWeights(bws)
       setWeeklyCounts(Array.from({ length: COUNT_WEEKS_BACK }, (_, i) => {
         const weekStart = mondayISO(i)
         const weekEnd = mondayISO(i - 1)
@@ -350,6 +400,10 @@ export function Stats() {
   const sortedPRs = sortByRecentUse(prs, recentCounts)
   const maxFrequency = frequencyData[0]?.count || 1
   const maxWeeklyCount = Math.max(0, ...weeklyCounts.map(w => w.count))
+  // Senaste värdet mot det senaste som är minst 30 dagar gammalt
+  const latestBody = bodyWeights[0]
+  const cutoffBody = (() => { const d = parseLocalDate(todayISO()); d.setDate(d.getDate() - 30); return localDateISO(d) })()
+  const bodyRef = bodyWeights.find(b => b.date <= cutoffBody)
 
   return (
     <div>
@@ -513,6 +567,20 @@ export function Stats() {
           )}
         </Card>
       </div>
+
+      {bodyWeights.length >= 2 && (
+        <Card title="Kroppsvikt">
+          <div class="chart-200">
+            <canvas ref={bodyCanvasRef} id="bodyweight-chart"></canvas>
+          </div>
+          <p class="text-sm m-0 mt-sm tabular-nums">
+            Senast <strong>{formatWeight(latestBody.kg)} kg</strong> ({formatDateShort(latestBody.date)})
+            {bodyRef
+              ? <span class="text-muted"> · {latestBody.kg - bodyRef.kg >= 0 ? '+' : ''}{formatWeight(Math.round((latestBody.kg - bodyRef.kg) * 10) / 10)} kg mot för 30 dagar sedan ({formatWeight(bodyRef.kg)} kg {formatDateShort(bodyRef.date)})</span>
+              : <span class="text-muted"> · ingen mätning för 30 dagar sedan att jämföra med</span>}
+          </p>
+        </Card>
+      )}
 
       <Card title="Personliga rekord (PR)">
         {prs.length === 0 ? (

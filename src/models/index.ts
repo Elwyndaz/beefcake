@@ -11,6 +11,7 @@ export type {
   SessionExercise,
   Session,
   ExerciseHistory,
+  BodyWeight,
   BeefcakeDB,
   // Legacy typer för seedData.ts kompatibilitet
   LegacyTemplateExercise,

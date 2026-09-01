@@ -22,8 +22,21 @@ describe('parseImportData', () => {
       templates: [],
       exercises: [],
       sessions: [],
-      exerciseHistory: []
+      exerciseHistory: [],
+      bodyWeight: []
     })
+  })
+
+  it('accepterar kroppsvikt när den finns och släpper igenom en tom lista', () => {
+    const rows = [{ date: '2026-09-01', kg: 82.5 }]
+    expect(parseImportData(JSON.stringify({ ...valid(), bodyWeight: rows })).bodyWeight).toEqual(rows)
+    expect(parseImportData(JSON.stringify({ ...valid(), bodyWeight: [] })).bodyWeight).toEqual([])
+  })
+
+  it('avvisar kroppsvikt utan giltigt datum, utan kilo eller med två värden samma dag', () => {
+    expect(() => parseImportData(JSON.stringify({ ...valid(), bodyWeight: [{ date: 'igår', kg: 82.5 }] }))).toThrow('bodyWeight')
+    expect(() => parseImportData(JSON.stringify({ ...valid(), bodyWeight: [{ date: '2026-09-01', kg: 0 }] }))).toThrow('bodyWeight')
+    expect(() => parseImportData(JSON.stringify({ ...valid(), bodyWeight: [{ date: '2026-09-01', kg: 82 }, { date: '2026-09-01', kg: 83 }] }))).toThrow('dubbletter')
   })
 
   it('avvisar en backup som saknar en samling', () => {

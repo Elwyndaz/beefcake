@@ -1,4 +1,4 @@
-import type { Exercise, ExerciseHistory, ExerciseKind, SetEntry, Session, Template } from '../models'
+import type { BodyWeight, Exercise, ExerciseHistory, ExerciseKind, SetEntry, Session, Template } from '../models'
 import type { SnapshotData } from './snapshot'
 
 export type ImportData = SnapshotData
@@ -28,7 +28,23 @@ export function validateSnapshot(parsed: unknown): SnapshotData {
     if (!sessionIds.has(h.sessionId)) throw new Error(`Importen har fel format: exerciseHistory ${h.id} pekar på ett pass som saknas`)
   }
 
-  return { templates, exercises, sessions, exerciseHistory }
+  // Kroppsvikt kom 2026-09-01. Äldre snapshots i D1 och äldre klienter saknar fältet: då är listan tom.
+  const bodyWeight = parsed.bodyWeight === undefined ? [] : readBodyWeights(parsed.bodyWeight)
+
+  return { templates, exercises, sessions, exerciseHistory, bodyWeight }
+}
+
+function readBodyWeights(value: unknown): BodyWeight[] {
+  if (!Array.isArray(value)) throw new Error('Importen har fel format: bodyWeight')
+  const dates = new Set<string>()
+  for (const item of value) {
+    if (!isRecord(item) || typeof item.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(item.date) || !isNumber(item.kg) || item.kg <= 0) {
+      throw new Error('Importen har fel format: bodyWeight')
+    }
+    if (dates.has(item.date)) throw new Error('Importen innehåller dubbletter: bodyWeight')
+    dates.add(item.date)
+  }
+  return value as BodyWeight[]
 }
 
 function readCollection<T extends { id: string }>(value: unknown, name: string, validate: (item: Record<string, unknown>) => boolean): T[] {

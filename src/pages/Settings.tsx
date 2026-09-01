@@ -1,12 +1,20 @@
 import { useState, useEffect } from 'preact/hooks'
-import { getAllTemplates, exportAllData, importAllData, exportSessionsCSV, clearAllData } from '../services/dataService'
+import { getAllTemplates, exportAllData, importAllData, exportSessionsCSV, clearAllData, getBodyWeights, saveBodyWeight, deleteBodyWeight } from '../services/dataService'
+import { formatDateWithWeekday, todayISO } from '../lib/date'
+import { formatWeight } from '../lib/format'
 import { saveBackupToFile } from '../services/backupService'
 import { icon } from '../icons'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
 import { EmptyState } from '../components/EmptyState'
 import { Field } from '../components/Field'
-import type { Template } from '../models'
+import type { Template, BodyWeight } from '../models'
+
+/** "82,5" eller "82.5" till tal, annars null. Kilo med en decimal. */
+function parseKg(text: string): number | null {
+  const kg = Math.round(parseFloat(text.replace(',', '.')) * 10) / 10
+  return Number.isFinite(kg) && kg > 0 ? kg : null
+}
 
 // Toast component
 function Toast({ message, onDismiss }: { message: string; onDismiss: () => void }) {
@@ -67,13 +75,18 @@ export function Settings() {
   const [importFile, setImportFile] = useState<File | null>(null)
   const [clearDialogOpen, setClearDialogOpen] = useState(false)
   const [clearConfirmText, setClearConfirmText] = useState('')
+  // Kroppsvikt: datum förvalt i dag, kilo som text så decimalkomma fungerar i alla tangentbord
+  const [bodyWeights, setBodyWeights] = useState<BodyWeight[]>([])
+  const [bwDate, setBwDate] = useState(() => todayISO())
+  const [bwKg, setBwKg] = useState('')
 
   async function loadData() {
     try {
       setLoading(true)
       setError(null)
-      const ts = await getAllTemplates()
+      const [ts, bws] = await Promise.all([getAllTemplates(), getBodyWeights()])
       setTemplates(ts)
+      setBodyWeights(bws)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Okänt fel')
       console.error('Fel vid laddning av inställningar:', err)
@@ -85,6 +98,31 @@ export function Settings() {
   useEffect(() => {
     loadData()
   }, [])
+
+  async function handleSaveBodyWeight() {
+    const kg = parseKg(bwKg)
+    if (!kg || !/^\d{4}-\d{2}-\d{2}$/.test(bwDate)) return
+    try {
+      await saveBodyWeight(bwDate, kg)
+      setBodyWeights(await getBodyWeights())
+      setBwKg('')
+      setToastMessage('Kroppsvikt sparad')
+    } catch (err) {
+      console.error('Fel vid sparande av kroppsvikt:', err)
+      setError('Kunde inte spara kroppsvikten. Försök igen.')
+    }
+  }
+
+  // Egen kroppsviktsdata, ett värde: ingen bekräftelsedialog
+  async function handleDeleteBodyWeight(date: string) {
+    try {
+      await deleteBodyWeight(date)
+      setBodyWeights(await getBodyWeights())
+    } catch (err) {
+      console.error('Fel vid borttagning av kroppsvikt:', err)
+      setError('Kunde inte ta bort kroppsvikten. Försök igen.')
+    }
+  }
 
   async function handleExportJSON() {
     try {
@@ -238,6 +276,46 @@ export function Settings() {
           />
         </Card>
       ) : null}
+
+      <Card title="Kroppsvikt">
+        <form class="flex gap-sm items-end flex-wrap" onSubmit={e => { e.preventDefault(); void handleSaveBodyWeight() }}>
+          <Field label="Datum" class="m-0">
+            <input type="date" value={bwDate} max={todayISO()} onChange={(e: Event) => setBwDate((e.target as HTMLInputElement).value)} />
+          </Field>
+          <Field label="Kg" class="m-0">
+            <input
+              type="text"
+              inputMode="decimal"
+              class="input-short"
+              value={bwKg}
+              placeholder="82,5"
+              aria-label="Kroppsvikt i kilo"
+              onInput={(e: Event) => setBwKg((e.target as HTMLInputElement).value)}
+            />
+          </Field>
+          <Button type="submit" disabled={parseKg(bwKg) === null}>Spara</Button>
+        </form>
+        {bodyWeights.length > 0 && (
+          <div class="table-wrap mt">
+            <table>
+              <tbody>
+                {bodyWeights.slice(0, 10).map(b => (
+                  <tr key={b.date}>
+                    <td>{formatDateWithWeekday(b.date)}</td>
+                    <td class="tabular-nums font-600">{formatWeight(b.kg)} kg</td>
+                    <td class="remove-cell">
+                      <button type="button" class="btn-remove" onClick={() => handleDeleteBodyWeight(b.date)} aria-label={`Ta bort kroppsvikt ${b.date}`}>
+                        <svg width="20" height="20" viewBox="0 0 19 19"><use href={icon('trash-icon')} /></svg>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <p class="text-xs text-muted m-0 mt-sm">Ett värde per dag, samma datum skriver över. De tio senaste visas här, kurvan finns i Statistik.</p>
+      </Card>
 
       <Card title="Export / Import">
         <div class="flex gap mb">

@@ -694,6 +694,7 @@ th, td {
   outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg);
 }
 .input-group input[type="number"] { max-width: 100px; }
+.input-group input.input-short { max-width: 100px; }  /* Kort textfält för ett tal, som kroppsvikten */
 .input-group input[type="date"] { font-variant-numeric: var(--font-numeric); }
 
 /* Table: no vertical borders, horizontal lines only.

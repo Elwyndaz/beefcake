@@ -2,7 +2,7 @@
 schemaVersion: 1
 status: active
 currentGoal: Genomlysningens fem sista poster i chunkläge (A loggvyn och Hem, B statistik och Hem, C kroppsvikt), sedan Patriks ja eller nej på helheten
-nextAction: Chunk C, kroppsvikt: store, snapshot, inmatning i Inställningar, kurva i Statistik, Worker-deploy.
+nextAction: Skärmbilder efter-2, rapportens "## Efter 2", dagsnoten, sedan Patriks ja eller nej på hela passet.
 blockers:
   - Inga
 reviewedAt: 2026-09-01
@@ -10,7 +10,7 @@ reviewedAt: 2026-09-01
 
 ## Recent work
 
-Andra passet 2026-09-01, chunkläge. **Chunk A klar** (`0f17c24`): Föregående-kolumnen kompakt på telefon (kg 56 px, 1 px cellpadding, mätt 336 av 340 px), "Nästa pass" på Hem pekar ut det program som väntat längst med dagar sedan under varje knapp. **Chunk B klar:** pass per vecka som HTML-staplar i Statistik, kortet "Denna vecka" på Hem med text och muskelgruppschips.
+Andra passet 2026-09-01, chunkläge. **Chunk A klar** (`0f17c24`): Föregående-kolumnen kompakt på telefon (kg 56 px, 1 px cellpadding, mätt 336 av 340 px), "Nästa pass" på Hem pekar ut det program som väntat längst med dagar sedan under varje knapp. **Chunk B klar** (`09f2d15`): pass per vecka som HTML-staplar i Statistik, kortet "Denna vecka" på Hem med text och muskelgruppschips. **Chunk C klar:** kroppsvikt som egen store, valfri samling i snapshoten, inmatning i Inställningar, kurva i Statistik, Workern deployad med den delade valideringen.
 
 Genomlysningens byggpass 2026-09-01 i chunkläge, 14 commits efter `4f36f07` (`68303eb` till `034b331`, inklusive den här docs-rättningen), alla pushade och byggda av Pages.
 

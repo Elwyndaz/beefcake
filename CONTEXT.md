@@ -21,7 +21,7 @@ Ordet **mall** används både om övningsprogram och passtyp i gränssnittet. De
 
 ## Datamodell
 
-Fem object stores i IndexedDB `beefcake-db`. Typerna bor i `src/db/schema.ts` och återexporteras via `src/models/index.ts`.
+Sju object stores i IndexedDB `beefcake-db` (version 4 sedan 2026-09-01). Typerna bor i `src/db/schema.ts` och återexporteras via `src/models/index.ts`.
 
 ```ts
 SetEntry         { sets, reps, weight, rpe? }
@@ -34,7 +34,10 @@ Session          { id, date (YYYY-MM-DD), templateId, templateName, exercises: S
 ExerciseHistory  { id, date, exerciseId, exerciseName, setEntries: SetEntry[], volume, sessionId }
 ActiveSetEntry   SetEntry plus { completed?, type?: 'normal'|'warmup'|'drop'|'failure' }
 ActiveWorkout    { id, date, templateId, templateName, exercises: ActiveExercise[], startTime, updatedAt }
+BodyWeight       { date (YYYY-MM-DD, nyckel), kg }
 ```
+
+`bodyWeight` är kroppsvikten: ett värde per dag med datumet som nyckel, kilo med en decimal, samma datum skriver över. Matas in i Inställningar, ritas i Statistik när minst två värden finns. Ingen historik före 2026-09-01 och ingen migrering.
 
 `setEntries` är en lista, så olika vikt eller reps per set fungerar. `Legacy*`-typerna och `migrate*`-funktionerna i `src/models/` konverterar gammal seed-struktur och får inte tas bort så länge `seedData.ts` har den gamla formen.
 
@@ -55,7 +58,7 @@ Volym räknas alltid genom `src/lib/volume.ts`. Vikt 0 betyder kroppsvikt eller 
 
 ## Lagring och nödräddning
 
-D1 lagrar versionsnumrerade snapshots per Access-identitet och är sanningskälla. Klienten hämtar serverns snapshot före seedning och använder IndexedDB som lokal cache. Efter varje mutation synkar `syncCloudData()` snapshoten till D1. Workern och JSON-importen validerar hela domänmodellen med samma `validateSnapshot()` i `src/lib/importValidation.ts`, inklusive att varje historikrad pekar på ett pass som finns.
+D1 lagrar versionsnumrerade snapshots per Access-identitet och är sanningskälla. Klienten hämtar serverns snapshot före seedning och använder IndexedDB som lokal cache. Efter varje mutation synkar `syncCloudData()` snapshoten till D1. Workern och JSON-importen validerar hela domänmodellen med samma `validateSnapshot()` i `src/lib/importValidation.ts`, inklusive att varje historikrad pekar på ett pass som finns. Snapshoten har fyra obligatoriska samlingar (`templates`, `exercises`, `sessions`, `exerciseHistory`) och `bodyWeight` som **valfri samling**: äldre snapshots i D1 och äldre klienter saknar fältet, då blir det en tom lista. En äldre klient som skriver en snapshot utan fältet nollar därmed kroppsvikten i D1; båda telefonerna får nya bundeln vid nästa laddning, så det är accepterat.
 
 - Skrivning använder enkel `POST` med `Content-Type: text/plain` och `credentials: include`, eftersom Cloudflare Access stoppar CORS-preflight utan Access-cookie.
 - Skrivning kräver senaste revision, så en gammal klient får 409 i stället för att skriva över nyare data.
@@ -98,7 +101,7 @@ src/services/dataService.ts   alla läsningar, skrivningar och statistik
 src/services/timerService.ts  vilotimerns presets, notiser och start-event
 server/src/index.ts         Access-skyddat snapshot-API med revisionslås
 server/migrations/          D1-schema för versionsnumrerade snapshots
-src/pages/                Home, LogSession, Templates, History, SessionDetail, ExerciseDetail, Stats, Settings
+src/pages/                Home, LogSession, Templates, History, SessionDetail, ExerciseDetail, Stats, Settings (export, import, kroppsvikt)
 ```
 
 Rutter: `/` · `/log` (stödjer `?from=<sessionId>`, `?template=<namn>` och `?date=<YYYY-MM-DD>`) · `/templates` · `/history` · `/history/:id` · `/exercises/:id` · `/stats` · `/settings`.

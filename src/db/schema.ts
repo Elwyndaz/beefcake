@@ -59,6 +59,12 @@ export interface ExerciseHistory {
   sessionId: string
 }
 
+/** Kroppsvikt: ett värde per dag, datumet (YYYY-MM-DD) är nyckeln. Kilo med en decimal. Sedan 2026-09-01. */
+export interface BodyWeight {
+  date: string
+  kg: number
+}
+
 export interface AppSetting {
   key: string
   value: unknown
@@ -157,10 +163,14 @@ export interface BeefcakeDB extends DBSchema {
     key: string
     value: ActiveWorkout
   }
+  bodyWeight: {
+    key: string
+    value: BodyWeight
+  }
 }
 
 const DB_NAME = 'beefcake-db'
-const DB_VERSION = 3
+const DB_VERSION = 4
 
 let dbInstance: IDBPDatabase<BeefcakeDB> | null = null
 
@@ -195,6 +205,9 @@ export async function getDB(): Promise<IDBPDatabase<BeefcakeDB>> {
       }
       if (!db.objectStoreNames.contains('activeWorkout')) {
         db.createObjectStore('activeWorkout', { keyPath: 'id' })
+      }
+      if (!db.objectStoreNames.contains('bodyWeight')) {
+        db.createObjectStore('bodyWeight', { keyPath: 'date' })
       }
     }
   })
