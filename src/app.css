@@ -920,6 +920,10 @@ canvas { display: block; max-width: 100%; }
 .session-detail-table th, .session-detail-table td { padding: var(--space-3); text-align: left; border-bottom: 1px solid var(--border); }
 .session-detail-table th { font-weight: 600; color: var(--text-muted); font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.5px; background: transparent; }
 .session-detail-table tfoot td { border-bottom: none; border-top: 1px solid var(--border); background: var(--surface); }
+/* Passdetaljens övningskort på telefon är läsytor, inte länkar */
+.history-card.session-detail-card { cursor: default; }
+.history-card.session-detail-card:hover { transform: none; box-shadow: none; }
+.session-detail-card .history-card-body { flex-wrap: wrap; }
 
 /* ===================================================================
    SKELETON LOADING STYLES
@@ -1373,8 +1377,6 @@ canvas { display: block; max-width: 100%; }
   .main { padding-bottom: 80px; }
   .history-list-table { display: none; }
   .history-list-cards { display: block; }
-  .session-detail-table { display: none; }
-  .session-detail-exercise-list { display: block; }
   .history-toolbar { grid-template-columns: 1fr auto; align-items: center; }
   .history-toolbar .history-filters-inline { grid-column: 1 / -1; grid-row: 2; max-width: none; margin: 0; }
   .history-filters-inline { grid-template-columns: 1fr 1fr; }

@@ -477,7 +477,31 @@ export function SessionDetail() {
 
         <Card>
           <h3 class="mb-sm">Övningar</h3>
-          <div class="session-detail-exercise-list">
+          {/* Telefon: ett kort per övning, samma mönster som Historik. Tabellen gömdes
+              under 767 px utan ersättare, så kortet "Övningar" var tomt på mobilen. */}
+          <div class="history-list-cards">
+            {session.exercises.map((ex, idx) => (
+              <div key={idx} class="history-card session-detail-card">
+                <div class="history-card-header">
+                  <span class="history-card-date">
+                    {ex.exerciseId
+                      ? <Link href={`/exercises/${ex.exerciseId}`} class="exercise-link">{ex.exerciseName}</Link>
+                      : ex.exerciseName}
+                  </span>
+                  <span class="history-card-volume tabular-nums">{calculateExerciseVolume(ex).toLocaleString('sv-SE')} kg</span>
+                </div>
+                <div class="history-card-body">
+                  <span class="tabular-nums">{formatSets(ex.setEntries)}</span>
+                </div>
+                {ex.notes && <div class="text-xs text-muted mt-1">{ex.notes}</div>}
+              </div>
+            ))}
+            <div class="flex justify-between items-center mt-sm">
+              <span class="font-semibold">Total:</span>
+              <span class="volume-hero">{calculateTotalVolume(session.exercises).toLocaleString('sv-SE')} kg</span>
+            </div>
+          </div>
+          <div class="history-list-table session-detail-exercise-list">
             <div class="session-detail-table table-rows">
               <table>
                 <thead>
