@@ -269,6 +269,21 @@ th, td {
 
 .sync-error a { color: inherit; font-weight: 700; }
 
+/* Ny version väntar: överst i innehållet, i flödet, så bottennavigeringen aldrig täcker den */
+.update-banner {
+  margin-bottom: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-md);
+  background: var(--accent-bg);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
 /* ===================================================================
    LAYOUT UTILITY CLASSES
    =================================================================== */

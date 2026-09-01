@@ -4,6 +4,7 @@ import { Router, Link, Switch, Route, useLocation } from 'wouter'
 import { lazy, Suspense } from 'preact/compat'
 import { PasswordGate } from './components/PasswordGate'
 import { CloudSyncStatus } from './components/CloudSyncStatus'
+import { UpdateBanner } from './components/UpdateBanner'
 import { BeefcakeBadge, BeefcakeAvatar, useBeefcakeStreak } from './components/BeefcakeBadge'
 import { Card } from './components/Card'
 import { Home } from './pages/Home'
@@ -131,6 +132,7 @@ function Shell() {
         <HeaderNav />
       </header>
       <main class="main">
+        <UpdateBanner />
         <CloudSyncStatus />
         {isHome && <BeefcakeBadge streak={streak} />}
         <Switch>

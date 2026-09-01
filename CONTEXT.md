@@ -65,6 +65,10 @@ D1 lagrar versionsnumrerade snapshots per Access-identitet och är sanningskäll
 - Synkfel visas beständigt i appen och får inte sväljas av `autoBackup()`.
 - Export och import av JSON är endast manuell nödräddning i Inställningar. Filbackup används aldrig automatiskt.
 
+## PWA och uppdatering
+
+Service workern (Workbox via vite-plugin-pwa) precachar hela bundeln, så appen fungerar offline. `registerType` är `'prompt'` sedan 2026-09-01: en ny version hämtas och installeras i bakgrunden men aktiveras **aldrig av sig själv**. `main.tsx` registrerar med `registerSW` från `virtual:pwa-register`; `onNeedRefresh` anropar `announceUpdate()` i `src/components/UpdateBanner.tsx`, som sparar omladdningsfunktionen (service workern kan bli klar innan appen har renderats) och skickar `beefcake-update-available` på `window`. Bannern "Ny version av Beefcake finns" ligger överst i `<main>` i flödet, ovanför synkfelet, och knappen "Ladda om" kör `updateSW(true)`: service workern får `SKIP_WAITING` och sidan laddas om med nya bundeln. `onOfflineReady` gör ingenting. Mitt i ett pass händer alltså inget förrän användaren själv trycker. Ett aktivt pass ligger i `activeWorkout` och överlever omladdningen.
+
 ## Beefcake-nivån
 
 Cartman speglar träningskedjan. I full storlek med statustexten bara på Hem (sedan 2026-09-01), på övriga sidor som 40 px avatar i headern, sidebaren och railen. `src/lib/streak.ts` äger regeln, och är det enda stället: ett glapp på över **tre dagar** bryter kedjan och sätter nivå 1, annars stegas nivån upp med kedjans längd (1-3 pass ger 2, 4-9 ger 3, 10 eller fler ger 4). Takten motsvarar "varannan dag", ungefär fyra pass i veckan. Streak-kortet i Statistik och alla andra läsningar går genom samma funktion.
@@ -82,10 +86,10 @@ Avatarerna i `src/assets/beefcake/` och ikonerna `favicon.ico`, `apple-touch-ico
 Vite 8 · Preact 10 · TypeScript strict · wouter · `idb` · Chart.js (lazy) · vite-plugin-pwa (Workbox) · Cloudflare Worker · D1 · Access. Cirka 2 000 rader klientkod.
 
 ```
-src/main.tsx              entry, syncSeed sedan render
+src/main.tsx              entry, registerSW (prompt), syncSeed sedan render
 src/app.tsx               Router, navigering, rutter
 src/app.css               all styling, tokens överst
-src/components/           Button, Card, Stat, EmptyState, Field, PasswordGate, RestTimer, PlateCalculator, CloudSyncStatus, BeefcakeBadge (märke, avatar, useBeefcakeStreak)
+src/components/           Button, Card, Stat, EmptyState, Field, PasswordGate, RestTimer, PlateCalculator, CloudSyncStatus, UpdateBanner (ny version väntar), BeefcakeBadge (märke, avatar, useBeefcakeStreak)
 src/db/schema.ts          IndexedDB-schema och typer
 src/db/seedData.ts        GENERERAD, all träningshistorik
 src/lib/date.ts           all datumhantering, tidszonssäker (även mondayISO, isoWeek). Använd den, aldrig new Date() rakt av

@@ -7,7 +7,8 @@ export default defineConfig({
   plugins: [
     preact(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'prompt': en ny version väntar tills användaren trycker Ladda om (UpdateBanner), aldrig mitt i ett pass
+      registerType: 'prompt',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
       manifest: {
         name: 'Beefcake',

@@ -1,8 +1,8 @@
 ---
 schemaVersion: 1
 status: active
-currentGoal: Härdning efter genomlysningen, chunk D till F. D och E klara (Worker behåller kroppsvikt, datumtester, tablet- och a11y-svep). Kvar: F uppdateringsbanner för PWA:n
-nextAction: Chunk F enligt prompten i dagsnoten 2026-09-01 session 12. Parallellt: prova loggvyn och kroppsvikten på telefonen.
+currentGoal: Härdning efter genomlysningen, chunk D till F, alla tre byggda och pushade 2026-09-01. Väntar på ja eller nej på helheten
+nextAction: Prova på telefonen: bannern vid nästa deploy, loggvyn, kroppsvikten. Sedan är backloggen bara beslut (två användare, Web Push, Cloudflare Pages med Access).
 blockers:
   - Inga
 reviewedAt: 2026-09-01
@@ -10,7 +10,7 @@ reviewedAt: 2026-09-01
 
 ## Recent work
 
-Tredje passet 2026-09-01, chunkläge. **Chunk D klar**: Workern kopierar senaste revisionens `bodyWeight` när en klient POST:ar utan fältet (tom lista respekteras), tvåklientstestet har fallet, Worker deployad som `40e6fc76`. `isoWeek` flyttad till `src/lib/date.ts`, `mondayISO(weeksAgo, fromISO)` testbar med fasta datum, `src/lib/date.test.ts` ny (68 tester totalt). **Chunk E klar**: tablet-svep på 768×1024 och 1024×768 hittade att settabellen klippte kolumnen Ta bort bakom en inre sidled-scroll (619 px tabell i 574 px kort); tabletbrytpunkten fick telefonens kompakta Föregående och inga stegknappar, plattraden 44 px. Roller på stapellistan och chipsen, aria-label på Föregående-cellen, fokus till kg-fältet efter Spara. Åtta skärmbilder `-tablet` och `-tablet-liggande` i `efter-2/`.
+Tredje passet 2026-09-01, chunkläge. **Chunk D klar**: Workern kopierar senaste revisionens `bodyWeight` när en klient POST:ar utan fältet (tom lista respekteras), tvåklientstestet har fallet, Worker deployad som `40e6fc76`. `isoWeek` flyttad till `src/lib/date.ts`, `mondayISO(weeksAgo, fromISO)` testbar med fasta datum, `src/lib/date.test.ts` ny (68 tester totalt). **Chunk E klar**: tablet-svep på 768×1024 och 1024×768 hittade att settabellen klippte kolumnen Ta bort bakom en inre sidled-scroll (619 px tabell i 574 px kort); tabletbrytpunkten fick telefonens kompakta Föregående och inga stegknappar, plattraden 44 px. Roller på stapellistan och chipsen, aria-label på Föregående-cellen, fokus till kg-fältet efter Spara. Åtta skärmbilder `-tablet` och `-tablet-liggande` i `efter-2/`. **Chunk F klar**: uppdateringsbanner för PWA:n (`registerType: 'prompt'`, `UpdateBanner`), verifierad i preview med två byggen, skärmbild `uppdateringsbanner-mobil-light.png`.
 
 Andra passet 2026-09-01, chunkläge. **Chunk A klar** (`0f17c24`): Föregående-kolumnen kompakt på telefon (kg 56 px, 1 px cellpadding, mätt 336 av 340 px), "Nästa pass" på Hem pekar ut det program som väntat längst med dagar sedan under varje knapp. **Chunk B klar** (`09f2d15`): pass per vecka som HTML-staplar i Statistik, kortet "Denna vecka" på Hem med text och muskelgruppschips. **Chunk C klar** (`4408e64`): kroppsvikt som egen store, valfri samling i snapshoten, inmatning i Inställningar, kurva i Statistik, Workern deployad som `16aa6c7d` med den delade valideringen. Alla tre pushade, Pages grön.
 
@@ -40,4 +40,4 @@ Genomlysningens byggpass 2026-09-01 i chunkläge, 14 commits efter `4f36f07` (`6
 
 ## Resume here
 
-Prova loggvyn och kroppsvikten på telefonen innan något mer byggs. Vid "ändringen syns inte": rensa `workbox-precache-v2-.../beefcake/` eller hårduppdatera; IndexedDB uppgraderas till version 4 automatiskt. Två användare, Web Push och Cloudflare Pages med Access kräver beslut eller infrastruktur.
+Prova loggvyn och kroppsvikten på telefonen innan något mer byggs. Sedan chunk F visar appen själv bannern "Ny version av Beefcake finns" när ett nytt bygge väntar; den första deployen efter `7a4b0c3` går fortfarande via den gamla autoUpdate-workern (den nya bundeln aktiveras som förut, utan banner), därefter gäller bannern. IndexedDB uppgraderas till version 4 automatiskt. Två användare, Web Push och Cloudflare Pages med Access kräver beslut eller infrastruktur.
