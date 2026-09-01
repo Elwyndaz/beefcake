@@ -336,9 +336,11 @@ export function LogSession() {
   function addSet(exerciseIdx: number) {
     const ex = exercises[exerciseIdx]
     const lastSet = ex.setEntries[ex.setEntries.length - 1]
-    // Nytt set: samma plats i förra passet, annars förra passets sista set, annars föregående rad
+    // Nytt set: samma plats i förra passet, annars förra passets sista set, annars föregående rad,
+    // annars programmets standardvärden (det enda stället de används sedan nollsetstarten)
     const prevSets = previousPerformances[ex.exerciseId]?.setEntries
-    const ref = prevSets?.[ex.setEntries.length] ?? prevSets?.[prevSets.length - 1] ?? lastSet
+    const programDefault = templates.find(t => t.id === selectedTemplateId)?.exercises.find(te => te.exerciseId === ex.exerciseId)?.defaultSetEntry
+    const ref = prevSets?.[ex.setEntries.length] ?? prevSets?.[prevSets.length - 1] ?? lastSet ?? programDefault
     const newSet: ActiveSetEntry = {
       sets: 1,
       reps: ref?.reps || 10,
