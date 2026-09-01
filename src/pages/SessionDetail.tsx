@@ -462,12 +462,12 @@ export function SessionDetail() {
         <h1 class="page-title">Passdetaljer</h1>
 
         <Card>
-          <div class="flex justify-between items-center mb">
+          <div class="flex justify-between items-center mb session-detail-head">
             <div>
               <h2 class="mb-1">{session.templateName}</h2>
               <p class="m-0 text-muted">{formatDateFull(session.date)}</p>
             </div>
-            <div class="flex gap-sm">
+            <div class="flex gap-sm flex-wrap">
               <Button size="sm" onClick={handleRunAgain}>Kör igen</Button>
               <Button variant="secondary" size="sm" onClick={toggleEdit}>Redigera</Button>
               <Button variant="danger" size="sm" onClick={() => setDeleteDialogOpen(true)}>Radera</Button>

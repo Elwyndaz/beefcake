@@ -300,7 +300,48 @@ export function Templates() {
             action={<Button onClick={startCreate}>+ Nytt program</Button>}
           />
         ) : (
-          <div class="table-wrap table-rows" style="padding: var(--space-6) var(--space-6) var(--space-6) var(--space-6)">
+          <>
+          {/* Telefon: ett kort per program. Tabellen krävde sidled-scroll och bröt namnen på tre rader. */}
+          <div class="history-list-cards" style="padding: var(--space-4)">
+            {templates.map(t => (
+              <div
+                key={t.id}
+                class="history-card"
+                role="button"
+                tabIndex={0}
+                aria-label={`Redigera program ${t.name}`}
+                onClick={() => startEdit(t)}
+                onKeyDown={event => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    startEdit(t)
+                  }
+                }}
+              >
+                <div class="history-card-header">
+                  <span class="history-card-date">{t.name}</span>
+                  <button
+                    type="button"
+                    class="btn-remove"
+                    onClick={event => {
+                      event.stopPropagation()
+                      handleDelete(t.id)
+                    }}
+                    aria-label={`Radera program ${t.name}`}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 19 19">
+                      <use href={icon('trash-icon')} />
+                    </svg>
+                  </button>
+                </div>
+                <div class="history-card-body">
+                  <span>{t.exercises.length} övningar</span>
+                  <span class="tabular-nums">{new Date(t.updatedAt).toLocaleDateString('sv-SE')}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div class="history-list-table table-wrap table-rows" style="padding: var(--space-6) var(--space-6) var(--space-6) var(--space-6)">
             <table>
               <thead>
                 <tr>
@@ -350,6 +391,7 @@ export function Templates() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </Card>
 

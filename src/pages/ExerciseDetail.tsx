@@ -8,6 +8,8 @@ import {
 } from '../services/dataService'
 import { formatDateShort, formatDateWithWeekday } from '../lib/date'
 import { formatSets, formatWeight } from '../lib/format'
+import { EXERCISE_METRIC_LABELS, repRecords, sessionMetric, type ExerciseMetric } from '../lib/exerciseMetrics'
+import { Field } from '../components/Field'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
 import { Stat } from '../components/Stat'
@@ -41,6 +43,7 @@ export function ExerciseDetail() {
   const [history, setHistory] = useState<ExerciseHistory[]>([])
   const [allSessions, setAllSessions] = useState<Session[]>([])
   const [estimated1RM, setEstimated1RM] = useState<{ exerciseName: string; estimated1RM: number; date: string } | null>(null)
+  const [metric, setMetric] = useState<ExerciseMetric>('maxWeight')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -85,14 +88,14 @@ export function ExerciseDetail() {
     loadExerciseData()
   }, [exerciseId])
 
-  // Rendera graf över 1RM och toppvikt över tid
+  // Rendera grafen för valt mått över tid: ett mått, en kurva, en axel
   useEffect(() => {
     if (!exercise || history.length === 0 || !chartCanvasRef.current) return
 
     const chronological = [...history].sort((a, b) => a.date.localeCompare(b.date))
     const labels = chronological.map(h => h.date)
-    const maxWeights = chronological.map(h => h.setEntries.reduce((m, s) => Math.max(m, s.weight), 0))
-    const volumes = chronological.map(h => h.volume)
+    const values = chronological.map(h => sessionMetric(h, metric))
+    const unit = 'kg'
 
     let isMounted = true
 
@@ -106,7 +109,6 @@ export function ExerciseDetail() {
       }
 
       const accentColor = getCSSVar('--accent', '#d6283a')
-      const primaryColor = getCSSVar('--primary', '#2c3e50')
       const textColor = getCSSVar('--text-muted', '#5b6472')
       const borderColor = getCSSVar('--border', '#e4e7ee')
 
@@ -116,25 +118,15 @@ export function ExerciseDetail() {
           labels,
           datasets: [
             {
-              label: 'Tyngsta set (kg)',
-              data: maxWeights,
+              label: `${EXERCISE_METRIC_LABELS[metric]} (${unit})`,
+              data: values,
               borderColor: accentColor,
-              backgroundColor: 'rgba(255, 71, 87, 0.1)',
-              tension: 0.25,
-              fill: false,
-              pointRadius: 4,
-              pointHoverRadius: 6,
-              yAxisID: 'y'
-            },
-            {
-              label: 'Totalvolym (kg)',
-              data: volumes,
-              borderColor: primaryColor,
-              borderDash: [4, 4],
               backgroundColor: 'transparent',
               tension: 0.25,
-              pointRadius: 3,
-              yAxisID: 'y1'
+              fill: false,
+              spanGaps: true,
+              pointRadius: 4,
+              pointHoverRadius: 6
             }
           ]
         },
@@ -146,10 +138,7 @@ export function ExerciseDetail() {
             intersect: false
           },
           plugins: {
-            legend: {
-              position: 'top',
-              labels: { color: textColor, font: { family: 'Geist, system-ui' } }
-            },
+            legend: { display: false },
             tooltip: {
               callbacks: {
                 title: context => formatDateShort(context[0].label)
@@ -170,16 +159,10 @@ export function ExerciseDetail() {
             y: {
               type: 'linear',
               position: 'left',
+              beginAtZero: true,
               grid: { color: borderColor },
               ticks: { color: textColor },
-              title: { display: true, text: 'Vikt (kg)', color: textColor }
-            },
-            y1: {
-              type: 'linear',
-              position: 'right',
-              grid: { drawOnChartArea: false },
-              ticks: { color: textColor },
-              title: { display: true, text: 'Volym (kg)', color: textColor }
+              title: { display: true, text: `${EXERCISE_METRIC_LABELS[metric]} (${unit})`, color: textColor }
             }
           }
         }
@@ -193,7 +176,7 @@ export function ExerciseDetail() {
         chartInstanceRef.current = null
       }
     }
-  }, [exercise, history])
+  }, [exercise, history, metric])
 
   if (loading) {
     return (
@@ -219,6 +202,8 @@ export function ExerciseDetail() {
     (max, h) => h.setEntries.reduce((m, s) => Math.max(m, s.weight), max),
     0
   )
+  const records = repRecords(history)
+  const sessionIdForDate = (date: string) => history.find(h => h.date === date)?.sessionId ?? ''
 
   return (
     <div>
@@ -266,8 +251,15 @@ export function ExerciseDetail() {
         </Card>
       </div>
 
-      {/* Progressionsdiagram */}
-      <Card title="Progression & Volym över tid" class="mb">
+      {/* Progressionsdiagram med valbart mått */}
+      <Card title="Progression över tid" class="mb">
+        <Field label="Mått" class="mb-sm">
+          <select value={metric} onChange={(e: Event) => setMetric((e.target as HTMLSelectElement).value as ExerciseMetric)}>
+            {(Object.keys(EXERCISE_METRIC_LABELS) as ExerciseMetric[]).map(key => (
+              <option key={key} value={key}>{EXERCISE_METRIC_LABELS[key]}</option>
+            ))}
+          </select>
+        </Field>
         {history.length <= 1 ? (
           <p class="text-sm text-muted m-0">Kör övningen i fler pass för att rita en progressionskurva.</p>
         ) : (
@@ -276,6 +268,33 @@ export function ExerciseDetail() {
           </div>
         )}
       </Card>
+
+      {/* Rekord per repsantal: ett 8-repsrekord syns inte i PR-listan, som bara räknar maxvikt och maxvolym */}
+      {records.length > 0 && (
+        <Card title="Rekord per repsantal" class="mb">
+          <div class="table-wrap table-rows">
+            <table>
+              <thead>
+                <tr>
+                  <th>Reps</th>
+                  <th>Vikt</th>
+                  <th>Datum</th>
+                </tr>
+              </thead>
+              <tbody>
+                {records.map(r => (
+                  <tr key={r.reps} onClick={() => navigate(`/history/${sessionIdForDate(r.date)}`)} style="cursor: pointer;">
+                    <td class="tabular-nums">{r.reps}</td>
+                    <td class="volume-hero tabular-nums">{formatWeight(r.weight)} kg</td>
+                    <td>{formatDateShort(r.date)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p class="text-xs text-muted m-0 mt-2">Tyngsta vikten lyft för minst så många reps.</p>
+        </Card>
+      )}
 
       {/* Historiklista */}
       <Card title="Tidigare genomföranden" padding="none">

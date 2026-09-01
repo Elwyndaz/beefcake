@@ -705,6 +705,19 @@ tr:hover td { background: var(--surface); }
 /* Prevent canvas/charts from expanding table width */
 canvas { display: block; max-width: 100%; }
 
+/* Set per muskelgrupp per vecka: en rad per vecka, en chip per grupp i bandets färg */
+.week-sets-list { display: flex; flex-direction: column; gap: var(--space-3); }
+.week-sets-row { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: var(--space-2); align-items: start; }
+.week-sets-label { padding-top: 4px; }
+.week-sets-chips { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+.week-sets-chip {
+  display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 999px;
+  font-size: var(--text-xs); border: 1px solid var(--border); background: var(--surface); color: var(--text);
+}
+.week-sets-chip.load-low { border-color: var(--warning); box-shadow: inset 3px 0 0 var(--warning); }
+.week-sets-chip.load-optimal { border-color: var(--success); box-shadow: inset 3px 0 0 var(--success); }
+.week-sets-chip.load-high { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+
 /* Muscle group breakdown list */
 .muscle-group-list { display: flex; flex-direction: column; gap: var(--space-4); }
 .muscle-group-bar { height: 8px; border-radius: 999px; background: var(--surface); overflow: hidden; }
@@ -751,6 +764,9 @@ canvas { display: block; max-width: 100%; }
 /* Let grid items shrink below content size to prevent overflow from charts/tables */
 .grid > * { min-width: 0; }
 @media (max-width: 900px) { .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; } }
+/* Talkorten två i bredd på telefon: fyra staplade kort åt upp första skärmen */
+@media (max-width: 900px) { .stat-grid.grid-4 { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 600px) { .stat-grid .stat-value { font-size: var(--text-2xl); } .stat-grid .card { margin-bottom: 0; } }
 
 /* Stat: label small + muted, value display-strong, sub muted */
 .stat { display: flex; flex-direction: column; gap: var(--space-1); }
@@ -1445,6 +1461,9 @@ canvas { display: block; max-width: 100%; }
   .main { padding-bottom: 80px; }
   .history-list-table { display: none; }
   .history-list-cards { display: block; }
+  /* Passdetaljens huvud: rubrik och datum på egen rad, knapparna under */
+  .session-detail-head { flex-wrap: wrap; }
+  .session-detail-head > div:first-child { flex: 1 1 100%; }
   .history-toolbar { grid-template-columns: 1fr auto; align-items: center; }
   .history-toolbar .history-filters-inline { grid-column: 1 / -1; grid-row: 2; max-width: none; margin: 0; }
   .history-filters-inline { grid-template-columns: 1fr 1fr; }

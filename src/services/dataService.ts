@@ -13,8 +13,9 @@ import type {
 } from '../models'
 import { loadSnapshotFromCloud, syncSnapshot } from './cloudSyncService'
 import { parseImportData } from '../lib/importValidation'
-import { setVolume, setsVolume, exercisesVolume } from '../lib/volume'
+import { setVolume, setsVolume } from '../lib/volume'
 import { localDateISO, parseLocalDate } from '../lib/date'
+import { epley1RM } from '../lib/exerciseMetrics'
 
 // Active Workout Service (pågående pass sparat lokalt i realtid)
 export async function getActiveWorkout(): Promise<ActiveWorkout | undefined> {
@@ -333,22 +334,6 @@ export async function getExerciseTrainingCounts(fromISO: string): Promise<Map<st
   return counts
 }
 
-export async function getHeatmapData(days: number = 30): Promise<{ date: string; count: number }[]> {
-  const db = await getDB()
-  const sessions = await db.getAll('sessions')
-  const cutoff = new Date()
-  cutoff.setDate(cutoff.getDate() - days)
-  const cutoffISO = localDateISO(cutoff)
-
-  const map = new Map<string, number>()
-  for (const s of sessions) {
-    if (s.date >= cutoffISO) {
-      map.set(s.date, (map.get(s.date) || 0) + 1)
-    }
-  }
-  return Array.from(map.entries()).map(([date, count]) => ({ date, count }))
-}
-
 export async function getPRs(): Promise<{ exerciseId: string; exerciseName: string; maxWeight: number; maxVolume: number; maxWeightDate: string; maxVolumeDate: string }[]> {
   const db = await getDB()
   const history = await db.getAll('exerciseHistory')
@@ -382,42 +367,19 @@ export async function getPRs(): Promise<{ exerciseId: string; exerciseName: stri
   return Array.from(map.entries()).map(([exerciseId, data]) => ({ exerciseId, ...data }))
 }
 
-// 1RM estimation using Epley formula: 1RM = weight * (1 + reps/30)
-// Endast set med 1-10 reps räknas för 1RM (högre reps ger inte tillförlitligt 1RM)
+// Bästa estimerade 1RM över hela historiken. Formeln bor i src/lib/exerciseMetrics.ts.
 export async function getEstimated1RM(exerciseId: string): Promise<{ exerciseName: string; estimated1RM: number; date: string } | null> {
   const history = await getExerciseHistory(exerciseId)
-  if (history.length === 0) return null
-
   let best: { exerciseName: string; estimated1RM: number; date: string } | null = null
   for (const h of history) {
     for (const set of h.setEntries) {
-      if (set.weight > 0 && set.reps > 0 && set.reps <= 10) {
-        const epley1RM = set.weight * (1 + set.reps / 30)
-        if (!best || epley1RM > best.estimated1RM) {
-          best = {
-            exerciseName: h.exerciseName,
-            estimated1RM: epley1RM,
-            date: h.date
-          }
-        }
+      const rm = epley1RM(set.weight, set.reps)
+      if (rm !== null && (!best || rm > best.estimated1RM)) {
+        best = { exerciseName: h.exerciseName, estimated1RM: rm, date: h.date }
       }
     }
   }
   return best
-}
-
-// Get total volume (tonnage) for a given week
-export async function getWeeklyTonnage(weekStartDate: string): Promise<number> {
-  const db = await getDB()
-  const sessions = await db.getAll('sessions')
-  
-  const weekEndDate = parseLocalDate(weekStartDate)
-  weekEndDate.setDate(weekEndDate.getDate() + 6)
-  const weekEndISO = localDateISO(weekEndDate)
-  
-  return sessions
-    .filter(s => s.date >= weekStartDate && s.date <= weekEndISO)
-    .reduce((sum, s) => sum + exercisesVolume(s.exercises), 0)
 }
 
 // Get volume per muscle group
