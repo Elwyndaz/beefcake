@@ -770,7 +770,7 @@ export function LogSession() {
                                 </td>
                                 {/* Telefonen visar den kompakta formen, desktop den fulla; CSS väljer */}
                                 <td class="col-prev text-xs text-muted tabular-nums" aria-label={prevSet ? formatSet(prevSet) : undefined}>
-                                  {prevSet ? <><span class="prev-full">{formatSet(prevSet)}</span><span class="prev-compact">{formatSetCompact(prevSet)}</span></> : '—'}
+                                  {prevSet ? <><span class="prev-full">{formatSet(prevSet)}</span><span class="prev-compact">{formatSetCompact(prevSet)}</span></> : '-'}
                                 </td>
                                 <td class="col-kg">
                                   <div class="input-with-steppers">

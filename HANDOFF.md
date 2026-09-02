@@ -1,11 +1,11 @@
 ---
 schemaVersion: 1
 status: active
-currentGoal: Härdning efter genomlysningen, chunk D till F, alla tre byggda och pushade 2026-09-01. Väntar på ja eller nej på helheten
+currentGoal: Härdning efter genomlysningen klar, chunk D till F godkända 2026-09-02 ("fortsätt") och de två öppna posterna ur granskningen fixade. Nästa steg är telefontest och beslut
 nextAction: Prova på telefonen: bannern vid nästa deploy, loggvyn, kroppsvikten. Sedan är backloggen bara beslut (två användare, Web Push, Cloudflare Pages med Access).
 blockers:
   - Inga
-reviewedAt: 2026-09-01
+reviewedAt: 2026-09-02
 ---
 
 ## Recent work
@@ -24,14 +24,14 @@ Genomlysningens byggpass 2026-09-01 i chunkläge, 14 commits efter `4f36f07` (`6
 
 ## Verification
 
-- Tredje passet: 68 tester, lint, build, `server:check` gröna. Chromium 768×1024 och 1024×768 ljust: railen synlig, noll sidled-scroll på dokumentet och i settabellens kort, volymkurvan 576 respektive 376 px bred, alla tryckytor i de nya ytorna minst 44 px, Escape på alla fyra sidorna utan fel, fokus i kg-fältet efter Spara verifierat. Kvar under 44 px på tablet, utanför de nya ytorna: settypsbrickan 32 (dokumenterat undantag), RPE-brickan 44×38, plattkalkylatorknappen 36, anteckningsfältet 38 högt, övningslänkarna i statistiktabellerna 19 px höga (textlänkar).
+- Tredje passet: 68 tester, lint, build, `server:check` gröna. Chromium 768×1024 och 1024×768 ljust: railen synlig, noll sidled-scroll på dokumentet och i settabellens kort, volymkurvan 576 respektive 376 px bred, alla tryckytor i de nya ytorna minst 44 px, Escape på alla fyra sidorna utan fel, fokus i kg-fältet efter Spara verifierat. Efterstäd 2026-09-02: RPE-brickan, plattkalkylatorknappen och anteckningsfältet 44 px på tablet, mätt om i Chromium 768 och 1024. Kvar under 44 på tablet: draghandtaget 40 brett, settypsbrickan 32 (dokumenterat undantag), övningslänkarna i statistiktabellerna 19 px höga (textlänkar i tabellrader, lämnade).
 - Andra passet: `npm test` 60 tester gröna (formatSetCompact, kroppsvikt i validering och Worker nya), `npm run lint`, `npm run build` och `server:check` gröna. Chromium 390×844 och 1440×900, ljust och mörkt: noll konsolfel, noll sidled-scroll, settabellen 336 av 340 px, tryckytor i loggvyn och Inställningar minst 44 px utom settypsbrickan. Kroppsviktsflödet (två värden, ladda om, kurva, export, töm, import) kört grönt. Skärmbilder i vaulten under `Beefcake Designgenomlysning/efter-2/`. Inga nya färger, kontrasten oförändrad (24 par, minst 4,5:1).
 - Första passet: 55 tester, samma Chromium-metod, skärmbilder under `efter/`.
 - Cartman nivå 2 till 4 fortfarande bara enhetstestade. PR-märket, plattraden och kroppsviktsinmatningen är testade i Chromium, inte på en telefon.
 
 ## Unresolved details
 
-- Båda passen godkända av Patrik 2026-09-01 ("ja" på helheten). Beslut tagna åt Patrik står i dagsnoten och i rapportens "## Efter" och "## Efter 2".
+- Chunk D till F godkända av Patrik 2026-09-02 ("fortsätt" på granskningen). Båda tidigare passen godkända 2026-09-01 ("ja" på helheten). Beslut tagna åt Patrik står i dagsnoten och i rapportens "## Efter" och "## Efter 2".
 - Alla genomlysningsposter är byggda. Kvar i backloggen: Web Push, Cloudflare Pages med Access, tvåanvändarstöd.
 - Workern behåller kroppsvikten vid skrivning utan fältet sedan `40e6fc76` (chunk D). Testat i tvåklientstestet, inte mot produktions-D1.
 - Ingen autentiserad POST mot produktions-D1 sedan `f3f1bb10`; `16aa6c7d` och `40e6fc76` är bara testade via tvåklientstestet.

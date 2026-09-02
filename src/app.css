@@ -1484,6 +1484,9 @@ canvas { display: block; max-width: 100%; }
   .set-rows-table .set-input { height: 44px; appearance: textfield; -moz-appearance: textfield; }
   .set-rows-table .set-input::-webkit-inner-spin-button,
   .set-rows-table .set-input::-webkit-outer-spin-button { display: none; }
+  .set-rows-table .rpe-badge { height: 44px; }
+  .btn-calc { width: 44px; height: 44px; }
+  .exercise-notes-input { min-height: 44px; }
   .app { margin-left: 64px; }
   .header { display: none; }
   .main { width: 100%; }

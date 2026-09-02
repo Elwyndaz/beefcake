@@ -176,7 +176,7 @@ export function Home() {
         <Card padding="sm">
           <Stat
             label="Senaste pass"
-            value={lastWorkout ? formatDateWithWeekday(lastWorkout) : '—'}
+            value={lastWorkout ? formatDateWithWeekday(lastWorkout) : '-'}
           />
         </Card>
       </div>

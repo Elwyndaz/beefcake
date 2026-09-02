@@ -234,13 +234,13 @@ export function ExerciseDetail() {
         <Card padding="sm">
           <Stat
             label="Estimerat 1RM"
-            value={estimated1RM ? `${Math.round(estimated1RM.estimated1RM)} kg` : '—'}
+            value={estimated1RM ? `${Math.round(estimated1RM.estimated1RM)} kg` : '-'}
           />
         </Card>
         <Card padding="sm">
           <Stat
             label="Tyngsta lyft"
-            value={maxWeightEver > 0 ? `${formatWeight(maxWeightEver)} kg` : '—'}
+            value={maxWeightEver > 0 ? `${formatWeight(maxWeightEver)} kg` : '-'}
           />
         </Card>
         <Card padding="sm">
