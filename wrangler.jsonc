@@ -17,9 +17,8 @@
     }
   ],
   "vars": {
-    "AUTH_MODE": "access",
-    "ACCESS_TEAM_DOMAIN": "https://late-hat-efad.cloudflareaccess.com",
-    "ACCESS_AUD": "e1a36c86fefd41457d6f0b21b866efbcfa84f3a94fd478fba57a1282da1b26af",
+    "AUTH_MODE": "firebase",
+    "FIREBASE_PROJECT_ID": "",
     "FRONTEND_ORIGINS": "https://orgutveckling.se,https://www.orgutveckling.se"
   },
   "observability": {

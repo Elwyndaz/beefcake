@@ -17,12 +17,14 @@
 - [x] `[P2]` Bestäm vokabulär: *pass* är något du gjorde, *program* är mallen. Byt genomgående
 - [ ] `[P3]` Web Push-påminnelser via service workern
 - [x] `[P3]` Kortkommandon på desktop
-- [ ] `[P3]` Cloudflare Pages med Access istället för GitHub Pages, riktig autentisering
 - [x] `[P3]` RIR/RPE och anteckningar i gränssnittet
-- [ ] `[P3]` Tvåanvändarstöd, om det verkligen behövs. Största produktbeslutet i listan
+- [x] `[P3]` Tvåanvändarstöd: löst med Firebase-konton, ett D1-spår per adress, seeden bara utan moln
+- [ ] `[P0]` Firebase-projekt för Beefcake skapas av Patrik, konfigurationen in i `src/config.ts` och `FIREBASE_PROJECT_ID` i `wrangler.jsonc`, Access-applikationen framför `api.orgutveckling.se` tas bort. Innan dess får inloggningsbygget inte pushas
+- [ ] `[P1]` Flytta repot till GitHub-orgen `buildapp-se` och appen till buildapp.se (Pages-bas, `FRONTEND_ORIGINS`, Firebase authorized domains, Worker-route)
 
 ## Byggt
 
+- Firebase-inloggning (2026-09-02, lokalt, ej pushad): `authService` laddar SDK:n från gstatic utan npm-beroende, `LoginGate` ersätter `PasswordGate` (Google, e-post med lösenord, skapa konto, glömt lösenord, bekräftelseskärm), Workerns `auth.ts` verifierar ID-token med jose och kräver `email_verified`, `owner` är adressen. Bearer-token och JSON i `cloudSyncService`, Access-varianten borta. Seeden bara utan moln. Kontokort med Logga ut i Inställningar. Verifierat: dev utan moln öppnar direkt, bygge med moln och tomt projekt stoppar i grinden; riktig inloggning väntar på projektet
 - Efterstäd (2026-09-02): RPE-brickan, plattkalkylatorknappen och anteckningsfältet 44 px på tablet (kvar under 44: draghandtaget 40 brett och settypsbrickan 32, dokumenterat undantag). Tankstrecket som tomvärde i Föregående-cellen och i Stat-korten (senaste pass, e1RM, maxvikt) ersatt med bindestreck
 - Uppdateringsbanner för PWA:n (2026-09-01, chunk F): `registerType: 'prompt'`, `registerSW` i `main.tsx`, `UpdateBanner` i `src/components` överst i innehållet med "Ny version av Beefcake finns" och knappen "Ladda om" (`updateSW(true)`), 44 px, i flödet så bottennavigeringen inte täcker den. Ingen automatisk omladdning. Verifierat i `vite preview` med två byggen: bannern kom efter det andra med gamla texten kvar, Ladda om gav nya versionen. Flödet i `CONTEXT.md` under "PWA och uppdatering"
 - Tablet och a11y (2026-09-01, chunk E): på 768 till 1199 px får settabellen telefonens kompakta Föregående och inga stegknappar, fälten 44 px höga (tabellen var 619 px i ett 574 px kort, kolumnen Ta bort låg bakom en inre sidled-scroll), plattraden 44 px. Stapellistan "Pass per vecka" och muskelgruppschipsen på Hem och i Statistik har `role="list"`/`listitem` med aria-label så skärmläsare läser antal, Föregående-cellen har aria-label med full text ("27,5 kg × 10"), fokus går tillbaka till kg-fältet efter Spara i Kroppsvikt. Skärmbilder 768×1024 och 1024×768 i vaulten under `efter-2/` med suffix `-tablet` och `-tablet-liggande`

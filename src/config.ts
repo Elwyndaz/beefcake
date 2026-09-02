@@ -1,2 +1,10 @@
-export const AUTH_HASH = 'd277670919a94ba361be1887d39852c3f31d7eed817343cbb70fcd8910841f86'
-export const AUTH_KEY = 'beefcake-auth'
+/**
+ * Publika Firebase-identifierare för inloggningen, ingen hemlighet: de ligger i varje
+ * klient. Tomt projectId betyder att inloggningen inte är konfigurerad (lokal utveckling
+ * utan moln går ändå). Fylls i när Beefcakes eget Firebase-projekt finns.
+ */
+export const FIREBASE = {
+  apiKey: '',
+  authDomain: '',
+  projectId: ''
+}

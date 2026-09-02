@@ -1,4 +1,5 @@
 import { getDB } from '../models'
+import { getIdToken } from './authService'
 import {
   selectAuthoritativeSnapshot,
   type SnapshotData
@@ -51,12 +52,13 @@ export function subscribeToCloudSyncError(listener: (error: string | null) => vo
   }
 }
 
-export function getCloudSyncLoginUrl(): string {
-  return `${apiUrl}/api/health`
+/** Firebase ID-token i varje anrop. Workern verifierar den och läser e-postadressen ur den. */
+async function authHeaders(): Promise<Record<string, string>> {
+  return { Authorization: `Bearer ${await getIdToken()}` }
 }
 
 async function getServerSnapshot(): Promise<ServerSnapshot> {
-  const response = await fetch(`${apiUrl}/api/snapshot`, { credentials: 'include' })
+  const response = await fetch(`${apiUrl}/api/snapshot`, { headers: await authHeaders() })
   if (!response.ok) throw new Error(`Servern kunde inte läsas (${response.status}).`)
   return response.json() as Promise<ServerSnapshot>
 }
@@ -112,8 +114,7 @@ async function syncSnapshotNow(snapshot: SnapshotData): Promise<void> {
 
     const response = await fetch(`${apiUrl}/api/snapshot`, {
       method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'text/plain' },
+      headers: { ...await authHeaders(), 'Content-Type': 'application/json' },
       body: JSON.stringify({ expectedRevision, data })
     })
     if (!response.ok) {

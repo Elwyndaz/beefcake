@@ -36,7 +36,13 @@ export default defineConfig({
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,jpg,svg,woff2}']
+        globPatterns: ['**/*.{js,css,html,ico,png,jpg,svg,woff2}'],
+        // Firebase-SDK:n laddas från gstatic vid start; utan cache startar appen inte offline
+        runtimeCaching: [{
+          urlPattern: /^https:\/\/www\.gstatic\.com\/firebasejs\//,
+          handler: 'CacheFirst',
+          options: { cacheName: 'firebase-sdk', expiration: { maxEntries: 8, maxAgeSeconds: 60 * 60 * 24 * 90 } }
+        }]
       }
     })
   ],

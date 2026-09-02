@@ -13,7 +13,7 @@ import type {
   BodyWeight
 } from '../models'
 import type { SnapshotData } from '../lib/snapshot'
-import { loadSnapshotFromCloud, syncSnapshot } from './cloudSyncService'
+import { isCloudSyncConfigured, loadSnapshotFromCloud, syncSnapshot } from './cloudSyncService'
 import { parseImportData } from '../lib/importValidation'
 import { setVolume, setsVolume } from '../lib/volume'
 import { localDateISO, parseLocalDate } from '../lib/date'
@@ -514,7 +514,8 @@ function sessionKey(date: string, templateName: string): string {
   return `${date} ${templateName}`
 }
 
-export async function syncSeed(): Promise<{ sessionsAdded: number; exercisesAdded: number }> {
+/** @param seedEmpty seeda en tom databas med Excel-historiken. Förval: bara utan moln, en ny användare i D1 startar tom. */
+export async function syncSeed(seedEmpty = !isCloudSyncConfigured()): Promise<{ sessionsAdded: number; exercisesAdded: number }> {
   await loadSnapshotFromCloud(JSON.parse(await exportAllData()) as SnapshotData, replaceDataInLocal)
   await backfillExerciseMeta()
 
@@ -529,7 +530,7 @@ export async function syncSeed(): Promise<{ sessionsAdded: number; exercisesAdde
 
   // Seeden är en engångsimport i en tom databas. Den var additiv vid varje uppstart,
   // och då kom varje raderat seedpass tillbaka nästa gång appen laddades.
-  if (existingExercises.length || existingTemplates.length || existingSessions.length) {
+  if (!seedEmpty || existingExercises.length || existingTemplates.length || existingSessions.length) {
     await syncCloudData()
     return { sessionsAdded: 0, exercisesAdded: 0 }
   }

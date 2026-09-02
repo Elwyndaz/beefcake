@@ -1,14 +1,17 @@
 ---
 schemaVersion: 1
 status: active
-currentGoal: Härdning efter genomlysningen klar, chunk D till F godkända 2026-09-02 ("fortsätt") och de två öppna posterna ur granskningen fixade. Nästa steg är telefontest och beslut
-nextAction: Prova på telefonen: bannern vid nästa deploy, loggvyn, kroppsvikten. Sedan är backloggen bara beslut (två användare, Web Push, Cloudflare Pages med Access).
+currentGoal: Firebase-inloggning och daglig latmask-mejl via Resend, på väg mot buildapp.se. Inloggningen är byggd lokalt och väntar på Firebase-projektet innan push
+nextAction: Patrik skapar Firebase-projektet och ger apiKey, authDomain, projectId; sedan fylls src/config.ts och wrangler.jsonc, Worker deployas, Access-appen tas bort, klienten pushas och riktig inloggning verifieras.
 blockers:
-  - Inga
+  - Firebase-projekt saknas (Patrik). Inloggningsbygget ligger som lokal commit, inte pushad
+  - Resend: beefcake.buildapp.se ska verifieras och RESEND_API_KEY sättas som secret (regel 1, Patrik)
 reviewedAt: 2026-09-02
 ---
 
 ## Recent work
+
+2026-09-02, inloggning (lokal commit, ej pushad): `PasswordGate` och Access borta, Firebase Auth i klient och Worker, seeden bara utan moln, tvåanvändarfrågan löst via ett D1-spår per adress. Beslut: eget Firebase-projekt (inte grammats), appen flyttar till buildapp.se med repot, Resend-underdomän `beefcake.buildapp.se` (gratisnivån tillåter 3 domäner, Familjehubben använder en).
 
 Tredje passet 2026-09-01, chunkläge. **Chunk D klar**: Workern kopierar senaste revisionens `bodyWeight` när en klient POST:ar utan fältet (tom lista respekteras), tvåklientstestet har fallet, Worker deployad som `40e6fc76`. `isoWeek` flyttad till `src/lib/date.ts`, `mondayISO(weeksAgo, fromISO)` testbar med fasta datum, `src/lib/date.test.ts` ny (68 tester totalt). **Chunk E klar**: tablet-svep på 768×1024 och 1024×768 hittade att settabellen klippte kolumnen Ta bort bakom en inre sidled-scroll (619 px tabell i 574 px kort); tabletbrytpunkten fick telefonens kompakta Föregående och inga stegknappar, plattraden 44 px. Roller på stapellistan och chipsen, aria-label på Föregående-cellen, fokus till kg-fältet efter Spara. Åtta skärmbilder `-tablet` och `-tablet-liggande` i `efter-2/`. **Chunk F klar**: uppdateringsbanner för PWA:n (`registerType: 'prompt'`, `UpdateBanner`), verifierad i preview med två byggen, skärmbild `uppdateringsbanner-mobil-light.png`.
 

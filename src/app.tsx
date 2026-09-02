@@ -2,7 +2,7 @@
 
 import { Router, Link, Switch, Route, useLocation } from 'wouter'
 import { lazy, Suspense } from 'preact/compat'
-import { PasswordGate } from './components/PasswordGate'
+import { LoginGate } from './components/LoginGate'
 import { CloudSyncStatus } from './components/CloudSyncStatus'
 import { UpdateBanner } from './components/UpdateBanner'
 import { BeefcakeBadge, BeefcakeAvatar, useBeefcakeStreak } from './components/BeefcakeBadge'
@@ -165,8 +165,8 @@ function AppContent() {
 
 export function App() {
   return (
-    <PasswordGate>
+    <LoginGate>
       <AppContent />
-    </PasswordGate>
+    </LoginGate>
   )
 }

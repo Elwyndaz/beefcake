@@ -6,6 +6,8 @@ import { saveBackupToFile } from '../services/backupService'
 import { icon } from '../icons'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
+import { useAuthUser } from '../components/LoginGate'
+import { signOutUser } from '../services/authService'
 import { EmptyState } from '../components/EmptyState'
 import { Field } from '../components/Field'
 import type { Template, BodyWeight } from '../models'
@@ -80,6 +82,7 @@ export function Settings() {
   const [bwDate, setBwDate] = useState(() => todayISO())
   const [bwKg, setBwKg] = useState('')
   const bwKgRef = useRef<HTMLInputElement>(null)
+  const authUser = useAuthUser()
 
   async function loadData() {
     try {
@@ -341,9 +344,16 @@ export function Settings() {
         </Field>
       </Card>
 
+      {authUser && (
+        <Card title="Konto">
+          <p class="mb text-muted">Inloggad som <strong>{authUser.email}</strong>. Passen sparas i D1 under den adressen.</p>
+          <Button variant="secondary" onClick={() => void signOutUser()}>Logga ut</Button>
+        </Card>
+      )}
+
       <Card title="Data">
         <p class="mb text-muted">
-          D1 är sanningskällan. IndexedDB är lokal cache och serverkopplingen skyddas av Cloudflare Access.
+          D1 är sanningskällan. IndexedDB är lokal cache och serverkopplingen kräver inloggning.
         </p>
         <Button variant="danger" onClick={handleClearAll}>Radera ALL data</Button>
       </Card>

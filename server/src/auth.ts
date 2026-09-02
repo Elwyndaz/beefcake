@@ -6,38 +6,43 @@ export interface AuthenticatedUser {
 
 export interface AuthEnv {
   AUTH_MODE: string
-  ACCESS_TEAM_DOMAIN?: string
-  ACCESS_AUD?: string
+  FIREBASE_PROJECT_ID?: string
 }
 
+// Googles nycklar för Firebase ID-token. jose cachar dem och hämtar om vid okänd kid.
+const FIREBASE_JWKS = createRemoteJWKSet(
+  new URL('https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com')
+)
+
+/**
+ * Firebase ID-token i Authorization: Bearer, verifierad mot Googles JWKS (RS256), issuer
+ * och audience mot projektet. D1-datan ligger under e-postadressen, så bara en bekräftad
+ * adress släpps in: annars kunde vem som helst registrera någon annans adress med lösenord
+ * och läsa dennes pass.
+ */
 export async function authenticate(request: Request, env: AuthEnv): Promise<AuthenticatedUser> {
   if (env.AUTH_MODE === 'dev') return { email: 'local@beefcake.invalid' }
 
-  const token = request.headers.get('cf-access-jwt-assertion') ?? cookieValue(request.headers.get('cookie'), 'CF_Authorization')
-  if (!token || !env.ACCESS_TEAM_DOMAIN || !env.ACCESS_AUD) {
-    throw new ApiError(401, 'unauthenticated', 'Cloudflare Access authentication is required.')
+  const token = (request.headers.get('authorization') ?? '').replace(/^Bearer /i, '')
+  if (!token || !env.FIREBASE_PROJECT_ID) {
+    throw new ApiError(401, 'unauthenticated', 'Logga in först.')
   }
 
-  const issuer = env.ACCESS_TEAM_DOMAIN.replace(/\/$/, '')
+  let payload
   try {
-    const jwks = createRemoteJWKSet(new URL(`${issuer}/cdn-cgi/access/certs`))
-    const { payload } = await jwtVerify(token, jwks, { issuer, audience: env.ACCESS_AUD })
-    const email = typeof payload.email === 'string' ? payload.email.toLowerCase() : ''
-    if (!email) throw new ApiError(403, 'missing_identity', 'The Access token has no email identity.')
-    return { email }
-  } catch (error) {
-    if (error instanceof ApiError) throw error
-    throw new ApiError(401, 'invalid_access_token', 'The Cloudflare Access token is invalid or expired.')
+    ({ payload } = await jwtVerify(token, FIREBASE_JWKS, {
+      issuer: `https://securetoken.google.com/${env.FIREBASE_PROJECT_ID}`,
+      audience: env.FIREBASE_PROJECT_ID,
+      algorithms: ['RS256']
+    }))
+  } catch {
+    throw new ApiError(401, 'invalid_token', 'Inloggningen har gått ut. Logga in igen.')
   }
-}
 
-function cookieValue(cookieHeader: string | null, name: string): string | null {
-  if (!cookieHeader) return null
-  for (const part of cookieHeader.split(';')) {
-    const [key, ...rest] = part.trim().split('=')
-    if (key === name) return rest.join('=') || null
-  }
-  return null
+  const email = typeof payload.email === 'string' ? payload.email.trim().toLowerCase() : ''
+  if (!email) throw new ApiError(403, 'missing_identity', 'Kontot saknar e-postadress.')
+  if (payload.email_verified !== true) throw new ApiError(403, 'email_unverified', 'Bekräfta e-postadressen först.')
+  return { email }
 }
 
 export class ApiError extends Error {

@@ -9,6 +9,9 @@ import { IDBFactory } from 'fake-indexeddb'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import worker from './index'
 
+// Firebase finns inte i testet: klienten skickar en låtsastoken, Workern kör i dev-läge och läser den inte
+vi.mock('../../src/services/authService', () => ({ getIdToken: async () => 'test-token' }))
+
 interface Row { owner: string; revision: number; payload: string; created_at: string }
 
 // ponytail: strängmatchning på de tre satserna i index.ts, byt till sqlite om Workern får fler frågor
@@ -84,7 +87,7 @@ describe('två klienter mot D1', () => {
   it('serverradering mot stale cache, revisionskonflikt och fail-closed återhämtning', async () => {
     // Klient A startar mot tom D1: seedens pass blir revision 1
     const a = await newClient()
-    await a.data.syncSeed()
+    await a.data.syncSeed(true)
     expect(db.latestRevision()).toBe(1)
     const seeded = await sessionIds(a)
     expect(seeded.length).toBeGreaterThan(0)

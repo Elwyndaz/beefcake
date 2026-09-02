@@ -831,7 +831,7 @@ canvas { display: block; max-width: 100%; }
 .dialog p { color: var(--text); line-height: 1.6; margin-bottom: var(--space-4); }
 
 /* Password Gate: a "reveal" screen, not a login form */
-.password-gate-container {
+.login-gate-container {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -842,7 +842,7 @@ canvas { display: block; max-width: 100%; }
   padding: var(--space-4);
 }
 
-.password-gate-form {
+.login-gate-form {
   background: var(--surface-raised);
   padding: var(--space-6);
   border-radius: var(--radius-lg);
@@ -852,20 +852,20 @@ canvas { display: block; max-width: 100%; }
   text-align: center;
 }
 
-.password-gate-title {
+.login-gate-title {
   margin-bottom: 0.25rem;
   font-weight: var(--heading-weight);
   letter-spacing: var(--tracking-tight);
   font-size: var(--text-3xl);
 }
 
-.password-gate-subtitle {
+.login-subtitle {
   color: var(--text-muted);
   margin-top: 0;
   margin-bottom: var(--space-6);
 }
 
-.password-input {
+.login-input {
   width: 100%;
   min-height: var(--touch-target);
   padding: var(--space-2) var(--space-3);
@@ -878,15 +878,18 @@ canvas { display: block; max-width: 100%; }
   box-sizing: border-box;
 }
 
-.password-input:focus {
+.login-input:focus {
   outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg);
 }
 
-.password-input-error {
+.login-input-error {
   border-color: var(--danger);
 }
 
-.password-error {
+.login-links { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-2) var(--space-4); margin-top: var(--space-4); }
+.link-button { background: none; border: 0; padding: var(--space-2); min-height: var(--touch-target); color: var(--text-muted); font: inherit; font-size: var(--text-sm); cursor: pointer; text-decoration: underline; }
+.link-button:hover { color: var(--text); }
+.login-error {
   color: var(--danger);
   margin: 0 0 var(--space-4);
   font-size: 0.85rem;

@@ -2,7 +2,7 @@
 
 Personlig träningslogg för styrketräning, ersätter ett Excel-ark. Svenskt gränssnitt, bara kilo. Två användare i praktiken: Patrik på dator, hans tjej på mobil. D1 är sanningskälla och IndexedDB är lokal cache.
 
-Live på https://orgutveckling.se/beefcake/ (GitHub Pages, bas-sökväg `/beefcake/`). Push till `master` bygger och deployar. Server-API:t är deployat som `https://api.orgutveckling.se` och använder D1 med Cloudflare Access.
+Live på https://orgutveckling.se/beefcake/ (GitHub Pages, bas-sökväg `/beefcake/`). Push till `master` bygger och deployar. Server-API:t är deployat som `https://api.orgutveckling.se` och använder D1 bakom Firebase-inloggning. Appen ska flyttas till buildapp.se när repot flyttas till GitHub-orgen `buildapp-se` (beslut 2026-09-02).
 
 **Den här filen äger domänmodellen och konventionerna.** Upprepa dem inte i andra filer, länka hit. `AGENTS.md` beskriver hur man arbetar i repot, `BACKLOG.md` vad som är kvar, `HANDOFF.md` var arbetet står just nu.
 
@@ -52,15 +52,15 @@ Volym räknas alltid genom `src/lib/volume.ts`. Vikt 0 betyder kroppsvikt eller 
 - **All träningsdata är verklig**, från 2024 till 2026-07-28. Radera eller skriv aldrig om historisk data, varken i seed, i IndexedDB eller i en migrering. Additivt eller inget.
 - `src/db/seedData.ts` är **genererad**, aldrig handredigerad. Bygg om med `python scripts/generate-seed.py`.
 - Källan är `C:\dev\Styrkepass v2.xlsx` och den öppnas **bara för läsning**.
-- `syncSeed()` körs bara i en tom databas (sedan 2026-09-01). Den var additiv vid varje uppstart, men med D1 som sanningskälla kom varje raderat seedpass tillbaka nästa gång appen laddades. Ny seeddata läses in en gång via en tömd klient och sprids sedan via D1. Matchningen inne i seeden är kvar: pass på `(datum, passnamn)`, övningar på gemener, aldrig på `seed-N`-id.
+- `syncSeed()` seedar bara en tom databas **utan moln** (`seedEmpty` är `!isCloudSyncConfigured()`, sedan 2026-09-02). I produktion startar en ny användare tom: Patriks historik ligger redan i D1 under hans adress, och ett andra konto ska inte få hans pass. Seeden var additiv vid varje uppstart fram till 2026-09-01, men med D1 som sanningskälla kom varje raderat seedpass tillbaka. Ny seeddata läses in via en tömd lokal klient med moln avstängt och sprids sedan via D1. Matchningen inne i seeden är kvar: pass på `(datum, passnamn)`, övningar på gemener, aldrig på `seed-N`-id.
 - Ett spökpass 2025-11-19 "Bröst, axlar & biceps" finns med flit, en artefakt av `=TODAY()`-drift i arket. Städa inte bort det.
 - Seeden innehåller 33 övningar, 9 mallar och 418 pass. Mallen med namnet `undefined` filtreras bort i `syncSeed`, så åtta laddas.
 
 ## Lagring och nödräddning
 
-D1 lagrar versionsnumrerade snapshots per Access-identitet och är sanningskälla. Klienten hämtar serverns snapshot före seedning och använder IndexedDB som lokal cache. Efter varje mutation synkar `syncCloudData()` snapshoten till D1. Workern och JSON-importen validerar hela domänmodellen med samma `validateSnapshot()` i `src/lib/importValidation.ts`, inklusive att varje historikrad pekar på ett pass som finns. Snapshoten har fyra obligatoriska samlingar (`templates`, `exercises`, `sessions`, `exerciseHistory`) och `bodyWeight` som **valfri samling**: äldre snapshots i D1 och äldre klienter saknar fältet, då blir det en tom lista i klienten. Workern skiljer på saknat och tomt: skriver en klient en snapshot **utan** `bodyWeight` (fältet är `undefined`) kopierar `writeSnapshot` listan från ägarens senaste revision innan valideringen, så en äldre bundel inte nollar kroppsvikten. En **tom lista** är ett medvetet "raderat" från en ny klient och sparas som den är.
+D1 lagrar versionsnumrerade snapshots per **e-postadress** (Firebase-kontots bekräftade adress, gemener) och är sanningskälla. Två konton är två helt skilda spår i samma tabell, inget delas. Klienten hämtar serverns snapshot före seedning och använder IndexedDB som lokal cache. Efter varje mutation synkar `syncCloudData()` snapshoten till D1. Workern och JSON-importen validerar hela domänmodellen med samma `validateSnapshot()` i `src/lib/importValidation.ts`, inklusive att varje historikrad pekar på ett pass som finns. Snapshoten har fyra obligatoriska samlingar (`templates`, `exercises`, `sessions`, `exerciseHistory`) och `bodyWeight` som **valfri samling**: äldre snapshots i D1 och äldre klienter saknar fältet, då blir det en tom lista i klienten. Workern skiljer på saknat och tomt: skriver en klient en snapshot **utan** `bodyWeight` (fältet är `undefined`) kopierar `writeSnapshot` listan från ägarens senaste revision innan valideringen, så en äldre bundel inte nollar kroppsvikten. En **tom lista** är ett medvetet "raderat" från en ny klient och sparas som den är.
 
-- Skrivning använder enkel `POST` med `Content-Type: text/plain` och `credentials: include`, eftersom Cloudflare Access stoppar CORS-preflight utan Access-cookie.
+- Varje anrop bär `Authorization: Bearer <Firebase ID-token>` (`getIdToken()` i `authService`, SDK:n förnyar den själv) och skrivning är vanlig JSON-POST. Workern svarar 401 på saknad eller ogiltig token och 403 på obekräftad adress.
 - Skrivning kräver senaste revision, så en gammal klient får 409 i stället för att skriva över nyare data.
 - Synkfel visas beständigt i appen och får inte sväljas av `autoBackup()`.
 - Export och import av JSON är endast manuell nödräddning i Inställningar. Filbackup används aldrig automatiskt.
@@ -89,7 +89,7 @@ Vite 8 · Preact 10 · TypeScript strict · wouter · `idb` · Chart.js (lazy) �
 src/main.tsx              entry, registerSW (prompt), syncSeed sedan render
 src/app.tsx               Router, navigering, rutter
 src/app.css               all styling, tokens överst
-src/components/           Button, Card, Stat, EmptyState, Field, PasswordGate, RestTimer, PlateCalculator, CloudSyncStatus, UpdateBanner (ny version väntar), BeefcakeBadge (märke, avatar, useBeefcakeStreak)
+src/components/           Button, Card, Stat, EmptyState, Field, LoginGate (inloggning, useAuthUser), RestTimer, PlateCalculator, CloudSyncStatus, UpdateBanner (ny version väntar), BeefcakeBadge (märke, avatar, useBeefcakeStreak)
 src/db/schema.ts          IndexedDB-schema och typer
 src/db/seedData.ts        GENERERAD, all träningshistorik
 src/lib/date.ts           all datumhantering, tidszonssäker (även mondayISO, isoWeek). Använd den, aldrig new Date() rakt av
@@ -101,9 +101,11 @@ src/lib/plates.ts         skivor per sida och stångvikt per utrustning
 src/lib/exerciseMetrics.ts Epley-1RM, grafens mått per genomförande, rekord per repsantal
 src/lib/warmup.ts         uppvärmningsset ur första arbetssetet
 src/assets/beefcake/      GENERERADE avatarer, se assets-source/ och scripts/
+src/services/authService.ts   Firebase Auth från gstatic-CDN, ingen npm-beroende, svenska felmeddelanden
 src/services/dataService.ts   alla läsningar, skrivningar och statistik
 src/services/timerService.ts  vilotimerns presets, notiser och start-event
-server/src/index.ts         Access-skyddat snapshot-API med revisionslås
+server/src/auth.ts          Firebase ID-token verifierad med jose mot Googles JWKS, kräver email_verified
+server/src/index.ts         snapshot-API med revisionslås
 server/migrations/          D1-schema för versionsnumrerade snapshots
 src/pages/                Home, LogSession, Templates, History, SessionDetail, ExerciseDetail, Stats, Settings (export, import, kroppsvikt)
 ```
@@ -127,6 +129,8 @@ Loggvyn startar timern genom att skicka `beefcake-start-timer` på `window`; `Re
 - Minsta ändring som helt löser uppgiften. Inga refaktoreringar på vägen.
 - `npm test` (Vitest) täcker de rena beräkningarna i `src/lib/`. Den kör före `npm run build` i deploy-workflowen, så ett rött test stoppar deployen.
 
-## Säkerhet, känt och accepterat
+## Inloggning och säkerhet
 
-Lösenordsgrinden är enbart klientsida: `AUTH_HASH` ligger i bundlen, SHA-256 utan salt. Upplåsningen sparas i `localStorage`, inte `sessionStorage`, så grinden inte kräver lösenordet i varje ny flik. Den hindrar en nyfiken förbipasserande, inget mer. Riktigt skydd kräver en server framför appen, till exempel Cloudflare Access, vilket ligger i `BACKLOG.md`. Återanvänd inte lösenordet någon annanstans. IndexedDB är okrypterat, och GitHub Pages kan inte sätta CSP-headers.
+Firebase Auth i ett eget projekt för Beefcake (inte grammats `grammat-78450`, beslut 2026-09-02), Google eller e-post med lösenord, samma mönster som grammat och sipdeck. `src/config.ts` bär de publika identifierarna (apiKey, authDomain, projectId), tomt projectId betyder ingen inloggning. `LoginGate` sitter framför hela appen när moln är konfigurerat; utan `VITE_BEEFCAKE_API_URL` finns ingen grind alls (lokal utveckling). Workern verifierar ID-token med `jose` mot Googles JWKS och kräver `email_verified`, eftersom D1-datan ligger under adressen: utan kravet kunde vem som helst registrera någon annans adress med lösenord och läsa dennes pass. E-postkonton får Firebase eget bekräftelsemejl, grinden visar "Jag har bekräftat" tills adressen är bekräftad. Firebase-SDK:n cachas av service workern (`runtimeCaching` på gstatic) så appen startar offline med sparad inloggning.
+
+Den gamla lösenordsgrinden (`PasswordGate`, `AUTH_HASH` i bundlen) och Cloudflare Access framför API:t är borttagna 2026-09-02. IndexedDB är okrypterat, och GitHub Pages kan inte sätta CSP-headers.

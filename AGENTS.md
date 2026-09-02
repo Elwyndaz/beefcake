@@ -52,6 +52,8 @@ Versalerna är ett krav: cockpiten (`cockpit.buildapp.se`) hämtar exakt `HANDOF
 - **`.playwright-shots/` och `.playwright-mcp/` ignoreras av ESLint** sedan 2026-09-01. Verifieringsskript där gav tolv `no-undef`-fel lokalt fast CI var grön; skripten hör hemma i scratchpad, inte i repot.
 - **`PlateCalculatorModal` monteras först när den öppnas.** Den läser `initialWeight` och `initialBarWeight` med `useState`, alltså bara vid första renderingen; en alltid monterad modal visade 60 kg oavsett set.
 - **Starta dev-servern för hand innan ett Playwright-skript körs.** Ett skript som själv spawnade `npx vite` hängde i fem minuter utan att porten någonsin svarade (2026-09-01); med servern startad separat (`VITE_BEEFCAKE_API_URL= npx vite --port 5731 --strictPort --host 127.0.0.1`) och skriptet som bara kontrollerar att `/beefcake/` ger 200 tog hela rundan under två minuter.
+- **Firebase-SDK:n importeras från gstatic med `import(/* @vite-ignore */ url)`.** Utan kommentaren försöker Vite lösa URL:en vid bygget. Typerna är handskrivna i `authService.ts` och täcker bara det som anropas; lägg till där när en ny SDK-funktion behövs, dra inte in `firebase` från npm.
+- **Tvåklientstestet mockar `authService`** (`vi.mock`, låtsastoken) och seedar klient A med `syncSeed(true)`: seeden är avstängd så fort moln är konfigurerat.
 - **Wrangler kan försöka skriva logg utanför arbetsytan och ge `EPERM` i sandbox.** Sätt `WRANGLER_LOG_PATH` till en tillfällig fil i repot för kontroller, till exempel `.wrangler-verify.log`, och ta bort filen efteråt. Ett tillfälligt D1-fel `7403` har lösts genom `wrangler whoami` och omedelbar retry.
 
 ## Flera agenter i samma repo
@@ -70,11 +72,7 @@ npm run build     # måste ge exit 0, inga TS-fel
 npm run dev       # http://localhost:5173/beefcake/
 ```
 
-Lösenordsgrinden hoppas över i utvecklingsläge via webbläsarkonsolen:
-
-```js
-sessionStorage.setItem('beefcake-auth','1'); location.reload()
-```
+Utan `VITE_BEEFCAKE_API_URL` finns ingen inloggningsgrind: appen seedar lokalt och öppnar direkt. Med moln krävs ett Firebase-konto med bekräftad adress.
 
 Gå igenom alla rutter på 390 px, 768 px, 1200 px och 1600 px: `/beefcake/`, `/log`, `/templates`, `/stats`, `/settings`. Konsolen ska vara ren, ingen vågrät scroll på 390 px, alla tryckytor på mobil minst 44 × 44 px.
 
