@@ -46,6 +46,10 @@ async function getBackupTarget(): Promise<BackupTarget> {
   }
 }
 
+export async function findLastBackupAt(): Promise<string | null> {
+  return (await getBackupTarget()).lastBackupAt
+}
+
 async function saveBackupTarget(target: BackupTarget): Promise<void> {
   const db = await getDB()
   await db.put('settings', { key: BACKUP_SETTING_KEY, value: target })

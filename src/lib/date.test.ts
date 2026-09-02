@@ -1,7 +1,13 @@
 import { describe, it, expect } from 'vitest'
-import { daysBetween, daysAgoText, mondayISO, isoWeek } from './date'
+import { daysBetween, daysAgoText, formatDateTime, mondayISO, isoWeek } from './date'
 
 // Fasta datum överallt: 2026-09-01 är en tisdag.
+
+describe('formatDateTime', () => {
+  it('formaterar tidpunkten i svensk tid', () => {
+    expect(formatDateTime('2026-09-02T12:03:00Z')).toBe('2 sep. 2026 14:03')
+  })
+})
 
 describe('daysBetween', () => {
   it('räknar hela dagar, positivt framåt', () => {

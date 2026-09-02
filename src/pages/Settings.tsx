@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'preact/hooks'
 import { getAllTemplates, exportAllData, importAllData, exportSessionsCSV, clearAllData, getBodyWeights, saveBodyWeight, deleteBodyWeight } from '../services/dataService'
-import { formatDateWithWeekday, todayISO } from '../lib/date'
+import { formatDateTime, formatDateWithWeekday, todayISO } from '../lib/date'
 import { formatWeight } from '../lib/format'
-import { saveBackupToFile } from '../services/backupService'
+import { findLastBackupAt, saveBackupToFile } from '../services/backupService'
 import { icon } from '../icons'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
@@ -72,6 +72,7 @@ export function Settings() {
   const [importing, setImporting] = useState(false)
   const [templates, setTemplates] = useState<Template[]>([])
   const [loading, setLoading] = useState(true)
+  const [lastBackupAt, setLastBackupAt] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const [importDialogOpen, setImportDialogOpen] = useState(false)
@@ -111,9 +112,10 @@ export function Settings() {
     try {
       setLoading(true)
       setError(null)
-      const [ts, bws] = await Promise.all([getAllTemplates(), getBodyWeights()])
+      const [ts, bws, backupAt] = await Promise.all([getAllTemplates(), getBodyWeights(), findLastBackupAt()])
       setTemplates(ts)
       setBodyWeights(bws)
+      setLastBackupAt(backupAt)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Okänt fel')
       console.error('Fel vid laddning av inställningar:', err)
@@ -176,6 +178,7 @@ export function Settings() {
     try {
       const result = await saveBackupToFile()
       if (!result.success) throw new Error(result.error ?? 'Okänt fel')
+      setLastBackupAt(await findLastBackupAt())
       setToastMessage('Manuell backup sparad')
     } catch (err) {
       console.error('Fel vid backup:', err)
@@ -354,6 +357,9 @@ export function Settings() {
         <div class="flex gap mb">
           <Button onClick={handleBackup}>Spara manuell backup</Button>
         </div>
+        <p class="text-xs text-muted m-0 mt-sm">
+          {lastBackupAt ? `Senaste manuella backup: ${formatDateTime(lastBackupAt)}` : 'Ingen manuell backup sparad än'}
+        </p>
         <p class="mb text-muted">
           Export och import är en manuell nödräddning. D1 är appens ordinarie lagring.
         </p>

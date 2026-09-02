@@ -24,6 +24,15 @@ export function formatDateShort(isoDate: string): string {
   return `${date.getDate()} ${monthNames[date.getMonth()]} ${date.getFullYear()}`
 }
 
+/** Formatera en ISO-tidpunkt som svenskt datum och klockslag i Stockholm. */
+export function formatDateTime(iso: string): string {
+  return new Date(iso).toLocaleString('sv-SE', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: 'Europe/Stockholm'
+  })
+}
+
 /**
  * Formatera datum som "Ve D Mmm YYYY" (t.ex. "Lör 9 aug 2025")
  */
