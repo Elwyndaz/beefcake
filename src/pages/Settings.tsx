@@ -8,6 +8,7 @@ import { Card } from '../components/Card'
 import { Button } from '../components/Button'
 import { useAuthUser } from '../components/LoginGate'
 import { signOutUser } from '../services/authService'
+import { getReminderEnabled, setReminderEnabled } from '../services/cloudSyncService'
 import { EmptyState } from '../components/EmptyState'
 import { Field } from '../components/Field'
 import type { Template, BodyWeight } from '../models'
@@ -83,6 +84,28 @@ export function Settings() {
   const [bwKg, setBwKg] = useState('')
   const bwKgRef = useRef<HTMLInputElement>(null)
   const authUser = useAuthUser()
+  // Latmask-mejlet: null tills servern svarat
+  const [reminders, setReminders] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    if (!authUser) return
+    getReminderEnabled().then(setReminders).catch(err => {
+      console.error('Fel vid läsning av påminnelsen:', err)
+      setError('Kunde inte läsa inställningen för mejl. Försök igen.')
+    })
+  }, [authUser])
+
+  async function handleReminders(enabled: boolean) {
+    setReminders(enabled)
+    try {
+      await setReminderEnabled(enabled)
+      setToastMessage(enabled ? 'Latmask-mejlet är på' : 'Latmask-mejlet är av')
+    } catch (err) {
+      console.error('Fel vid sparande av påminnelsen:', err)
+      setReminders(!enabled)
+      setError('Kunde inte spara inställningen för mejl. Försök igen.')
+    }
+  }
 
   async function loadData() {
     try {
@@ -347,6 +370,15 @@ export function Settings() {
       {authUser && (
         <Card title="Konto">
           <p class="mb text-muted">Inloggad som <strong>{authUser.email}</strong>. Passen sparas i D1 under den adressen.</p>
+          <label class="toggle-row mb">
+            <input
+              type="checkbox"
+              checked={reminders === true}
+              disabled={reminders === null}
+              onChange={(e: Event) => void handleReminders((e.target as HTMLInputElement).checked)}
+            />
+            <span>Mejla mig varje dag jag inte har tränat, från dag fyra. "Nu har du inte tränat på 4 dagar, din latmask."</span>
+          </label>
           <Button variant="secondary" onClick={() => void signOutUser()}>Logga ut</Button>
         </Card>
       )}

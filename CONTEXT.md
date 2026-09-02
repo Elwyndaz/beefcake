@@ -69,6 +69,12 @@ D1 lagrar versionsnumrerade snapshots per **e-postadress** (Firebase-kontots bek
 
 Service workern (Workbox via vite-plugin-pwa) precachar hela bundeln, så appen fungerar offline. `registerType` är `'prompt'` sedan 2026-09-01: en ny version hämtas och installeras i bakgrunden men aktiveras **aldrig av sig själv**. `main.tsx` registrerar med `registerSW` från `virtual:pwa-register`; `onNeedRefresh` anropar `announceUpdate()` i `src/components/UpdateBanner.tsx`, som sparar omladdningsfunktionen (service workern kan bli klar innan appen har renderats) och skickar `beefcake-update-available` på `window`. Bannern "Ny version av Beefcake finns" ligger överst i `<main>` i flödet, ovanför synkfelet, och knappen "Ladda om" kör `updateSW(true)`: service workern får `SKIP_WAITING` och sidan laddas om med nya bundeln. `onOfflineReady` gör ingenting. Mitt i ett pass händer alltså inget förrän användaren själv trycker. Ett aktivt pass ligger i `activeWorkout` och överlever omladdningen.
 
+## Latmask-mejlet
+
+Valfritt per konto (kryssruta i Inställningar under Konto), lagrat i D1-tabellen `reminders` (`owner`, `enabled`, `last_sent`), inte i snapshoten: det är ingen träningsdata. En cron i Workern (`0 17 * * *` UTC, 19:00 sommartid och 18:00 vintertid) går igenom påslagna konton, läser senaste snapshoten och räknar dagar sedan senaste passet i svensk tid (`stockholmToday`). Regeln bor i `server/src/reminders.ts` och delar `MAX_GAP_DAYS` med Cartman: över tre dagars glapp ger ett brev, alltså från dag fyra och sedan **varje dag**: "Nu har du inte tränat på N dagar, din latmask." `last_sent` hindrar dubbelbrev samma dag. Ingen historik alls ger inget brev.
+
+Brevet går via Resend från `latmask@beefcake.buildapp.se` (`server/src/email.ts`), en egen underdomän på buildapp.se som Familjehubben-mönstret: aldrig apexdomänen, och ingen data delas mellan apparna. Innehållet är bara antalet dagar och en länk, inget ur passen. `RESEND_API_KEY` är en Worker-secret; saknas den loggar cronen `reminders_skipped` och skickar inget.
+
 ## Beefcake-nivån
 
 Cartman speglar träningskedjan. I full storlek med statustexten bara på Hem (sedan 2026-09-01), på övriga sidor som 40 px avatar i headern, sidebaren och railen. `src/lib/streak.ts` äger regeln, och är det enda stället: ett glapp på över **tre dagar** bryter kedjan och sätter nivå 1, annars stegas nivån upp med kedjans längd (1-3 pass ger 2, 4-9 ger 3, 10 eller fler ger 4). Takten motsvarar "varannan dag", ungefär fyra pass i veckan. Streak-kortet i Statistik och alla andra läsningar går genom samma funktion.
@@ -105,8 +111,10 @@ src/services/authService.ts   Firebase Auth från gstatic-CDN, ingen npm-beroend
 src/services/dataService.ts   alla läsningar, skrivningar och statistik
 src/services/timerService.ts  vilotimerns presets, notiser och start-event
 server/src/auth.ts          Firebase ID-token verifierad med jose mot Googles JWKS, kräver email_verified
-server/src/index.ts         snapshot-API med revisionslås
-server/migrations/          D1-schema för versionsnumrerade snapshots
+server/src/index.ts         snapshot-API med revisionslås, /api/reminders och cronen sendLazyReminders
+server/src/email.ts         latmask-brevet via Resend
+server/src/reminders.ts     lazyDays (regeln) och stockholmToday
+server/migrations/          D1-schema för versionsnumrerade snapshots och reminders
 src/pages/                Home, LogSession, Templates, History, SessionDetail, ExerciseDetail, Stats, Settings (export, import, kroppsvikt)
 ```
 

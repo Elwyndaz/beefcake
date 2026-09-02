@@ -19,8 +19,11 @@
   "vars": {
     "AUTH_MODE": "firebase",
     "FIREBASE_PROJECT_ID": "",
-    "FRONTEND_ORIGINS": "https://orgutveckling.se,https://www.orgutveckling.se"
+    "FRONTEND_ORIGINS": "https://orgutveckling.se,https://www.orgutveckling.se",
+    "APP_URL": "https://orgutveckling.se/beefcake/"
   },
+  // Latmask-mejlet 19:00 svensk sommartid, 18:00 vintertid (cron är UTC)
+  "triggers": { "crons": ["0 17 * * *"] },
   "observability": {
     "enabled": true,
     "logs": { "enabled": true, "head_sampling_rate": 1 }

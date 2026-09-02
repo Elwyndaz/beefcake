@@ -132,6 +132,22 @@ async function syncSnapshotNow(snapshot: SnapshotData): Promise<void> {
   }
 }
 
+/** Latmask-mejlet, valfritt per konto. Bor i D1, inte i snapshoten: det är ingen träningsdata. */
+export async function getReminderEnabled(): Promise<boolean> {
+  const response = await fetch(`${apiUrl}/api/reminders`, { headers: await authHeaders() })
+  if (!response.ok) throw new Error(`Inställningen kunde inte läsas (${response.status}).`)
+  return ((await response.json()) as { enabled: boolean }).enabled
+}
+
+export async function setReminderEnabled(enabled: boolean): Promise<void> {
+  const response = await fetch(`${apiUrl}/api/reminders`, {
+    method: 'PUT',
+    headers: { ...await authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enabled })
+  })
+  if (!response.ok) throw new Error(`Inställningen kunde inte sparas (${response.status}).`)
+}
+
 function syncErrorMessage(error: unknown, fallback: string): string {
   const detail = error instanceof Error && error.message ? error.message : fallback
   return `${detail} Ändringarna finns kvar på denna enhet men är inte sparade i D1.`

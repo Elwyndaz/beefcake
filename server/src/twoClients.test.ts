@@ -14,30 +14,47 @@ vi.mock('../../src/services/authService', () => ({ getIdToken: async () => 'test
 
 interface Row { owner: string; revision: number; payload: string; created_at: string }
 
-// ponytail: strängmatchning på de tre satserna i index.ts, byt till sqlite om Workern får fler frågor
+// ponytail: strängmatchning på satserna i index.ts, byt till sqlite om Workern får fler frågor
 class FakeD1 {
   rows: Row[] = []
+  reminders = new Map<string, { enabled: number; last_sent: string | null }>()
 
   prepare(sql: string) {
     const rows = this.rows
     const latest = (owner: string) => rows.filter(r => r.owner === owner).sort((a, b) => b.revision - a.revision)[0]
-    return {
-      bind: (...args: unknown[]) => ({
+    // Riktig D1 tillåter first/all/run direkt på satsen, utan bind
+    const statement = (args: unknown[]) => ({
         first: async () => {
           const owner = String(args[0])
           if (sql.includes('SELECT revision, payload')) return latest(owner) ?? null
           if (sql.includes('AS revision')) return { revision: latest(owner)?.revision ?? 0 }
+          if (sql.includes('SELECT enabled FROM reminders')) return this.reminders.get(owner) ?? null
           throw new Error(`FakeD1 kan inte: ${sql}`)
         },
+        all: async () => {
+          if (!sql.includes('FROM reminders WHERE enabled = 1')) throw new Error(`FakeD1 kan inte: ${sql}`)
+          return { results: [...this.reminders].filter(([, r]) => r.enabled === 1).map(([owner, r]) => ({ owner, last_sent: r.last_sent })) }
+        },
         run: async () => {
+          if (sql.includes('INSERT INTO reminders')) {
+            const [owner, enabled] = args as [string, number]
+            this.reminders.set(owner, { enabled, last_sent: this.reminders.get(owner)?.last_sent ?? null })
+            return { meta: { changes: 1 } }
+          }
+          if (sql.includes('UPDATE reminders SET last_sent')) {
+            const [lastSent, owner] = args as [string, string]
+            const r = this.reminders.get(owner)
+            if (r) r.last_sent = lastSent
+            return { meta: { changes: r ? 1 : 0 } }
+          }
           if (!sql.includes('INSERT INTO snapshots')) throw new Error(`FakeD1 kan inte: ${sql}`)
           const [owner, revision, payload, createdAt, , expected] = args as [string, number, string, string, string, number]
           if ((latest(owner)?.revision ?? 0) !== expected) return { meta: { changes: 0 } }
           rows.push({ owner, revision, payload, created_at: createdAt })
           return { meta: { changes: 1 } }
         }
-      })
-    }
+    })
+    return { bind: (...args: unknown[]) => statement(args), ...statement([]) }
   }
 
   latestRevision(owner = 'local@beefcake.invalid'): number {
@@ -51,7 +68,8 @@ class FakeD1 {
 }
 
 const db = new FakeD1()
-const env = { DB: db, AUTH_MODE: 'dev', FRONTEND_ORIGINS: '' } as unknown as Parameters<typeof worker.fetch>[1]
+const env = { DB: db, AUTH_MODE: 'dev', FRONTEND_ORIGINS: '', APP_URL: 'https://buildapp.se/beefcake/', RESEND_API_KEY: 're_test' } as unknown as Parameters<typeof worker.fetch>[1]
+const resendCalls: { body: string; auth: string | null }[] = []
 const API = 'http://api.test'
 
 type Client = {
@@ -70,6 +88,11 @@ async function newClient(): Promise<Client> {
 
 function apiFetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
   const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+  if (url.startsWith('https://api.resend.com/')) {
+    // Resend-attrapp: samlar breven, svarar som Resend gör
+    resendCalls.push({ body: String(init?.body ?? ''), auth: new Headers(init?.headers).get('authorization') })
+    return Promise.resolve(new Response('{"id":"x"}', { status: 200 }))
+  }
   const { credentials: _credentials, ...rest } = init ?? {}
   return worker.fetch(new Request(url, rest), env)
 }
@@ -201,5 +224,46 @@ describe('kroppsvikt i snapshoten', () => {
       body: JSON.stringify({ expectedRevision: db.latestRevision(), data: { ...rest, bodyWeight: [] } })
     })).status).toBe(201)
     expect(latestBody()).toEqual([])
+  })
+})
+
+describe('latmask-mejlet', () => {
+  it('inställningen sparas per konto och cronen skickar ett brev per dag från dag fyra', async () => {
+    const client = await newClient()
+    await client.data.syncSeed()
+    expect(await client.sync.getReminderEnabled()).toBe(false)
+    await client.sync.setReminderEnabled(true)
+    expect(await client.sync.getReminderEnabled()).toBe(true)
+
+    // Senaste passet i D1 är 2026-09-03 (från flödet ovan). Tre dagar senare: inget brev.
+    const ctx = { waitUntil: (p: Promise<unknown>) => { pending = p }, passThroughOnException: () => {} } as unknown as ExecutionContext
+    let pending: Promise<unknown> = Promise.resolve()
+    const run = async (iso: string) => {
+      await worker.scheduled({ scheduledTime: Date.parse(iso), cron: '0 17 * * *', noRetry: () => {} }, env, ctx)
+      await pending
+    }
+    await run('2026-09-06T17:00:00Z')
+    expect(resendCalls).toHaveLength(0)
+
+    // Dag fyra: ett brev med antalet, till kontots adress, från underdomänen
+    await run('2026-09-07T17:00:00Z')
+    expect(resendCalls).toHaveLength(1)
+    const mail = JSON.parse(resendCalls[0].body) as { to: string[]; subject: string; from: string }
+    expect(mail.to).toEqual(['local@beefcake.invalid'])
+    expect(mail.subject).toBe('Nu har du inte tränat på 4 dagar, din latmask.')
+    expect(mail.from).toContain('@beefcake.buildapp.se')
+    expect(resendCalls[0].auth).toBe('Bearer re_test')
+
+    // Samma dag igen: inget dubbelbrev. Nästa dag: fem dagar.
+    await run('2026-09-07T20:00:00Z')
+    expect(resendCalls).toHaveLength(1)
+    await run('2026-09-08T17:00:00Z')
+    expect(resendCalls).toHaveLength(2)
+    expect((JSON.parse(resendCalls[1].body) as { subject: string }).subject).toContain('5 dagar')
+
+    // Avstängt: tyst
+    await client.sync.setReminderEnabled(false)
+    await run('2026-09-09T17:00:00Z')
+    expect(resendCalls).toHaveLength(2)
   })
 })

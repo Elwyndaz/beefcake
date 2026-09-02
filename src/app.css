@@ -886,6 +886,9 @@ canvas { display: block; max-width: 100%; }
   border-color: var(--danger);
 }
 
+/* Kryssruta med text, hela raden är tryckyta */
+.toggle-row { display: flex; align-items: flex-start; gap: var(--space-3); min-height: var(--touch-target); cursor: pointer; }
+.toggle-row input { width: 22px; height: 22px; margin: 2px 0 0; flex-shrink: 0; accent-color: var(--accent); }
 .login-links { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-2) var(--space-4); margin-top: var(--space-4); }
 .link-button { background: none; border: 0; padding: var(--space-2); min-height: var(--touch-target); color: var(--text-muted); font: inherit; font-size: var(--text-sm); cursor: pointer; text-decoration: underline; }
 .link-button:hover { color: var(--text); }

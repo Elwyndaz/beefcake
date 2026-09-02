@@ -1,5 +1,10 @@
 import { authenticate, ApiError } from './auth'
 import { validateSnapshot } from '../../src/lib/importValidation'
+import { sendReminderEmail } from './email'
+import { lazyDays, stockholmToday } from './reminders'
+
+// RESEND_API_KEY är en secret och saknas i de genererade typerna
+type ReminderEnv = Env & { RESEND_API_KEY?: string }
 
 interface SnapshotRow {
   revision: number
@@ -32,13 +37,70 @@ export default {
       if (url.pathname === '/api/snapshot' && request.method === 'POST') {
         return await writeSnapshot(request, env.DB, user.email, headers)
       }
+      if (url.pathname === '/api/reminders' && request.method === 'GET') {
+        const row = await env.DB.prepare('SELECT enabled FROM reminders WHERE owner = ?').bind(user.email).first<{ enabled: number }>()
+        return json({ enabled: row?.enabled === 1 }, 200, headers)
+      }
+      if (url.pathname === '/api/reminders' && request.method === 'PUT') {
+        return await writeReminderSetting(request, env.DB, user.email, headers)
+      }
 
       throw new ApiError(404, 'not_found', 'Route not found.')
     } catch (error) {
       return errorResponse(error, headers)
     }
+  },
+
+  // Latmask-mejlet, en gång per dag. Tiden i wrangler.jsonc är UTC.
+  async scheduled(event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(sendLazyReminders(env, new Date(event.scheduledTime)))
   }
 } satisfies ExportedHandler<Env>
+
+async function writeReminderSetting(request: Request, db: D1Database, owner: string, headers: Headers): Promise<Response> {
+  let body: unknown
+  try {
+    body = JSON.parse(await request.text())
+  } catch {
+    throw new ApiError(400, 'invalid_body', 'Fel format.')
+  }
+  if (!isRecord(body) || typeof body.enabled !== 'boolean') throw new ApiError(400, 'invalid_body', 'Fel format.')
+  await db.prepare(
+    'INSERT INTO reminders (owner, enabled) VALUES (?, ?) ON CONFLICT(owner) DO UPDATE SET enabled = excluded.enabled'
+  ).bind(owner, body.enabled ? 1 : 0).run()
+  return json({ enabled: body.enabled }, 200, headers)
+}
+
+/**
+ * Ett brev per påslaget konto och dag när glappet är över MAX_GAP_DAYS. Läser senaste
+ * snapshoten per konto (två konton, ingen optimering behövs). Ett misslyckat brev
+ * loggas och stoppar inte de andra.
+ */
+export async function sendLazyReminders(env: ReminderEnv, now: Date): Promise<number> {
+  if (!env.RESEND_API_KEY) {
+    console.warn(JSON.stringify({ event: 'reminders_skipped', reason: 'RESEND_API_KEY saknas' }))
+    return 0
+  }
+  const today = stockholmToday(now)
+  const { results } = await env.DB.prepare('SELECT owner, last_sent FROM reminders WHERE enabled = 1').all<{ owner: string; last_sent: string | null }>()
+  let sent = 0
+  for (const r of results) {
+    if (r.last_sent === today) continue
+    const row = await latestRow(env.DB, r.owner)
+    if (!row) continue
+    const sessions = (JSON.parse(row.payload) as { sessions: { date: string }[] }).sessions
+    const days = lazyDays(sessions.map(s => s.date), today)
+    if (days === null) continue
+    const status = await sendReminderEmail({ to: r.owner, days, appUrl: env.APP_URL }, env.RESEND_API_KEY)
+    if (status >= 200 && status < 300) {
+      await env.DB.prepare('UPDATE reminders SET last_sent = ? WHERE owner = ?').bind(today, r.owner).run()
+      sent++
+    } else {
+      console.error(JSON.stringify({ event: 'reminder_failed', status }))
+    }
+  }
+  return sent
+}
 
 async function latestRow(db: D1Database, owner: string): Promise<SnapshotRow | null> {
   return db.prepare(

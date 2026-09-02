@@ -15,15 +15,16 @@
 - [x] `[P2]` Race condition i mall-laddningen i LogSession, async-effekt utan avbrottsskydd
 - [x] `[P2]` `<datalist id="template-exercise-suggestions">` renderas en gång per övningsrad i Templates.tsx. Samma id upprepas, ogiltig HTML. Rendera den en gång utanför loopen
 - [x] `[P2]` Bestäm vokabulär: *pass* är något du gjorde, *program* är mallen. Byt genomgående
-- [ ] `[P3]` Web Push-påminnelser via service workern
 - [x] `[P3]` Kortkommandon på desktop
 - [x] `[P3]` RIR/RPE och anteckningar i gränssnittet
 - [x] `[P3]` Tvåanvändarstöd: löst med Firebase-konton, ett D1-spår per adress, seeden bara utan moln
 - [ ] `[P0]` Firebase-projekt för Beefcake skapas av Patrik, konfigurationen in i `src/config.ts` och `FIREBASE_PROJECT_ID` i `wrangler.jsonc`, Access-applikationen framför `api.orgutveckling.se` tas bort. Innan dess får inloggningsbygget inte pushas
+- [ ] `[P0]` Resend: verifiera `beefcake.buildapp.se` (DNS i Cloudflare) och sätt `RESEND_API_KEY` som Worker-secret, kör migrering 0002 mot D1, sedan första riktiga brevet
 - [ ] `[P1]` Flytta repot till GitHub-orgen `buildapp-se` och appen till buildapp.se (Pages-bas, `FRONTEND_ORIGINS`, Firebase authorized domains, Worker-route)
 
 ## Byggt
 
+- Latmask-mejlet (2026-09-02, lokalt, ej deployat): `reminders`-tabell (migrering 0002), `GET`/`PUT /api/reminders`, cron `0 17 * * *` som kör `sendLazyReminders` (dag fyra och varje dag därefter, ett brev per dag, svensk dag), `server/src/email.ts` mot Resend från `latmask@beefcake.buildapp.se`, kryssruta under Konto i Inställningar. Testat i tvåklientstestet med Resend-attrapp (inget brev dag tre, brev dag fyra och fem, inget dubbelbrev, tyst när avstängt) plus enhetstester för regeln, tidszonen och brevet. Ersätter Web Push-posten
 - Firebase-inloggning (2026-09-02, lokalt, ej pushad): `authService` laddar SDK:n från gstatic utan npm-beroende, `LoginGate` ersätter `PasswordGate` (Google, e-post med lösenord, skapa konto, glömt lösenord, bekräftelseskärm), Workerns `auth.ts` verifierar ID-token med jose och kräver `email_verified`, `owner` är adressen. Bearer-token och JSON i `cloudSyncService`, Access-varianten borta. Seeden bara utan moln. Kontokort med Logga ut i Inställningar. Verifierat: dev utan moln öppnar direkt, bygge med moln och tomt projekt stoppar i grinden; riktig inloggning väntar på projektet
 - Efterstäd (2026-09-02): RPE-brickan, plattkalkylatorknappen och anteckningsfältet 44 px på tablet (kvar under 44: draghandtaget 40 brett och settypsbrickan 32, dokumenterat undantag). Tankstrecket som tomvärde i Föregående-cellen och i Stat-korten (senaste pass, e1RM, maxvikt) ersatt med bindestreck
 - Uppdateringsbanner för PWA:n (2026-09-01, chunk F): `registerType: 'prompt'`, `registerSW` i `main.tsx`, `UpdateBanner` i `src/components` överst i innehållet med "Ny version av Beefcake finns" och knappen "Ladda om" (`updateSW(true)`), 44 px, i flödet så bottennavigeringen inte täcker den. Ingen automatisk omladdning. Verifierat i `vite preview` med två byggen: bannern kom efter det andra med gamla texten kvar, Ladda om gav nya versionen. Flödet i `CONTEXT.md` under "PWA och uppdatering"
