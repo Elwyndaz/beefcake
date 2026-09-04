@@ -1,7 +1,7 @@
 ---
 schemaVersion: 1
 status: active
-currentGoal: Julias programkopiering, fokusfelet i Logga pass och inställningsbar alarmtid är klara och verifierade 2026-09-04. Flytten till buildapp.se är också klar
+currentGoal: Julias programkopiering, fokusfelet i Logga pass och inställningsbar alarmtid är klara, verifierade och live 2026-09-04. Flytten till buildapp.se är också klar
 nextAction: Julia laddar om appen så D1-revision 2 hämtas. Kontrollera sedan att "Enable create (sign-up)" är avstängt i Firebase om det inte redan är gjort, därefter Resend (BACKLOG P0)
 blockers:
   - Firebase: Julia kan logga in på buildapp.se, så domänen fungerar; det är inte verifierat om sign-up är avstängt
@@ -11,7 +11,7 @@ reviewedAt: 2026-09-04
 
 ## Recent work
 
-2026-09-04 kväll: Patriks 10 program och 33 övningar kopierades additivt till Julia genom en ny D1-revision 2; hennes pass, historik och kroppsvikt är fortfarande tomma och exakt JSON-likhet mot Patriks revision 17 är verifierad. Fokusfelet i Logga pass berodde på att ett nytt tidsbaserat `exerciseId` också användes som React-nyckel vid varje tecken, vilket monterade om fältet; nyckeln är nu stabil. Inställningar har nu alarmtid för vilotimern, 1 till 3 600 sekunder eller tills ljudet tystas, lokalt per enhet och med 19 sekunder som standard. 82 tester, lint och build gröna. Chrome-verifiering: `Kettlebell` gick att skriva med fokus kvar, 7 sekunder och oändligt alarm sparades över omladdning, Tysta ljudet stoppade alarmet, noll konsolfel. Codex webbläsarkontroll återanslöts via Browser-inställningen och användes för verifieringen.
+2026-09-04 kväll: Patriks 10 program och 33 övningar kopierades additivt till Julia genom en ny D1-revision 2; hennes pass, historik och kroppsvikt är fortfarande tomma och exakt JSON-likhet mot Patriks revision 17 är verifierad. Fokusfelet i Logga pass berodde på att ett nytt tidsbaserat `exerciseId` också användes som React-nyckel vid varje tecken, vilket monterade om fältet; nyckeln är nu stabil. Inställningar har nu alarmtid för vilotimern, 1 till 3 600 sekunder eller tills ljudet tystas, lokalt per enhet och med 19 sekunder som standard. 82 tester, lint och build gröna. Chrome-verifiering: `Kettlebell` gick att skriva med fokus kvar, 7 sekunder och oändligt alarm sparades över omladdning, Tysta ljudet stoppade alarmet, noll konsolfel. Codex webbläsarkontroll återanslöts via Browser-inställningen och användes för verifieringen. Commit `2f0c2a9` pushad till `master`; Pages-körning `33895507996` grön och livegrinden renderad på buildapp.se.
 
 2026-09-04 kväll, flytten: repot överfört `Elwyndaz/beefcake` → `buildapp-se/beefcake` (`gh api repos/.../transfer`), Pages-inställningen följde med (workflow-bygge, URL buildapp.se/beefcake). `wrangler.jsonc`: route `beefcake-api.buildapp.se` (samma mönster som `recept-api`), `FRONTEND_ORIGINS` buildapp.se och www, `APP_URL` buildapp.se/beefcake; `deploy.yml` bygger med nya API-URL:en (`375faef`). Worker `2e869cc8`: wrangler skapade den nya custom-domänen och tog bort `api.orgutveckling.se` (DNS-posten borta, gamla adressen svarar inte). Verifierat: nya API:t 401 utan token, preflight från buildapp.se 204, Pages-bygget grönt, bundeln pekar bara på nya API:t, grinden renderad i Chrome via Playwright-MCP:n utan konsolfel (Playwright är inte installerat i repot). orgutveckling.se/beefcake ger 404. Ingen inloggning genomförd: Google-inloggning på buildapp.se kräver att Patrik auktoriserar domänen i Firebase först. buildapp.se:s startsida listar projekt för hand, Beefcake syns inte där.
 
