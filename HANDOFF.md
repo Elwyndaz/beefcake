@@ -2,13 +2,15 @@
 schemaVersion: 1
 status: active
 currentGoal: Firebase-inloggningen är live sedan 2026-09-04. Kvar: latmask-mejlets Resend-nyckel och domän, sedan flytten till buildapp.se
-nextAction: Patrik loggar in på https://orgutveckling.se/beefcake/ med Google (samma gmail som Access använde, D1-spåret ligger under den adressen) och bekräftar att historiken syns och att ett pass synkar. Sedan Resend (BACKLOG P0).
+nextAction: Resend (BACKLOG P0): verifiera beefcake.buildapp.se och sätt RESEND_API_KEY, sedan första riktiga latmask-brevet. Därefter flytten till buildapp.se (P1).
 blockers:
   - Resend: beefcake.buildapp.se ska verifieras och RESEND_API_KEY sättas som secret (regel 1, Patrik)
 reviewedAt: 2026-09-04
 ---
 
 ## Recent work
+
+2026-09-04 sent: Patriks första inloggning med Google gav "Molnsynk misslyckades. Du är inte inloggad" och 0 pass: `main.tsx` hämtade D1 före render, innan Firebase svarat, och inget hämtade om. Fix `10e681c`: med moln renderas appen direkt och `LoginGate` kör `syncSeed()` per bekräftad användare. Verifierat av Patrik live: 428 pass, senaste 2 sep, nivå 2. D1 kontrollerad direkt under tiden: revision 17 orörd, inget skrevs över. Popupen för Google öppnas på primärskärmen, värt att veta med två skärmar.
 
 2026-09-04 kväll, allt pushat och live: Firebase-projektet `beefcake-4865a` skapat av Patrik (Google och e-post/lösenord påslagna, `orgutveckling.se` auktoriserad), nycklarna i `src/config.ts` och `FIREBASE_PROJECT_ID` i `wrangler.jsonc` (`f77c989`). Access-appen "beefcake" raderad av Patrik i Zero Trust (API:t svarar 401 i stället för 302). Migrering `0002_reminders` körd mot D1. Worker deployad som `6d8ef727`, master pushad (`7b21996..f77c989`, fem commits), Pages-bygget grönt. Live verifierat i Chromium efter rensad service worker: grinden visar Google, e-post, Skapa konto och Glömt lösenordet, ingen inloggning genomförd (kräver Patriks konto). Fynd: `syncSeed` kör före grinden och loggar "Seed misslyckades: Du är inte inloggad" i konsolen vid utloggat läge, kosmetiskt, i BACKLOG.
 
