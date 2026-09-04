@@ -13,7 +13,7 @@ import {
   getExerciseRecords
 } from '../services/dataService'
 import { startRestTimer, triggerHaptic } from '../services/timerService'
-import { formatDateShort, formatDateWithWeekday } from '../lib/date'
+import { formatDateShort } from '../lib/date'
 import { formatSet, formatSetCompact, formatSets, formatWeight } from '../lib/format'
 import { barWeightFor, formatPlatesPerSide } from '../lib/plates'
 import { epley1RM } from '../lib/exerciseMetrics'
@@ -65,8 +65,6 @@ export function LogSession() {
   })
   // RPE väljs i en rad brickor under tabellen, inget tangentbord. Öppen för ett set i taget.
   const [rpePicker, setRpePicker] = useState<{ exIdx: number; setIdx: number } | null>(null)
-  // Datum och program ligger hopfällda bakom pennan: första setet ska synas på första skärmen.
-  const [showSettings, setShowSettings] = useState(false)
 
   const draggedExerciseIndexRef = useRef<number | null>(null)
   const activeTemplateRequestRef = useRef<string>('')
@@ -593,7 +591,6 @@ export function LogSession() {
     )
   }
 
-  const selectedTemplate = templates.find(t => t.id === selectedTemplateId)
   const rpeOptions = Array.from({ length: 11 }, (_, i) => 5 + i * 0.5)
 
   return (
@@ -618,40 +615,15 @@ export function LogSession() {
               {completedSetsCount} av {totalSetsCount} set klara • Lyft volym: {totalVolume.toLocaleString('sv-SE')} kg
             </span>
           )}
-          {/* Datum och program som en rad med penna: kortet med fälten öppnas bara vid behov */}
-          <div class="log-session-meta">
-            <span class="text-sm">
-              <strong>{selectedTemplate?.name || (exercises.length > 0 ? 'Fritt pass' : 'Inget program valt')}</strong> · {formatDateWithWeekday(date)}
-            </span>
-            <button
-              type="button"
-              class="btn-icon"
-              aria-label="Ändra datum eller program"
-              aria-expanded={showSettings}
-              onClick={() => setShowSettings(v => !v)}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-                <path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
-              </svg>
-            </button>
+          {/* Datum och program alltid synliga, som en slimmad rad utan etiketter (Patrik 2026-09-04, ersätter pennan från 2026-09-01) */}
+          <div class="log-session-meta input-group">
+            <input type="date" aria-label="Datum" value={date} onChange={(e: Event) => setDate((e.target as HTMLInputElement).value)} />
+            <select aria-label="Program" value={selectedTemplateId} onChange={(e: Event) => handleSelectTemplate((e.target as HTMLSelectElement).value)}>
+              <option value="">Fritt pass</option>
+              {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
           </div>
         </div>
-
-        {showSettings && (
-          <Card class="mb">
-            <div class="grid grid-2 gap-3">
-              <Field label="Datum" class="m-0">
-                <input type="date" value={date} onChange={(e: Event) => setDate((e.target as HTMLInputElement).value)} />
-              </Field>
-              <Field label="Program" class="m-0">
-                <select value={selectedTemplateId} onChange={(e: Event) => handleSelectTemplate((e.target as HTMLSelectElement).value)}>
-                  <option value="">Fritt pass (egen uppsättning)</option>
-                  {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                </select>
-              </Field>
-            </div>
-          </Card>
-        )}
 
         {/* Övningslista */}
         <div class="exercise-section mb">
@@ -659,7 +631,7 @@ export function LogSession() {
             <Card>
               <EmptyState
                 title="Inga övningar tillagda"
-                message="Välj ett program via pennan ovan eller lägg till din första övning."
+                message="Välj ett program ovan eller lägg till din första övning."
                 action={<Button onClick={addExercise}>+ Lägg till övning</Button>}
               />
             </Card>

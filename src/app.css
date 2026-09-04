@@ -1228,13 +1228,10 @@ canvas { display: block; max-width: 100%; }
 .exercise-prev-notes { font-style: italic; }
 
 /* Passets metarad: program och datum med penna, i stället för ett kort med två fält */
-.log-session-meta { display: flex; align-items: center; gap: var(--space-1); margin-top: var(--space-1); }
-.btn-icon {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: var(--touch-target); height: var(--touch-target); border: 0; border-radius: var(--radius-sm);
-  background: transparent; color: var(--text-muted); cursor: pointer;
-}
-.btn-icon:hover { background: var(--surface-hover); color: var(--text); }
+/* Datum och program som en slimmad rad: inga etiketter, datumet så brett som det behöver, programmet tar resten */
+.log-session-meta.input-group { display: flex; align-items: center; gap: var(--space-2); margin: var(--space-2) 0 0; }
+.log-session-meta input[type="date"] { width: auto; flex: 0 0 auto; }
+.log-session-meta select { flex: 1 1 0; min-width: 0; }
 .log-session-hint { text-align: center; }
 
 /* Inputs with Steppers */

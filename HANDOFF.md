@@ -11,6 +11,8 @@ reviewedAt: 2026-09-04
 
 ## Recent work
 
+2026-09-04 kväll, loggvyn: datum och program syns alltid som en slimmad rad (Patrik: pennan var ett klick för mycket). Detaljer i BACKLOG under Byggt. Lint, 82 tester och build gröna, Chromium 390 px verifierat lokalt.
+
 2026-09-04 kväll: automatvalet av nästa program togs bort från direktnavigering till Logga pass. Bara `?template=`, `?from=` eller ett sparat utkast med minst ett set laddar innehåll; tomvyn heter "Logga pass", visar "Inget program valt" och har ingen Avbryt-knapp. Historikens månadskalender har nu en egen `V.`-kolumn med ISO-veckonummer. 82 tester, lint och build gröna. På Patriks begäran gjordes ingen webbläsarverifiering före modellbyte; commit, push och Pages-deploy återstår.
 
 2026-09-04 kväll: Patriks 10 program och 33 övningar kopierades additivt till Julia genom en ny D1-revision 2; hennes pass, historik och kroppsvikt är fortfarande tomma och exakt JSON-likhet mot Patriks revision 17 är verifierad. Fokusfelet i Logga pass berodde på att ett nytt tidsbaserat `exerciseId` också användes som React-nyckel vid varje tecken, vilket monterade om fältet; nyckeln är nu stabil. Inställningar har nu alarmtid för vilotimern, 1 till 3 600 sekunder eller tills ljudet tystas, lokalt per enhet och med 19 sekunder som standard. 82 tester, lint och build gröna. Chrome-verifiering: `Kettlebell` gick att skriva med fokus kvar, 7 sekunder och oändligt alarm sparades över omladdning, Tysta ljudet stoppade alarmet, noll konsolfel. Codex webbläsarkontroll återanslöts via Browser-inställningen och användes för verifieringen. Commit `2f0c2a9` pushad till `master`; Pages-körning `33895507996` grön och livegrinden renderad på buildapp.se.

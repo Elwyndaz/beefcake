@@ -24,6 +24,8 @@
 
 ## Byggt
 
+- Datum och program alltid synliga i loggvyn (2026-09-04, Patriks beslut, ersätter pennan från 2026-09-01): en slimmad rad direkt under rubriken, datumfält och programväljare utan etiketter (aria-label), inget kort, 44 px hög. Pennan, `showSettings` och sammanfattningsraden borta, "Fritt pass (egen uppsättning)" heter "Fritt pass" så det ryms i väljaren på telefon. Verifierat i Chromium 390 px utan konsolfel: raden 343 px bred, datum 170 och program 165
+
 - Logga pass öppnas utan startat pass (2026-09-04): automatvalet av nästa program i rotationen är borttaget. Bara ett uttryckligt program, ett tidigare pass eller ett utkast med minst ett set laddas. Tomvyn heter "Logga pass", visar "Inget program valt" och saknar Avbryt-knapp
 - Veckonummer i månadskalendern (2026-09-04): Historik visar en separat `V.`-kolumn med ISO-veckonummer för kalenderns sex veckor, inklusive på mobil
 - Julias program och övningskatalog kopierade additivt i produktion (2026-09-04): en ny D1-revision 2 skapades under Julias egen adress med Patriks 10 program och 33 övningar. Julias pass, historik och kroppsvikt lämnades orörda. Exakt JSON-likhet verifierad mot Patriks revision 17
