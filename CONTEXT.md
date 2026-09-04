@@ -41,7 +41,9 @@ BodyWeight       { date (YYYY-MM-DD, nyckel), kg }
 
 `setEntries` är en lista, så olika vikt eller reps per set fungerar. `Legacy*`-typerna och `migrate*`-funktionerna i `src/models/` konverterar gammal seed-struktur och får inte tas bort så länge `seedData.ts` har den gamla formen.
 
-`activeWorkout` håller **ett** påbörjat pass, sparat vid varje ändring i loggvyn. Det är utkastet, inte ett pass: det blir en `Session` först när passet slutförs, och rensas då.
+`activeWorkout` håller **ett** påbörjat pass, sparat vid varje ändring i loggvyn **så snart minst ett set finns** (sedan 2026-09-04). Förvalda övningar utan set är en startpunkt, inte ett utkast: de lämnar inget spår, annars blev varje öppning av loggvyn ett "pågående pass" på Hem. Det är utkastet, inte ett pass: det blir en `Session` först när passet slutförs, och rensas då.
+
+Loggvyn förväljer **nästa pass i rotationen**, samma regel som Hem-kortet "Nästa pass": `src/lib/nextPrograms.ts` tar de tre senast körda programmen och sätter det som väntat längst först. Appen har inget rotationsbegrepp i datamodellen, regeln härleds ur historiken och bor bara där. Första mallen i bokstavsordning är reserv (ingen historik, eller programmet raderat).
 
 Volym räknas alltid genom `src/lib/volume.ts`. Vikt 0 betyder kroppsvikt eller kondition och ger volym 0. Skriv aldrig `sets * reps * weight` på nytt ställe.
 
@@ -103,6 +105,7 @@ src/lib/format.ts         vikt och set som text, svensk notation
 src/lib/volume.ts         volymformeln, enda stället
 src/lib/hypertrophy.ts    set per vecka mot bandet 10-20
 src/lib/streak.ts         beefcake-nivån ur passdatumen
+src/lib/nextPrograms.ts   nästa pass i rotationen ur historiken, Hem och loggvyns förval
 src/lib/plates.ts         skivor per sida och stångvikt per utrustning
 src/lib/exerciseMetrics.ts Epley-1RM, grafens mått per genomförande, rekord per repsantal
 src/lib/warmup.ts         uppvärmningsset ur första arbetssetet

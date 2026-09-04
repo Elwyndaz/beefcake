@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'preact/hooks'
 import {
   getAllTemplates,
   getAllExercises,
+  getAllSessions,
   createSession,
   getOrCreateExercise,
   getSession,
@@ -19,6 +20,7 @@ import { barWeightFor, formatPlatesPerSide } from '../lib/plates'
 import { epley1RM } from '../lib/exerciseMetrics'
 import { warmupSets } from '../lib/warmup'
 import { setsVolume } from '../lib/volume'
+import { nextPrograms } from '../lib/nextPrograms'
 import { todayISO, nowISO } from '../models'
 import { icon } from '../icons'
 import { useLocation } from 'wouter'
@@ -114,14 +116,20 @@ export function LogSession() {
         setDate(requestedDate)
       }
 
-      const [ts, es, activeDraft] = await Promise.all([
+      const [ts, es, activeDraft, sessions] = await Promise.all([
         getAllTemplates(),
         getAllExercises(),
-        getActiveWorkout()
+        getActiveWorkout(),
+        getAllSessions()
       ])
 
       setTemplates(ts)
       setAllExercises(es)
+
+      // Förvalet är nästa pass i rotationen, samma regel som Hem-kortet "Nästa pass".
+      // Första mallen i bokstavsordning bara som reserv: ingen historik, eller programmet raderat.
+      const upcomingName = nextPrograms(sessions)[0]?.name
+      const defaultTemplate = ts.find(t => t.name === upcomingName) ?? ts[0]
 
       // Priority 1: explicitly requested ?from=<sessionId>
       if (fromSessionId) {
@@ -149,9 +157,9 @@ export function LogSession() {
         if (matchedTemplate) {
           setSelectedTemplateId(matchedTemplate.id)
           await loadTemplateIntoExercises(matchedTemplate, es)
-        } else if (ts.length > 0) {
-          setSelectedTemplateId(ts[0].id)
-          await loadTemplateIntoExercises(ts[0], es)
+        } else if (defaultTemplate) {
+          setSelectedTemplateId(defaultTemplate.id)
+          await loadTemplateIntoExercises(defaultTemplate, es)
         }
       }
       // Priority 3: active draft in IndexedDB
@@ -162,10 +170,10 @@ export function LogSession() {
         setExercises(activeDraft.exercises)
         void fetchPreviousPerformances(activeDraft.exercises.map(e => e.exerciseId))
       }
-      // Priority 4: Default to first template
-      else if (ts.length > 0) {
-        setSelectedTemplateId(ts[0].id)
-        await loadTemplateIntoExercises(ts[0], es)
+      // Priority 4: nästa pass i rotationen
+      else if (defaultTemplate) {
+        setSelectedTemplateId(defaultTemplate.id)
+        await loadTemplateIntoExercises(defaultTemplate, es)
       }
 
       if (fromSessionId || templateParam || requestedDate) {
@@ -220,7 +228,9 @@ export function LogSession() {
   useEffect(() => {
     if (isInitialLoadRef.current || loading) return
 
-    if (exercises.length === 0) {
+    // Ett utkast finns först när något kan gå förlorat: minst ett set. Förvalda övningar
+    // utan set är en startpunkt, inte ett pågående pass, och lämnar inget spår.
+    if (!exercises.some(e => e.setEntries.length > 0)) {
       void clearActiveWorkout()
       return
     }

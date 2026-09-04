@@ -6,10 +6,12 @@ nextAction: Patrik skapar Firebase-projektet och ger apiKey, authDomain, project
 blockers:
   - Firebase-projekt saknas (Patrik). Inloggningsbygget ligger som lokal commit, inte pushad
   - Resend: beefcake.buildapp.se ska verifieras och RESEND_API_KEY sättas som secret (regel 1, Patrik)
-reviewedAt: 2026-09-02
+reviewedAt: 2026-09-04
 ---
 
 ## Recent work
+
+2026-09-04 (lokal commit, ej pushad): buggen att Logga pass startade ett benpass av sig självt rättad (utkast kräver minst ett set) och loggvyn förväljer nästa pass i rotationen genom `src/lib/nextPrograms.ts`, flyttad ur Hem. 78 tester, lint, build och Chromium gröna. Samma dag: Stitch-designunderlag i vaulten (`Beefcake Designgenomlysning/stitch/`), ingen kod.
 
 2026-09-02 eftermiddag (lokal commit, ej pushad): senaste manuella backup visas under knappen i Inställningar. Första leveransen genom AI-fabrikens Omnigent-flöde: Codex skrev kandidaten i en WSL-klon, en separat Codex-session granskade, build, lint, 74 tester och Chromium-prov gröna här. Mätning och fynd i `C:\dev\aifabriken\runs\2026-09-02-backupstatus\LEVERANS.md`.
 

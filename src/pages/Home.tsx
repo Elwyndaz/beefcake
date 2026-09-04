@@ -4,6 +4,7 @@ import { getAllSessions, getAllTemplates, getActiveWorkout, getPRs, getWeeklyHar
 import { formatDateWithWeekday, daysBetween, daysAgoText, todayISO, mondayISO } from '../lib/date'
 import { classifyWeeklySets, SET_LOAD_LABELS } from '../lib/hypertrophy'
 import { exercisesVolume } from '../lib/volume'
+import { nextPrograms, type NextProgram } from '../lib/nextPrograms'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
 import { Stat } from '../components/Stat'
@@ -14,7 +15,7 @@ export function Home() {
   const [, navigate] = useLocation()
   const [recentSessions, setRecentSessions] = useState<Session[]>([])
   // De tre senast körda programmen, det som väntat längst först: det är nästa pass
-  const [nextPrograms, setNextPrograms] = useState<{ name: string; date: string }[]>([])
+  const [upcoming, setNextPrograms] = useState<NextProgram[]>([])
   const [templateCount, setTemplateCount] = useState(0)
   const [totalSessions, setTotalSessions] = useState(0)
   const [lastWorkout, setLastWorkout] = useState<string | null>(null)
@@ -57,13 +58,7 @@ export function Home() {
       }
       if (sessions.length > 0) {
         setLastWorkout(sessions[0].date)
-        // Första förekomsten per programnamn är senaste datumet, listan är nyast först
-        const lastRun = new Map<string, string>()
-        for (const s of sessions) {
-          if (!lastRun.has(s.templateName)) lastRun.set(s.templateName, s.date)
-          if (lastRun.size >= 3) break
-        }
-        setNextPrograms([...lastRun].map(([name, date]) => ({ name, date })).sort((a, b) => a.date.localeCompare(b.date)))
+        setNextPrograms(nextPrograms(sessions))
       }
     } catch (err) {
       setError('Kunde inte ladda data. Försök igen.')
@@ -123,10 +118,10 @@ export function Home() {
       )}
 
       {/* Utan mallar har kortet inget innehåll: tomma kortet ersätts av CTA:n i "Senaste pass". */}
-      {nextPrograms.length > 0 && (
+      {upcoming.length > 0 && (
       <Card>
         <h2 class="m-0 mb-sm">Nästa pass</h2>
-        {nextPrograms.map((p, i) => (
+        {upcoming.map((p, i) => (
           <div class="mb-sm" key={p.name}>
             <Button
               variant={i === 0 ? 'primary' : 'secondary'}
