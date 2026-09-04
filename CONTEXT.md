@@ -2,7 +2,7 @@
 
 Personlig träningslogg för styrketräning, ersätter ett Excel-ark. Svenskt gränssnitt, bara kilo. Två användare i praktiken: Patrik på dator, hans tjej på mobil. D1 är sanningskälla och IndexedDB är lokal cache.
 
-Live på https://orgutveckling.se/beefcake/ (GitHub Pages, bas-sökväg `/beefcake/`). Push till `master` bygger och deployar. Server-API:t är deployat som `https://api.orgutveckling.se` och använder D1 bakom Firebase-inloggning. Appen ska flyttas till buildapp.se när repot flyttas till GitHub-orgen `buildapp-se` (beslut 2026-09-02).
+Live på https://buildapp.se/beefcake/ (GitHub Pages i orgen `buildapp-se`, bas-sökväg `/beefcake/`). Push till `master` bygger och deployar. Server-API:t är deployat som `https://beefcake-api.buildapp.se` (samma namnmönster som `recept-api`) och använder D1 bakom Firebase-inloggning. Flyttat från orgutveckling.se 2026-09-04.
 
 **Den här filen äger domänmodellen och konventionerna.** Upprepa dem inte i andra filer, länka hit. `AGENTS.md` beskriver hur man arbetar i repot, `BACKLOG.md` vad som är kvar, `HANDOFF.md` var arbetet står just nu.
 

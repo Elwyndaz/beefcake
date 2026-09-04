@@ -6,7 +6,7 @@
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": false,
   "routes": [
-    { "pattern": "api.orgutveckling.se", "custom_domain": true }
+    { "pattern": "beefcake-api.buildapp.se", "custom_domain": true }
   ],
   "d1_databases": [
     {
@@ -19,8 +19,8 @@
   "vars": {
     "AUTH_MODE": "firebase",
     "FIREBASE_PROJECT_ID": "beefcake-4865a",
-    "FRONTEND_ORIGINS": "https://orgutveckling.se,https://www.orgutveckling.se",
-    "APP_URL": "https://orgutveckling.se/beefcake/"
+    "FRONTEND_ORIGINS": "https://buildapp.se,https://www.buildapp.se",
+    "APP_URL": "https://buildapp.se/beefcake/"
   },
   // Latmask-mejlet 19:00 svensk sommartid, 18:00 vintertid (cron är UTC)
   "triggers": { "crons": ["0 17 * * *"] },
