@@ -18,7 +18,7 @@
   ],
   "vars": {
     "AUTH_MODE": "firebase",
-    "FIREBASE_PROJECT_ID": "",
+    "FIREBASE_PROJECT_ID": "beefcake-4865a",
     "FRONTEND_ORIGINS": "https://orgutveckling.se,https://www.orgutveckling.se",
     "APP_URL": "https://orgutveckling.se/beefcake/"
   },
