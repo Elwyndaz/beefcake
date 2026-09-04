@@ -14,7 +14,7 @@ import {
 } from '../services/dataService'
 import { startRestTimer, triggerHaptic } from '../services/timerService'
 import { formatDateShort } from '../lib/date'
-import { formatSet, formatSetCompact, formatSets, formatWeight } from '../lib/format'
+import { formatSet, formatSetCompact, formatSets, formatWeight, parseDecimal } from '../lib/format'
 import { barWeightFor, formatPlatesPerSide } from '../lib/plates'
 import { epley1RM } from '../lib/exerciseMetrics'
 import { warmupSets } from '../lib/warmup'
@@ -29,6 +29,10 @@ import { Field } from '../components/Field'
 import { PlateCalculatorModal } from '../components/PlateCalculator'
 import { RestTimer } from '../components/RestTimer'
 import type { Template, Exercise, TemplateExercise, SetEntry, ActiveSetEntry, SetType } from '../models'
+
+// Settyp som fullt ord i pickern (bokstaven ensam var obegriplig på mobil), tom sträng för normal i brickan
+const SET_TYPE_LABELS: Record<SetType, string> = { normal: 'Normal', warmup: 'Uppvärmning', drop: 'Drop', failure: 'Failure' }
+const SET_TYPE_ORDER: SetType[] = ['normal', 'warmup', 'drop', 'failure']
 
 export interface LogFormExercise {
   exerciseId: string
@@ -65,6 +69,12 @@ export function LogSession() {
   })
   // RPE väljs i en rad brickor under tabellen, inget tangentbord. Öppen för ett set i taget.
   const [rpePicker, setRpePicker] = useState<{ exIdx: number; setIdx: number } | null>(null)
+  // Settyp väljs i en rad brickor, samma mönster som RPE: bokstaven N/W/D/F på egen hand var obegriplig på mobil.
+  const [typePicker, setTypePicker] = useState<{ exIdx: number; setIdx: number } | null>(null)
+  // Kg som fritext medan man skriver: value={set.weight} skulle nolla ett nyss skrivet
+  // kommatecken vid omrendering (kontrollerat fält, `<input type="number">` följer dessutom
+  // webbläsarens lokal för decimaltecken och godkänner bara komma ELLER punkt). Nyckel "exIdx:setIdx".
+  const [weightDrafts, setWeightDrafts] = useState<Record<string, string>>({})
 
   const draggedExerciseIndexRef = useRef<number | null>(null)
   const activeTemplateRequestRef = useRef<string>('')
@@ -206,6 +216,12 @@ export function LogSession() {
     initSession()
   }, [])
 
+  // Ett nytt program eller pass laddar nya set på samma exIdx:setIdx-nycklar; en kvarvarande
+  // kg-draft från förra programmet skulle annars visas på fel set.
+  useEffect(() => {
+    setWeightDrafts({})
+  }, [selectedTemplateId])
+
   // Auto-save to activeWorkout whenever exercises or settings change (after initial load)
   useEffect(() => {
     if (isInitialLoadRef.current || loading) return
@@ -238,6 +254,7 @@ export function LogSession() {
         setCancelDialogOpen(false)
         setShowSaveTemplate(false)
         setRpePicker(null)
+        setTypePicker(null)
         setPlateCalcModal(prev => ({ ...prev, isOpen: false }))
       }
     }
@@ -304,22 +321,6 @@ export function LogSession() {
     triggerHaptic(20)
   }
 
-  // Cycle set type: normal -> warmup -> drop -> failure -> normal
-  function cycleSetType(exerciseIdx: number, setIdx: number) {
-    const ex = exercises[exerciseIdx]
-    const currentSet = ex.setEntries[setIdx]
-    const typeOrder: SetType[] = ['normal', 'warmup', 'drop', 'failure']
-    const nextIndex = (typeOrder.indexOf(currentSet.type || 'normal') + 1) % typeOrder.length
-    const nextType = typeOrder[nextIndex]
-
-    const newSetEntries = [...ex.setEntries]
-    newSetEntries[setIdx] = { ...currentSet, type: nextType }
-
-    const newExercises = [...exercises]
-    newExercises[exerciseIdx] = { ...ex, setEntries: newSetEntries }
-    setExercises(newExercises)
-    triggerHaptic(20)
-  }
 
   function adjustSetValues(exerciseIdx: number, setIdx: number, deltaWeight: number, deltaReps: number) {
     const ex = exercises[exerciseIdx]
@@ -333,6 +334,16 @@ export function LogSession() {
     const newExercises = [...exercises]
     newExercises[exerciseIdx] = { ...ex, setEntries: newSetEntries }
     setExercises(newExercises)
+    // Stegknappen sätter kg direkt: en kvarvarande kg-draft (mitt i skrivandet) ska inte överskugga den
+    if (deltaWeight !== 0) {
+      const key = `${exerciseIdx}:${setIdx}`
+      setWeightDrafts(prev => {
+        if (!(key in prev)) return prev
+        const next = { ...prev }
+        delete next[key]
+        return next
+      })
+    }
     triggerHaptic(20)
   }
 
@@ -713,13 +724,11 @@ export function LogSession() {
                             const isCompleted = Boolean(set.completed)
                             const setType = set.type || 'normal'
                             const pickerOpen = rpePicker?.exIdx === exIdx && rpePicker.setIdx === setIdx
+                            const typePickerOpen = typePicker?.exIdx === exIdx && typePicker.setIdx === setIdx
                             const isRecord = isRecordSet(ex.exerciseId, set)
 
-                            const badgeLabel =
-                              setType === 'warmup' ? 'W' :
-                              setType === 'drop' ? 'D' :
-                              setType === 'failure' ? 'F' :
-                              `${setIdx + 1}`
+                            const badgeLabel = setType === 'normal' ? `${setIdx + 1}` : SET_TYPE_LABELS[setType][0]
+                            const weightKey = `${exIdx}:${setIdx}`
 
                             return (
                               <tr
@@ -730,8 +739,9 @@ export function LogSession() {
                                   <button
                                     type="button"
                                     class={`set-type-badge badge-${setType}`}
-                                    onClick={() => cycleSetType(exIdx, setIdx)}
-                                    title="Klicka för att byta settyp (Normal, Warmup, Drop, Failure)"
+                                    onClick={() => setTypePicker(typePickerOpen ? null : { exIdx, setIdx })}
+                                    aria-expanded={typePickerOpen}
+                                    aria-label={`Settyp: ${SET_TYPE_LABELS[setType]}, tryck för att ändra`}
                                   >
                                     {badgeLabel}
                                   </button>
@@ -743,15 +753,23 @@ export function LogSession() {
                                 <td class="col-kg">
                                   <div class="input-with-steppers">
                                     <input
-                                      type="number"
-                                      step="0.5"
-                                      min="0"
-                                      max="500"
+                                      type="text"
                                       inputMode="decimal"
                                       enterKeyHint="next"
-                                      value={set.weight}
+                                      value={weightDrafts[weightKey] ?? formatWeight(set.weight)}
                                       aria-label="Kg"
-                                      onChange={(e: Event) => updateSet(exIdx, setIdx, { weight: parseFloat((e.target as HTMLInputElement).value) || 0 })}
+                                      onInput={(e: Event) => {
+                                        const text = (e.target as HTMLInputElement).value
+                                        setWeightDrafts(prev => ({ ...prev, [weightKey]: text }))
+                                        const parsed = parseDecimal(text)
+                                        updateSet(exIdx, setIdx, { weight: parsed !== null ? Math.max(0, Math.min(500, parsed)) : 0 })
+                                      }}
+                                      onBlur={() => setWeightDrafts(prev => {
+                                        if (!(weightKey in prev)) return prev
+                                        const next = { ...prev }
+                                        delete next[weightKey]
+                                        return next
+                                      })}
                                       class="set-input"
                                     />
                                     <div class="stepper-buttons">
@@ -831,6 +849,22 @@ export function LogSession() {
                         </tbody>
                       </table>
                     </div>
+
+                    {typePicker?.exIdx === exIdx && ex.setEntries[typePicker.setIdx] && (
+                      <div class="rpe-picker mb-sm" role="group" aria-label={`Settyp för set ${typePicker.setIdx + 1}`}>
+                        <span class="text-xs text-muted rpe-picker-label">Settyp set {typePicker.setIdx + 1}</span>
+                        {SET_TYPE_ORDER.map(t => (
+                          <button
+                            key={t}
+                            type="button"
+                            class={`set-type-badge rpe-chip ${(ex.setEntries[typePicker.setIdx].type || 'normal') === t ? 'rpe-set' : ''}`}
+                            onClick={() => { updateSet(exIdx, typePicker.setIdx, { type: t }); setTypePicker(null); triggerHaptic(20) }}
+                          >
+                            {SET_TYPE_LABELS[t]}
+                          </button>
+                        ))}
+                      </div>
+                    )}
 
                     {rpePicker?.exIdx === exIdx && ex.setEntries[rpePicker.setIdx] && (
                       <div class="rpe-picker mb-sm" role="group" aria-label={`RPE för set ${rpePicker.setIdx + 1}`}>

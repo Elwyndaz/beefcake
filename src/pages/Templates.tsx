@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'preact/hooks'
 import { getAllTemplates, getAllExercises, createTemplate, updateTemplate, deleteTemplate, getOrCreateExercise } from '../services/dataService'
+import { formatWeight, parseDecimal } from '../lib/format'
 import { icon } from '../icons'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
@@ -73,6 +74,10 @@ export function Templates() {
   const [error, setError] = useState<string | null>(null)
   const [deleteDialog, setDeleteDialog] = useState<{ id: string; name: string } | null>(null)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
+  // Vikt som fritext medan man skriver, nyckel radens index. Samma mönster som kg i Logga pass:
+  // `<input type="number">` följer webbläsarens/OS-lokal för decimaltecken och godkänner bara
+  // komma ELLER punkt, aldrig båda, och ett kontrollerat fält nollar ett nyss skrivet kommatecken.
+  const [weightDrafts, setWeightDrafts] = useState<Record<number, string>>({})
 
   useEffect(() => {
     loadData()
@@ -95,6 +100,7 @@ export function Templates() {
 
   function startEdit(template: Template) {
     setEditingId(template.id)
+    setWeightDrafts({})
     setFormName(template.name)
     const exercises: FormExercise[] = template.exercises.map(te => {
       const ex = allExercises.find(e => e.id === te.exerciseId)
@@ -110,6 +116,7 @@ export function Templates() {
 
   function startCreate() {
     setEditingId(null)
+    setWeightDrafts({})
     setFormName('')
     setFormExercises([{ exerciseId: '', exerciseName: '', defaultSetEntry: { sets: 3, reps: 10, weight: 0 } }])
     setShowForm(true)
@@ -183,6 +190,7 @@ export function Templates() {
 
   function removeFormExercise(idx: number) {
     setFormExercises(formExercises.filter((_, i) => i !== idx))
+    setWeightDrafts({}) // indexen skiftar när en rad tas bort, en kvarvarande draft skulle hamna på fel rad
   }
 
   function handleInputChange(e: Event, idx: number, field: keyof FormExercise, nestedField?: keyof SetEntry) {
@@ -266,7 +274,23 @@ export function Templates() {
                 <input type="number" min="1" max="50" value={fe.defaultSetEntry.reps} onChange={e => handleInputChange(e, idx, 'defaultSetEntry', 'reps')} />
               </Field>
               <Field label="Vikt (kg)" class="m-0">
-                <input type="number" min="0" step="0.5" max="500" value={fe.defaultSetEntry.weight} onChange={e => handleInputChange(e, idx, 'defaultSetEntry', 'weight')} />
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={weightDrafts[idx] ?? formatWeight(fe.defaultSetEntry.weight)}
+                  onInput={e => {
+                    const text = (e.target as HTMLInputElement).value
+                    setWeightDrafts(prev => ({ ...prev, [idx]: text }))
+                    const parsed = parseDecimal(text)
+                    updateFormExercise(idx, 'defaultSetEntry', { ...fe.defaultSetEntry, weight: parsed !== null ? Math.max(0, Math.min(500, parsed)) : 0 })
+                  }}
+                  onBlur={() => setWeightDrafts(prev => {
+                    if (!(idx in prev)) return prev
+                    const next = { ...prev }
+                    delete next[idx]
+                    return next
+                  })}
+                />
               </Field>
               <div class="m-0">
                 <button

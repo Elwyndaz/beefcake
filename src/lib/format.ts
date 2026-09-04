@@ -3,6 +3,17 @@ export function formatWeight(kg: number): string {
   return kg.toLocaleString('sv-SE', { maximumFractionDigits: 2 })
 }
 
+/**
+ * Tolkar ett tal skrivet med komma eller punkt som decimaltecken, ogiltig text ger null.
+ * `<input type="number">` följer webbläsarens/OS-lokal för decimaltecken, så komma eller
+ * punkt (beroende på lokal) godkänns aldrig; det här är den enda parsern, använd den överallt
+ * vikt eller andra decimaltal skrivs in som text.
+ */
+export function parseDecimal(text: string): number | null {
+  const n = parseFloat(text.trim().replace(',', '.'))
+  return Number.isFinite(n) ? n : null
+}
+
 /** Ett set som text: "82,5 kg × 8", med "@8" efter när RPE finns. Vikt 0 betyder kroppsvikt eller kondition. */
 export function formatSet(set: { weight: number; reps: number; rpe?: number }): string {
   const base = set.weight > 0 ? `${formatWeight(set.weight)} kg × ${set.reps}` : `${set.reps} reps`

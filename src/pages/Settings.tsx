@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'preact/hooks'
 import { getAllTemplates, exportAllData, importAllData, exportSessionsCSV, clearAllData, getBodyWeights, saveBodyWeight, deleteBodyWeight } from '../services/dataService'
 import { formatDateTime, formatDateWithWeekday, todayISO } from '../lib/date'
-import { formatWeight } from '../lib/format'
+import { formatWeight, parseDecimal } from '../lib/format'
 import { findLastBackupAt, saveBackupToFile } from '../services/backupService'
 import { icon } from '../icons'
 import { Card } from '../components/Card'
@@ -20,10 +20,12 @@ import { EmptyState } from '../components/EmptyState'
 import { Field } from '../components/Field'
 import type { Template, BodyWeight } from '../models'
 
-/** "82,5" eller "82.5" till tal, annars null. Kilo med en decimal. */
+/** Kroppsvikt: "82,5" eller "82.5" till tal med en decimal, 0 eller ogiltigt ger null. */
 function parseKg(text: string): number | null {
-  const kg = Math.round(parseFloat(text.replace(',', '.')) * 10) / 10
-  return Number.isFinite(kg) && kg > 0 ? kg : null
+  const n = parseDecimal(text)
+  if (n === null) return null
+  const kg = Math.round(n * 10) / 10
+  return kg > 0 ? kg : null
 }
 
 function parseAlarmSeconds(text: string): number | null {

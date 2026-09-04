@@ -1,7 +1,7 @@
 ---
 schemaVersion: 1
 status: active
-currentGoal: Logga pass öppnas tomt utan automatiskt program, månadskalendern visar veckonummer, datum och program alltid synliga som en slimmad rad. Allt pushat och live 2026-09-04 kväll (`a7eadfd`, Pages grön)
+currentGoal: Logga pass öppnas tomt utan automatiskt program, månadskalendern visar veckonummer, datum och program alltid synliga som en slimmad rad, kg-fält skriver med komma och settyp visas som fulla ord. Allt pushat 2026-09-04 kväll
 nextAction: Julia laddar om appen så D1-revision 2 hämtas. Kontrollera sedan att "Enable create (sign-up)" är avstängt i Firebase om det inte redan är gjort, därefter Resend (BACKLOG P0)
 blockers:
   - Firebase: Julia kan logga in på buildapp.se, så domänen fungerar; det är inte verifierat om sign-up är avstängt
@@ -10,6 +10,8 @@ reviewedAt: 2026-09-04
 ---
 
 ## Recent work
+
+2026-09-04 kväll, kg och settyp: rotorsaken till "kan bara ändra ett kg i taget" och "komma eller punkt ger inga decimaler" var `<input type="number">` (webbläsarlokal för decimaltecken, kontrollerat fält nollar ett nyss skrivet kommatecken). Kg i Logga pass och Templates är nu text med delad `parseDecimal()`-parser och en per-fält draft, settypsbokstäverna är nu en picker med fulla ord. Detaljer i BACKLOG under Byggt. Lint, 82 tester och build gröna, verifierat i Chromium: kommatecken bevaras, sparat 82,5 kg återöppnas som 82,5.
 
 2026-09-04 kväll, loggvyn: datum och program syns alltid som en slimmad rad (Patrik: pennan var ett klick för mycket). Detaljer i BACKLOG under Byggt. Lint, 82 tester och build gröna, Chromium 390 px verifierat lokalt.
 
