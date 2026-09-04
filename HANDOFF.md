@@ -1,14 +1,17 @@
 ---
 schemaVersion: 1
 status: active
-currentGoal: Firebase-inloggningen är live sedan 2026-09-04. Kvar: latmask-mejlets Resend-nyckel och domän, sedan flytten till buildapp.se
-nextAction: Resend (BACKLOG P0): verifiera beefcake.buildapp.se och sätt RESEND_API_KEY, sedan första riktiga latmask-brevet. Därefter flytten till buildapp.se (P1).
+currentGoal: Flytten till buildapp.se är klar 2026-09-04 (repo i buildapp-se, app på buildapp.se/beefcake, API på beefcake-api.buildapp.se). Kvar: Patriks två klick i Firebase, sedan Resend
+nextAction: Patrik i Firebase-konsolen: lägg till buildapp.se under Authorized domains (annars faller Google-inloggningen på nya domänen) och stäng av "Enable create (sign-up)" så bara befintliga konton kan logga in. Sedan Resend (BACKLOG P0).
 blockers:
+  - Firebase: buildapp.se auktoriserad och sign-up avstängt, bara Patrik kan klicka
   - Resend: beefcake.buildapp.se ska verifieras och RESEND_API_KEY sättas som secret (regel 1, Patrik)
 reviewedAt: 2026-09-04
 ---
 
 ## Recent work
+
+2026-09-04 kväll, flytten: repot överfört `Elwyndaz/beefcake` → `buildapp-se/beefcake` (`gh api repos/.../transfer`), Pages-inställningen följde med (workflow-bygge, URL buildapp.se/beefcake). `wrangler.jsonc`: route `beefcake-api.buildapp.se` (samma mönster som `recept-api`), `FRONTEND_ORIGINS` buildapp.se och www, `APP_URL` buildapp.se/beefcake; `deploy.yml` bygger med nya API-URL:en (`375faef`). Worker `2e869cc8`: wrangler skapade den nya custom-domänen och tog bort `api.orgutveckling.se` (DNS-posten borta, gamla adressen svarar inte). Verifierat: nya API:t 401 utan token, preflight från buildapp.se 204, Pages-bygget grönt, bundeln pekar bara på nya API:t, grinden renderad i Chrome via Playwright-MCP:n utan konsolfel (Playwright är inte installerat i repot). orgutveckling.se/beefcake ger 404. Ingen inloggning genomförd: Google-inloggning på buildapp.se kräver att Patrik auktoriserar domänen i Firebase först. buildapp.se:s startsida listar projekt för hand, Beefcake syns inte där.
 
 2026-09-04 sent: Patriks första inloggning med Google gav "Molnsynk misslyckades. Du är inte inloggad" och 0 pass: `main.tsx` hämtade D1 före render, innan Firebase svarat, och inget hämtade om. Fix `10e681c`: med moln renderas appen direkt och `LoginGate` kör `syncSeed()` per bekräftad användare. Verifierat av Patrik live: 428 pass, senaste 2 sep, nivå 2. D1 kontrollerad direkt under tiden: revision 17 orörd, inget skrevs över. Popupen för Google öppnas på primärskärmen, värt att veta med två skärmar.
 
