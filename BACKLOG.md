@@ -18,8 +18,9 @@
 - [x] `[P3]` Kortkommandon på desktop
 - [x] `[P3]` RIR/RPE och anteckningar i gränssnittet
 - [x] `[P3]` Tvåanvändarstöd: löst med Firebase-konton, ett D1-spår per adress, seeden bara utan moln
-- [ ] `[P0]` Firebase-projekt för Beefcake skapas av Patrik, konfigurationen in i `src/config.ts` och `FIREBASE_PROJECT_ID` i `wrangler.jsonc`, Access-applikationen framför `api.orgutveckling.se` tas bort. Innan dess får inloggningsbygget inte pushas
-- [ ] `[P0]` Resend: verifiera `beefcake.buildapp.se` (DNS i Cloudflare) och sätt `RESEND_API_KEY` som Worker-secret, kör migrering 0002 mot D1, sedan första riktiga brevet
+- [x] `[P0]` Firebase-projekt `beefcake-4865a` skapat, konfigurationen i `src/config.ts` och `wrangler.jsonc`, Access-appen borta, Worker `6d8ef727` och klient live 2026-09-04. Patriks första riktiga inloggning återstår (HANDOFF nextAction)
+- [ ] `[P3]` `syncSeed` i `main.tsx` försöker läsa molnsnapshoten före inloggningsgrinden och loggar "Seed misslyckades: Du är inte inloggad" i konsolen när ingen är inloggad. Ofarligt (seeden är avstängd med moln), men ett fel i konsolen som inte är ett fel. Hoppa över molnläsningen när `authService` saknar användare
+- [ ] `[P0]` Resend: verifiera `beefcake.buildapp.se` (DNS i Cloudflare) och sätt `RESEND_API_KEY` som Worker-secret, sedan första riktiga brevet. Migrering 0002 är körd 2026-09-04, cronen loggar `reminders_skipped` tills nyckeln finns
 - [ ] `[P1]` Flytta repot till GitHub-orgen `buildapp-se` och appen till buildapp.se (Pages-bas, `FRONTEND_ORIGINS`, Firebase authorized domains, Worker-route)
 
 ## Byggt

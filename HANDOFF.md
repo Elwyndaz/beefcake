@@ -1,15 +1,16 @@
 ---
 schemaVersion: 1
 status: active
-currentGoal: Firebase-inloggning och daglig latmask-mejl via Resend, på väg mot buildapp.se. Inloggningen är byggd lokalt och väntar på Firebase-projektet innan push
-nextAction: Patrik skapar Firebase-projektet och ger apiKey, authDomain, projectId; sedan fylls src/config.ts och wrangler.jsonc, Worker deployas, Access-appen tas bort, klienten pushas och riktig inloggning verifieras.
+currentGoal: Firebase-inloggningen är live sedan 2026-09-04. Kvar: latmask-mejlets Resend-nyckel och domän, sedan flytten till buildapp.se
+nextAction: Patrik loggar in på https://orgutveckling.se/beefcake/ med Google (samma gmail som Access använde, D1-spåret ligger under den adressen) och bekräftar att historiken syns och att ett pass synkar. Sedan Resend (BACKLOG P0).
 blockers:
-  - Firebase-projekt saknas (Patrik). Inloggningsbygget ligger som lokal commit, inte pushad
   - Resend: beefcake.buildapp.se ska verifieras och RESEND_API_KEY sättas som secret (regel 1, Patrik)
 reviewedAt: 2026-09-04
 ---
 
 ## Recent work
+
+2026-09-04 kväll, allt pushat och live: Firebase-projektet `beefcake-4865a` skapat av Patrik (Google och e-post/lösenord påslagna, `orgutveckling.se` auktoriserad), nycklarna i `src/config.ts` och `FIREBASE_PROJECT_ID` i `wrangler.jsonc` (`f77c989`). Access-appen "beefcake" raderad av Patrik i Zero Trust (API:t svarar 401 i stället för 302). Migrering `0002_reminders` körd mot D1. Worker deployad som `6d8ef727`, master pushad (`7b21996..f77c989`, fem commits), Pages-bygget grönt. Live verifierat i Chromium efter rensad service worker: grinden visar Google, e-post, Skapa konto och Glömt lösenordet, ingen inloggning genomförd (kräver Patriks konto). Fynd: `syncSeed` kör före grinden och loggar "Seed misslyckades: Du är inte inloggad" i konsolen vid utloggat läge, kosmetiskt, i BACKLOG.
 
 2026-09-04 (lokal commit, ej pushad): buggen att Logga pass startade ett benpass av sig självt rättad (utkast kräver minst ett set) och loggvyn förväljer nästa pass i rotationen genom `src/lib/nextPrograms.ts`, flyttad ur Hem. 78 tester, lint, build och Chromium gröna. Samma dag: Stitch-designunderlag i vaulten (`Beefcake Designgenomlysning/stitch/`), ingen kod.
 
