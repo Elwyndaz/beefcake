@@ -1,7 +1,7 @@
 ---
 schemaVersion: 1
 status: active
-currentGoal: Logga pass öppnas nu tomt utan automatiskt program och månadskalendern visar veckonummer. Automatiska kontroller är gröna 2026-09-04, push och Pages-deploy återstår
+currentGoal: Logga pass öppnas tomt utan automatiskt program, månadskalendern visar veckonummer, datum och program alltid synliga som en slimmad rad. Allt pushat och live 2026-09-04 kväll (`a7eadfd`, Pages grön)
 nextAction: Julia laddar om appen så D1-revision 2 hämtas. Kontrollera sedan att "Enable create (sign-up)" är avstängt i Firebase om det inte redan är gjort, därefter Resend (BACKLOG P0)
 blockers:
   - Firebase: Julia kan logga in på buildapp.se, så domänen fungerar; det är inte verifierat om sign-up är avstängt
