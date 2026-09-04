@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'preact/hooks'
 import type { ComponentChildren } from 'preact'
 import { isCloudSyncConfigured } from '../services/cloudSyncService'
+import { syncSeed } from '../services/dataService'
 import {
   authErrorMessage, isAuthConfigured, refreshUser, registerWithEmail, resendVerification,
   sendPasswordReset, signInWithEmail, signInWithGoogle, signOutUser, subscribeToAuth, type AuthUser
@@ -23,12 +24,26 @@ export function useAuthUser(): AuthUser | null | undefined {
 
 export function LoginGate({ children }: { children: ComponentChildren }) {
   const user = useAuthUser()
+  // Snapshoten hämtas först när Firebase gett en bekräftad användare, med giltig token.
+  // Körs om per användare, så ett kontobyte hämtar det nya kontots data.
+  const uid = user && user.emailVerified ? user.uid : null
+  const [loadedFor, setLoadedFor] = useState<string | null>(null)
+  useEffect(() => {
+    if (!uid) return
+    let cancelled = false
+    syncSeed()
+      .catch(err => console.error('Molnsnapshoten kunde inte hämtas:', err))
+      .finally(() => { if (!cancelled) setLoadedFor(uid) })
+    return () => { cancelled = true }
+  }, [uid])
 
   if (!isCloudSyncConfigured()) return <>{children}</>
   if (!isAuthConfigured()) return <Shell><p class="login-error">Inloggningen är inte konfigurerad i det här bygget.</p></Shell>
   if (user === undefined) return <Shell><p class="login-subtitle">Laddar…</p></Shell>
   if (user === null) return <Shell><LoginForm /></Shell>
   if (!user.emailVerified) return <Shell><VerifyEmail user={user} /></Shell>
+  // Misslyckas hämtningen släpps appen in ändå: synkfelet visas beständigt av CloudSyncStatus
+  if (loadedFor !== user.uid) return <Shell><p class="login-subtitle">Hämtar dina pass…</p></Shell>
   return <>{children}</>
 }
 
