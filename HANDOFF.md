@@ -1,7 +1,7 @@
 ---
 schemaVersion: 1
 status: active
-currentGoal: Julias programkopiering, fokusfelet i Logga pass och inställningsbar alarmtid är klara, verifierade och live 2026-09-04. Flytten till buildapp.se är också klar
+currentGoal: Logga pass öppnas nu tomt utan automatiskt program och månadskalendern visar veckonummer. Automatiska kontroller är gröna 2026-09-04, push och Pages-deploy återstår
 nextAction: Julia laddar om appen så D1-revision 2 hämtas. Kontrollera sedan att "Enable create (sign-up)" är avstängt i Firebase om det inte redan är gjort, därefter Resend (BACKLOG P0)
 blockers:
   - Firebase: Julia kan logga in på buildapp.se, så domänen fungerar; det är inte verifierat om sign-up är avstängt
@@ -10,6 +10,8 @@ reviewedAt: 2026-09-04
 ---
 
 ## Recent work
+
+2026-09-04 kväll: automatvalet av nästa program togs bort från direktnavigering till Logga pass. Bara `?template=`, `?from=` eller ett sparat utkast med minst ett set laddar innehåll; tomvyn heter "Logga pass", visar "Inget program valt" och har ingen Avbryt-knapp. Historikens månadskalender har nu en egen `V.`-kolumn med ISO-veckonummer. 82 tester, lint och build gröna. På Patriks begäran gjordes ingen webbläsarverifiering före modellbyte; commit, push och Pages-deploy återstår.
 
 2026-09-04 kväll: Patriks 10 program och 33 övningar kopierades additivt till Julia genom en ny D1-revision 2; hennes pass, historik och kroppsvikt är fortfarande tomma och exakt JSON-likhet mot Patriks revision 17 är verifierad. Fokusfelet i Logga pass berodde på att ett nytt tidsbaserat `exerciseId` också användes som React-nyckel vid varje tecken, vilket monterade om fältet; nyckeln är nu stabil. Inställningar har nu alarmtid för vilotimern, 1 till 3 600 sekunder eller tills ljudet tystas, lokalt per enhet och med 19 sekunder som standard. 82 tester, lint och build gröna. Chrome-verifiering: `Kettlebell` gick att skriva med fokus kvar, 7 sekunder och oändligt alarm sparades över omladdning, Tysta ljudet stoppade alarmet, noll konsolfel. Codex webbläsarkontroll återanslöts via Browser-inställningen och användes för verifieringen. Commit `2f0c2a9` pushad till `master`; Pages-körning `33895507996` grön och livegrinden renderad på buildapp.se.
 

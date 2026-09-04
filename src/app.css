@@ -971,10 +971,12 @@ canvas { display: block; max-width: 100%; }
 .history-calendar-header { display: flex; justify-content: space-between; align-items: center; gap: var(--space-4); margin-bottom: var(--space-4); }
 .history-calendar-nav { display: flex; align-items: center; gap: var(--space-3); }
 .history-calendar-nav strong { min-width: 130px; text-align: center; }
-.history-calendar-weekdays, .history-calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.history-calendar-weekdays, .history-calendar-grid { display: grid; grid-template-columns: 2rem repeat(7, minmax(0, 1fr)); }
 .history-calendar-weekdays { color: var(--text-muted); font-size: var(--text-xs); font-weight: 700; text-align: center; text-transform: uppercase; }
+.history-calendar-week-heading { text-align: left; }
+.history-calendar-week-number { display: flex; align-items: flex-start; justify-content: center; padding-top: var(--space-2); border-top: 1px solid var(--border); color: var(--text-muted); font-size: var(--text-xs); font-weight: 700; font-variant-numeric: var(--font-numeric); }
 .history-calendar-day { min-height: 86px; padding: var(--space-2); border-top: 1px solid var(--border); border-right: 1px solid var(--border); background: var(--surface-raised); }
-.history-calendar-day:nth-child(7n + 1) { border-left: 1px solid var(--border); }
+.history-calendar-week-number + .history-calendar-day { border-left: 1px solid var(--border); }
 .history-calendar-day.outside { background: var(--surface); color: var(--text-muted); opacity: 0.6; }
 .history-calendar-day.trained { background: var(--accent-bg); }
 /* Dagens ruta ska gå att hitta utan att räkna: inre ram istället för yttre,
@@ -1526,6 +1528,8 @@ canvas { display: block; max-width: 100%; }
   .history-filters-inline { grid-template-columns: 1fr 1fr; }
   .history-calendar-header { align-items: flex-start; flex-direction: column; }
   .history-calendar-nav { width: 100%; justify-content: space-between; }
+  .history-calendar-weekdays, .history-calendar-grid { grid-template-columns: 1.75rem repeat(7, minmax(0, 1fr)); }
+  .history-calendar-week-number { padding-top: 5px; }
   .history-calendar-day { min-height: 70px; padding: 5px; }
   .history-calendar-session { font-size: 0.6rem; }
   .toast { left: var(--space-4); right: var(--space-4); bottom: calc(80px + env(safe-area-inset-bottom, 0)); justify-content: space-between; }

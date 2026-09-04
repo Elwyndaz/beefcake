@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useCallback } from 'preact/hooks'
 import {
   getAllTemplates,
   getAllExercises,
-  getAllSessions,
   createSession,
   getOrCreateExercise,
   getSession,
@@ -20,7 +19,6 @@ import { barWeightFor, formatPlatesPerSide } from '../lib/plates'
 import { epley1RM } from '../lib/exerciseMetrics'
 import { warmupSets } from '../lib/warmup'
 import { setsVolume } from '../lib/volume'
-import { nextPrograms } from '../lib/nextPrograms'
 import { todayISO, nowISO } from '../models'
 import { icon } from '../icons'
 import { useLocation } from 'wouter'
@@ -116,20 +114,14 @@ export function LogSession() {
         setDate(requestedDate)
       }
 
-      const [ts, es, activeDraft, sessions] = await Promise.all([
+      const [ts, es, activeDraft] = await Promise.all([
         getAllTemplates(),
         getAllExercises(),
-        getActiveWorkout(),
-        getAllSessions()
+        getActiveWorkout()
       ])
 
       setTemplates(ts)
       setAllExercises(es)
-
-      // Förvalet är nästa pass i rotationen, samma regel som Hem-kortet "Nästa pass".
-      // Första mallen i bokstavsordning bara som reserv: ingen historik, eller programmet raderat.
-      const upcomingName = nextPrograms(sessions)[0]?.name
-      const defaultTemplate = ts.find(t => t.name === upcomingName) ?? ts[0]
 
       // Priority 1: explicitly requested ?from=<sessionId>
       if (fromSessionId) {
@@ -157,23 +149,15 @@ export function LogSession() {
         if (matchedTemplate) {
           setSelectedTemplateId(matchedTemplate.id)
           await loadTemplateIntoExercises(matchedTemplate, es)
-        } else if (defaultTemplate) {
-          setSelectedTemplateId(defaultTemplate.id)
-          await loadTemplateIntoExercises(defaultTemplate, es)
         }
       }
-      // Priority 3: active draft in IndexedDB
-      else if (activeDraft && activeDraft.exercises.length > 0) {
+      // Priority 3: ett faktiskt påbörjat utkast i IndexedDB
+      else if (activeDraft && activeDraft.exercises.some(e => e.setEntries.length > 0)) {
         setSelectedTemplateId(activeDraft.templateId)
         setDate(activeDraft.date || todayISO())
         setStartTime(activeDraft.startTime || nowISO())
         setExercises(activeDraft.exercises)
         void fetchPreviousPerformances(activeDraft.exercises.map(e => e.exerciseId))
-      }
-      // Priority 4: nästa pass i rotationen
-      else if (defaultTemplate) {
-        setSelectedTemplateId(defaultTemplate.id)
-        await loadTemplateIntoExercises(defaultTemplate, es)
       }
 
       if (fromSessionId || templateParam || requestedDate) {
@@ -628,14 +612,16 @@ export function LogSession() {
 
       <div class="log-session-main">
         <div class="mb log-session-header">
-          <h1 class="page-title m-0">Aktivt träningspass</h1>
-          <span class="text-xs text-muted">
-            {completedSetsCount} av {totalSetsCount} set klara • Lyft volym: {totalVolume.toLocaleString('sv-SE')} kg
-          </span>
+          <h1 class="page-title m-0">{exercises.length > 0 ? 'Aktivt träningspass' : 'Logga pass'}</h1>
+          {exercises.length > 0 && (
+            <span class="text-xs text-muted">
+              {completedSetsCount} av {totalSetsCount} set klara • Lyft volym: {totalVolume.toLocaleString('sv-SE')} kg
+            </span>
+          )}
           {/* Datum och program som en rad med penna: kortet med fälten öppnas bara vid behov */}
           <div class="log-session-meta">
             <span class="text-sm">
-              <strong>{selectedTemplate?.name || 'Fritt pass'}</strong> · {formatDateWithWeekday(date)}
+              <strong>{selectedTemplate?.name || (exercises.length > 0 ? 'Fritt pass' : 'Inget program valt')}</strong> · {formatDateWithWeekday(date)}
             </span>
             <button
               type="button"
@@ -966,9 +952,11 @@ export function LogSession() {
             <p class="text-xs text-muted mt-1 m-0 log-session-hint">Lägg till minst ett set för att kunna spara passet.</p>
           )}
           <div class="flex gap-sm mt flex-wrap">
-            <Button variant="secondary" size="sm" onClick={() => setCancelDialogOpen(true)}>
-              Avbryt pass
-            </Button>
+            {exercises.length > 0 && (
+              <Button variant="secondary" size="sm" onClick={() => setCancelDialogOpen(true)}>
+                Avbryt pass
+              </Button>
+            )}
             <Button variant="secondary" size="sm" onClick={() => setShowSaveTemplate(v => !v)} disabled={exercises.length === 0}>
               {showSaveTemplate ? 'Dölj programsparning' : 'Spara som nytt program'}
             </Button>

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'preact/hooks'
 import { useLocation } from 'wouter'
 import { getAllSessions, getAllTemplates, deleteSession } from '../services/dataService'
 import { icon } from '../icons'
-import { formatDateShort, formatDateWithWeekday, formatDateFull, getMonthKey, monthNames, todayISO, parseLocalDate, localDateISO } from '../lib/date'
+import { formatDateShort, formatDateWithWeekday, formatDateFull, getMonthKey, monthNames, todayISO, parseLocalDate, localDateISO, isoWeek } from '../lib/date'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
 import { EmptyState } from '../components/EmptyState'
@@ -399,14 +399,23 @@ export function History() {
           </div>
         </div>
         <div class="history-calendar-weekdays">
+          <span class="history-calendar-week-heading">V.</span>
           {calendarWeekdays.map(day => <span key={day}>{day}</span>)}
         </div>
         <div class="history-calendar-grid">
-          {calendarDays.map(day => {
+          {calendarDays.flatMap((day, index) => {
             const date = localDateISO(day)
             const daySessions = sessionsByDate.get(date) || []
             const isCurrentMonth = day.getMonth() === calendarMonth.getMonth()
-            return (
+            const cells = []
+            if (index % 7 === 0) {
+              cells.push(
+                <span class="history-calendar-week-number" key={`week-${date}`} aria-label={`Vecka ${isoWeek(date)}`}>
+                  {isoWeek(date)}
+                </span>
+              )
+            }
+            cells.push(
               <div
                 class={`history-calendar-day${isCurrentMonth ? '' : ' outside'}${daySessions.length ? ' trained' : ''}${date === today ? ' today' : ''}`}
                 key={date}
@@ -433,6 +442,7 @@ export function History() {
                 ))}
               </div>
             )
+            return cells
           })}
         </div>
       </Card>
