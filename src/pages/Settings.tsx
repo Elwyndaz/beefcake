@@ -9,6 +9,13 @@ import { Button } from '../components/Button'
 import { useAuthUser } from '../components/LoginGate'
 import { signOutUser } from '../services/authService'
 import { getReminderEnabled, setReminderEnabled } from '../services/cloudSyncService'
+import {
+  DEFAULT_REST_TIMER_ALARM_DURATION,
+  loadRestTimerAlarmDuration,
+  REST_TIMER_ALARM_DURATION_CHANGED_EVENT,
+  saveRestTimerAlarmDuration,
+  type RestTimerAlarmDuration
+} from '../services/timerService'
 import { EmptyState } from '../components/EmptyState'
 import { Field } from '../components/Field'
 import type { Template, BodyWeight } from '../models'
@@ -17,6 +24,12 @@ import type { Template, BodyWeight } from '../models'
 function parseKg(text: string): number | null {
   const kg = Math.round(parseFloat(text.replace(',', '.')) * 10) / 10
   return Number.isFinite(kg) && kg > 0 ? kg : null
+}
+
+function parseAlarmSeconds(text: string): number | null {
+  if (!/^\d+$/.test(text)) return null
+  const seconds = Number.parseInt(text, 10)
+  return seconds >= 1 && seconds <= 3600 ? seconds : null
 }
 
 // Toast component
@@ -87,6 +100,9 @@ export function Settings() {
   const authUser = useAuthUser()
   // Latmask-mejlet: null tills servern svarat
   const [reminders, setReminders] = useState<boolean | null>(null)
+  const [alarmDuration, setAlarmDuration] = useState<RestTimerAlarmDuration>(DEFAULT_REST_TIMER_ALARM_DURATION)
+  const [alarmSeconds, setAlarmSeconds] = useState(String(DEFAULT_REST_TIMER_ALARM_DURATION))
+  const [alarmSaving, setAlarmSaving] = useState(false)
 
   useEffect(() => {
     if (!authUser) return
@@ -112,10 +128,17 @@ export function Settings() {
     try {
       setLoading(true)
       setError(null)
-      const [ts, bws, backupAt] = await Promise.all([getAllTemplates(), getBodyWeights(), findLastBackupAt()])
+      const [ts, bws, backupAt, savedAlarmDuration] = await Promise.all([
+        getAllTemplates(),
+        getBodyWeights(),
+        findLastBackupAt(),
+        loadRestTimerAlarmDuration()
+      ])
       setTemplates(ts)
       setBodyWeights(bws)
       setLastBackupAt(backupAt)
+      setAlarmDuration(savedAlarmDuration)
+      if (savedAlarmDuration !== null) setAlarmSeconds(String(savedAlarmDuration))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Okänt fel')
       console.error('Fel vid laddning av inställningar:', err)
@@ -127,6 +150,42 @@ export function Settings() {
   useEffect(() => {
     loadData()
   }, [])
+
+  async function handleSaveAlarmDuration() {
+    const seconds = parseAlarmSeconds(alarmSeconds)
+    if (seconds === null) return
+    try {
+      setAlarmSaving(true)
+      await saveRestTimerAlarmDuration(seconds)
+      setAlarmDuration(seconds)
+      window.dispatchEvent(new CustomEvent<RestTimerAlarmDuration>(REST_TIMER_ALARM_DURATION_CHANGED_EVENT, { detail: seconds }))
+      setToastMessage(`Alarmet ljuder i ${seconds} sekunder`)
+    } catch (err) {
+      console.error('Fel vid sparande av alarmtid:', err)
+      setError('Kunde inte spara alarmtiden. Försök igen.')
+    } finally {
+      setAlarmSaving(false)
+    }
+  }
+
+  async function handleAlarmUntilStopped(enabled: boolean) {
+    const nextDuration = enabled
+      ? null
+      : (parseAlarmSeconds(alarmSeconds) ?? DEFAULT_REST_TIMER_ALARM_DURATION)
+    try {
+      setAlarmSaving(true)
+      await saveRestTimerAlarmDuration(nextDuration)
+      setAlarmDuration(nextDuration)
+      window.dispatchEvent(new CustomEvent<RestTimerAlarmDuration>(REST_TIMER_ALARM_DURATION_CHANGED_EVENT, { detail: nextDuration }))
+      if (nextDuration !== null) setAlarmSeconds(String(nextDuration))
+      setToastMessage(enabled ? 'Alarmet ljuder tills du tystar det' : `Alarmet ljuder i ${nextDuration} sekunder`)
+    } catch (err) {
+      console.error('Fel vid sparande av alarmtid:', err)
+      setError('Kunde inte spara alarmtiden. Försök igen.')
+    } finally {
+      setAlarmSaving(false)
+    }
+  }
 
   async function handleSaveBodyWeight() {
     const kg = parseKg(bwKg)
@@ -347,6 +406,38 @@ export function Settings() {
           </div>
         )}
         <p class="text-xs text-muted m-0 mt-sm">Ett värde per dag, samma datum skriver över. De tio senaste visas här, kurvan finns i Statistik.</p>
+      </Card>
+
+      <Card title="Vilotimer">
+        <label class="toggle-row mb">
+          <input
+            type="checkbox"
+            checked={alarmDuration === null}
+            disabled={alarmSaving}
+            onChange={(e: Event) => void handleAlarmUntilStopped((e.target as HTMLInputElement).checked)}
+          />
+          <span>Låt alarmet fortsätta tills jag trycker på Tysta ljudet.</span>
+        </label>
+        <form class="flex gap-sm items-end flex-wrap" onSubmit={e => { e.preventDefault(); void handleSaveAlarmDuration() }}>
+          <Field label="Annars tystnar alarmet efter" class="m-0">
+            <div class="flex gap-sm items-center">
+              <input
+                type="number"
+                min="1"
+                max="3600"
+                step="1"
+                class="input-short"
+                value={alarmSeconds}
+                disabled={alarmDuration === null || alarmSaving}
+                onInput={(e: Event) => setAlarmSeconds((e.target as HTMLInputElement).value)}
+                aria-label="Alarmtid i sekunder"
+              />
+              <span>sekunder</span>
+            </div>
+          </Field>
+          <Button type="submit" disabled={alarmDuration === null || alarmSaving || parseAlarmSeconds(alarmSeconds) === null}>Spara</Button>
+        </form>
+        <p class="text-xs text-muted m-0 mt-sm">Inställningen sparas på den här enheten.</p>
       </Card>
 
       <Card title="Export / Import">

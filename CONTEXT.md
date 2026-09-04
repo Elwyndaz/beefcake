@@ -123,7 +123,7 @@ src/pages/                Home, LogSession, Templates, History, SessionDetail, E
 
 Rutter: `/` · `/log` (stödjer `?from=<sessionId>`, `?template=<namn>` och `?date=<YYYY-MM-DD>`) · `/templates` · `/history` · `/history/:id` · `/exercises/:id` · `/stats` · `/settings`.
 
-Loggvyn startar timern genom att skicka `beefcake-start-timer` på `window`; `RestTimer` lyssnar. Det håller avbockning och timer i olika komponenter utan delad state.
+Loggvyn startar timern genom att skicka `beefcake-start-timer` på `window`; `RestTimer` lyssnar. Det håller avbockning och timer i olika komponenter utan delad state. Alarmtiden lagras lokalt per enhet i IndexedDB-inställningarna: standard är 19 sekunder, användaren kan välja 1 till 3 600 sekunder eller låta ljudet fortsätta tills det tystas manuellt.
 
 ## Konventioner
 

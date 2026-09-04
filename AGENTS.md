@@ -55,6 +55,7 @@ Versalerna är ett krav: cockpiten (`cockpit.buildapp.se`) hämtar exakt `HANDOF
 - **Firebase-SDK:n importeras från gstatic med `import(/* @vite-ignore */ url)`.** Utan kommentaren försöker Vite lösa URL:en vid bygget. Typerna är handskrivna i `authService.ts` och täcker bara det som anropas; lägg till där när en ny SDK-funktion behövs, dra inte in `firebase` från npm.
 - **Tvåklientstestet mockar `authService`** (`vi.mock`, låtsastoken) och seedar klient A med `syncSeed(true)`: seeden är avstängd så fort moln är konfigurerat.
 - **Wrangler kan försöka skriva logg utanför arbetsytan och ge `EPERM` i sandbox.** Sätt `WRANGLER_LOG_PATH` till en tillfällig fil i repot för kontroller, till exempel `.wrangler-verify.log`, och ta bort filen efteråt. Ett tillfälligt D1-fel `7403` har lösts genom `wrangler whoami` och omedelbar retry.
+- **Övningskort i `LogSession` får inte ha `exerciseId` som React-nyckel medan namnet skrivs.** Ett namn utan katalogträff får ett nytt tidsbaserat id vid varje tecken; en sådan nyckel monterar om kortet och tappar fokus. Den stabila renderingsidentiteten är listpositionen.
 
 ## Flera agenter i samma repo
 
@@ -63,7 +64,7 @@ Claude Code och Mistral arbetar ibland parallellt i samma arbetsträd. Får du e
 - Öppna, ändra eller formatera **inte** filer utanför din lista.
 - **Återställ dem inte heller.** `git checkout` eller `git restore` på en fil utanför din lista raderar någon annans pågående arbete. Det har redan hänt två gånger.
 - Behöver uppgiften en ändring utanför din gräns: stanna och rapportera i stället för att göra den.
-- Committa inte om du inte blivit ombedd. Lämna ändringarna i arbetsträdet för granskning.
+- Committa verifierade, sammanhängande ändringar som lokal återställningspunkt. Följ den globala regeln i `C:\dev\CLAUDE.md` för push och deploy, och stagea aldrig orelaterade ändringar.
 
 ## Så verifierar du
 

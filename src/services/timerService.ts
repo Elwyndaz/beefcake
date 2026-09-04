@@ -1,7 +1,11 @@
 import { getDB } from '../models'
 
 const PRESETS_KEY = 'rest-timer-presets'
+const ALARM_DURATION_KEY = 'rest-timer-alarm-duration'
 const DEFAULT_PRESETS = [3, 5, 8]
+export const DEFAULT_REST_TIMER_ALARM_DURATION = 19
+export const REST_TIMER_ALARM_DURATION_CHANGED_EVENT = 'beefcake-alarm-duration-changed'
+export type RestTimerAlarmDuration = number | null
 
 function validPresets(value: unknown): value is number[] {
   return Array.isArray(value) && value.length === 3 && value.every(v => typeof v === 'number' && Number.isFinite(v) && v >= 1 && v <= 60)
@@ -17,6 +21,24 @@ export async function saveRestTimerPresets(presets: number[]): Promise<void> {
   if (!validPresets(presets)) return
   const db = await getDB()
   await db.put('settings', { key: PRESETS_KEY, value: presets })
+}
+
+function validAlarmDuration(value: unknown): value is RestTimerAlarmDuration {
+  return value === null || (typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= 3600)
+}
+
+export async function loadRestTimerAlarmDuration(): Promise<RestTimerAlarmDuration> {
+  const db = await getDB()
+  const setting = await db.get('settings', ALARM_DURATION_KEY)
+  return validAlarmDuration(setting?.value) ? setting.value : DEFAULT_REST_TIMER_ALARM_DURATION
+}
+
+export async function saveRestTimerAlarmDuration(duration: RestTimerAlarmDuration): Promise<void> {
+  if (!validAlarmDuration(duration)) {
+    throw new Error('Alarmtiden måste vara 1 till 3 600 sekunder eller utan tidsgräns.')
+  }
+  const db = await getDB()
+  await db.put('settings', { key: ALARM_DURATION_KEY, value: duration })
 }
 
 export async function showRestTimerNotification(): Promise<void> {
@@ -58,4 +80,3 @@ export function triggerHaptic(pattern: number | number[] = 40): void {
     }
   }
 }
-

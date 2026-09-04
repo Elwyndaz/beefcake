@@ -1,9 +1,13 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
 import {
+  DEFAULT_REST_TIMER_ALARM_DURATION,
+  loadRestTimerAlarmDuration,
   loadRestTimerPresets,
+  REST_TIMER_ALARM_DURATION_CHANGED_EVENT,
   requestRestTimerNotifications,
   saveRestTimerPresets,
-  showRestTimerNotification
+  showRestTimerNotification,
+  type RestTimerAlarmDuration
 } from '../services/timerService'
 
 type TimerStatus = 'idle' | 'running' | 'paused' | 'finished'
@@ -15,16 +19,37 @@ function formatTime(totalSeconds: number): string {
 }
 
 let activeSoundContext: AudioContext | null = null
+let activeSoundRepeatTimer: number | null = null
 let activeSoundStopTimer: number | null = null
 
 function stopTimerSound(): void {
+  if (activeSoundRepeatTimer !== null) window.clearInterval(activeSoundRepeatTimer)
   if (activeSoundStopTimer !== null) window.clearTimeout(activeSoundStopTimer)
+  activeSoundRepeatTimer = null
   activeSoundStopTimer = null
   if (activeSoundContext) void activeSoundContext.close()
   activeSoundContext = null
 }
 
-function playTimerSound(): void {
+function playChime(context: AudioContext): void {
+  const frequencies = [440, 659, 880]
+  frequencies.forEach((frequency, note) => {
+    const oscillator = context.createOscillator()
+    const gain = context.createGain()
+    const start = context.currentTime + note * 0.14
+    oscillator.type = 'triangle'
+    oscillator.frequency.value = frequency
+    gain.gain.setValueAtTime(0.0001, start)
+    gain.gain.exponentialRampToValueAtTime(0.16, start + 0.025)
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.42)
+    oscillator.connect(gain)
+    gain.connect(context.destination)
+    oscillator.start(start)
+    oscillator.stop(start + 0.48)
+  })
+}
+
+function playTimerSound(duration: RestTimerAlarmDuration): void {
   try {
     stopTimerSound()
     const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
@@ -32,27 +57,12 @@ function playTimerSound(): void {
     const context = new AudioContextClass()
     activeSoundContext = context
 
-    const chimeSpacing = 1.5
-    const frequencies = [440, 659, 880]
-    for (let chime = 0; chime < 12; chime += 1) {
-      const chimeStart = context.currentTime + chime * chimeSpacing
-      frequencies.forEach((frequency, note) => {
-        const oscillator = context.createOscillator()
-        const gain = context.createGain()
-        const start = chimeStart + note * 0.14
-        oscillator.type = 'triangle'
-        oscillator.frequency.value = frequency
-        gain.gain.setValueAtTime(0.0001, start)
-        gain.gain.exponentialRampToValueAtTime(0.16, start + 0.025)
-        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.42)
-        oscillator.connect(gain)
-        gain.connect(context.destination)
-        oscillator.start(start)
-        oscillator.stop(start + 0.48)
-      })
-    }
+    playChime(context)
+    activeSoundRepeatTimer = window.setInterval(() => playChime(context), 1500)
     // Signalen ska höras genom en hörlur mitt i ett set, inte bara i tystnad.
-    activeSoundStopTimer = window.setTimeout(stopTimerSound, 19_000)
+    if (duration !== null) {
+      activeSoundStopTimer = window.setTimeout(stopTimerSound, duration * 1000)
+    }
   } catch {
     // Some browsers block audio until the next user gesture.
   }
@@ -63,16 +73,28 @@ export function RestTimer() {
   const [selectedPreset, setSelectedPreset] = useState(0)
   const [remaining, setRemaining] = useState(180)
   const [status, setStatus] = useState<TimerStatus>('idle')
+  const [alarmDuration, setAlarmDuration] = useState<RestTimerAlarmDuration>(DEFAULT_REST_TIMER_ALARM_DURATION)
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | 'unsupported'>(() =>
     'Notification' in window ? Notification.permission : 'unsupported'
   )
   const deadlineRef = useRef<number | null>(null)
 
   useEffect(() => {
-    loadRestTimerPresets().then(loaded => {
-      setPresets(loaded)
-      setRemaining(loaded[0] * 60)
+    Promise.all([loadRestTimerPresets(), loadRestTimerAlarmDuration()]).then(([loadedPresets, loadedAlarmDuration]) => {
+      setPresets(loadedPresets)
+      setRemaining(loadedPresets[0] * 60)
+      setAlarmDuration(loadedAlarmDuration)
     }).catch(() => undefined)
+  }, [])
+
+  useEffect(() => stopTimerSound, [])
+
+  useEffect(() => {
+    const handleAlarmDurationChange = (event: Event) => {
+      setAlarmDuration((event as CustomEvent<RestTimerAlarmDuration>).detail)
+    }
+    window.addEventListener(REST_TIMER_ALARM_DURATION_CHANGED_EVENT, handleAlarmDurationChange)
+    return () => window.removeEventListener(REST_TIMER_ALARM_DURATION_CHANGED_EVENT, handleAlarmDurationChange)
   }, [])
 
   useEffect(() => {
@@ -86,7 +108,7 @@ export function RestTimer() {
       if (nextRemaining === 0) {
         deadlineRef.current = null
         setStatus('finished')
-        playTimerSound()
+        playTimerSound(alarmDuration)
         void showRestTimerNotification()
       }
     }
@@ -94,7 +116,7 @@ export function RestTimer() {
     tick()
     const interval = window.setInterval(tick, 250)
     return () => window.clearInterval(interval)
-  }, [status])
+  }, [status, alarmDuration])
 
   useEffect(() => {
     const handleStart = (event: Event) => {

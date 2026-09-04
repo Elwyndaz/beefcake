@@ -687,7 +687,7 @@ export function LogSession() {
                 const plateWeights = barWeight === null ? [] : Array.from(new Set(ex.setEntries.map(s => s.weight).filter(w => w > 0)))
                 return (
                   <Card
-                    key={ex.exerciseId || exIdx}
+                    key={exIdx}
                     class={`exercise-live-card mb ${draggedExerciseIndex === exIdx ? 'exercise-row-dragging' : ''}`}
                     data-exercise-index={exIdx}
                   >
